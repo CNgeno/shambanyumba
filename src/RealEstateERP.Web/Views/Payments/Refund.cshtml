@@ -1,0 +1,54 @@
+@model RefundViewModel
+@{
+    ViewData["Title"] = Model.Kind.Display();
+}
+@if (Model.Kind == RefundKind.Deposit)
+{
+    <a asp-controller="Leases" asp-action="Details" asp-route-id="@Model.LeaseId" class="back-link"><i class="bi bi-arrow-left"></i>Lease</a>
+}
+else
+{
+    <a asp-action="Details" asp-route-id="@Model.PaymentId" class="back-link"><i class="bi bi-arrow-left"></i>Receipt</a>
+}
+<h1 class="page-title">@Model.Kind.Display() for @Model.TenantName</h1>
+<p class="text-body-secondary mb-4">@Model.Context. Up to <strong>@Model.Available.Kes()</strong> can be refunded.</p>
+
+<form method="post" asp-action="Refund" class="form-narrow" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <input type="hidden" asp-for="Kind" />
+    <input type="hidden" asp-for="PaymentId" />
+    <input type="hidden" asp-for="LeaseId" />
+    <input type="hidden" asp-for="TenantName" />
+    <input type="hidden" asp-for="Context" />
+    <input type="hidden" asp-for="Available" />
+
+    <section class="panel mb-4">
+        <div class="row g-3">
+            <div class="col-sm-6">
+                <label asp-for="Amount" class="form-label"></label>
+                <input asp-for="Amount" class="form-control" inputmode="decimal" />
+                <span asp-validation-for="Amount" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="RefundDate" class="form-label"></label>
+                <input asp-for="RefundDate" type="date" class="form-control" />
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="Method" class="form-label"></label>
+                <select asp-for="Method" class="form-select">
+                    @foreach (var m in Enum.GetValues<PaymentMethod>()) { <option value="@m">@m.Display()</option> }
+                </select>
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="Reference" class="form-label"></label>
+                <input asp-for="Reference" class="form-control text-uppercase" />
+                <div class="form-text">The M-PESA, bank or cheque reference of the money sent back.</div>
+            </div>
+            <div class="col-12">
+                <label asp-for="Notes" class="form-label"></label>
+                <input asp-for="Notes" class="form-control" />
+            </div>
+        </div>
+    </section>
+    <button type="submit" class="btn btn-primary">Record refund</button>
+</form>

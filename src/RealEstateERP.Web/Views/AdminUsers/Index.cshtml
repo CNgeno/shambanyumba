@@ -1,0 +1,68 @@
+@model AdminUsersViewModel
+@{
+    ViewData["Title"] = "Users";
+}
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">Users</h1>
+        <p class="page-sub">Everyone with a ShambaNyumba login (newest first)</p>
+    </div>
+    <form method="get" class="d-flex gap-2" role="search">
+        <input type="search" name="q" value="@Model.Search" class="form-control form-control-sm" placeholder="Name or email" aria-label="Search users" />
+        <button type="submit" class="btn btn-sm btn-outline-primary">Search</button>
+    </form>
+</div>
+
+<section class="panel p-0">
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead><tr><th>User</th><th>Status</th><th class="text-end">Businesses</th><th>Joined</th><th>Last sign-in</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var u in Model.Users)
+            {
+                var isMe = u.Id == Model.CurrentUserId;
+                <tr>
+                    <td>
+                        <span class="fw-semibold">@(u.FullName ?? "(no name)")</span>@if (u.IsSuperAdmin) { <span class="status-chip status-info ms-1">Platform admin</span> }
+                        <div class="small text-body-secondary">@u.Email</div>
+                    </td>
+                    <td>
+                        @if (u.IsLockedOut) { <span class="status-chip status-bad">Locked</span> }
+                        else if (!u.EmailConfirmed) { <span class="status-chip status-warn">Unconfirmed</span> }
+                        else { <span class="status-chip status-ok">Active</span> }
+                    </td>
+                    <td class="text-end">@u.BusinessCount</td>
+                    <td class="small text-nowrap">@u.CreatedAtUtc.ToEatDate()</td>
+                    <td class="small text-nowrap">@(u.LastLoginAtUtc?.ToEatDateTime() ?? "Never")</td>
+                    <td class="text-end">
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions for @u.Email"><i class="bi bi-three-dots"></i></button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                @if (!u.EmailConfirmed)
+                                {
+                                    <li><form method="post" asp-action="ResendConfirmation" asp-route-id="@u.Id"><button class="dropdown-item">Resend confirmation email</button></form></li>
+                                    <li><form method="post" asp-action="ConfirmEmail" asp-route-id="@u.Id"><button class="dropdown-item">Mark email as confirmed</button></form></li>
+                                }
+                                <li><form method="post" asp-action="SendReset" asp-route-id="@u.Id"><button class="dropdown-item">Send password reset link</button></form></li>
+                                @if (!isMe)
+                                {
+                                    <li><hr class="dropdown-divider" /></li>
+                                    @if (u.IsLockedOut)
+                                    {
+                                        <li><form method="post" asp-action="Unlock" asp-route-id="@u.Id"><button class="dropdown-item">Unlock account</button></form></li>
+                                    }
+                                    else
+                                    {
+                                        <li><form method="post" asp-action="Lock" asp-route-id="@u.Id" onsubmit="return confirm('Lock this account? They will be signed out.');"><button class="dropdown-item text-danger">Lock account</button></form></li>
+                                    }
+                                    <li><form method="post" asp-action="ToggleSuperAdmin" asp-route-id="@u.Id" onsubmit="return confirm('Change platform admin access for this user?');"><button class="dropdown-item">@(u.IsSuperAdmin ? "Remove platform admin" : "Make platform admin")</button></form></li>
+                                }
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</section>

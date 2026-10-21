@@ -1,0 +1,63 @@
+@model ListingForm
+@{
+    ViewData["Title"] = "New listing";
+}
+<a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Listings</a>
+<h1 class="page-title mb-4">New listing</h1>
+<form method="post" asp-action="Create" class="form-narrow" id="listing-form" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <section class="panel mb-3">
+        <div class="btn-group mb-3" role="group" aria-label="To let or for sale">
+            @foreach (var t in Enum.GetValues<ListingType>())
+            {
+                <input type="radio" class="btn-check" name="Type" id="lt-@t" value="@t" checked="@(Model.Type == t)" />
+                <label class="btn btn-outline-primary" for="lt-@t">@t.Display()</label>
+            }
+        </div>
+        <div class="mb-3">
+            <label asp-for="UnitId" class="form-label"></label>
+            <select asp-for="UnitId" class="form-select" id="unit">
+                <option value="">Select the unit...</option>
+                @foreach (var g in Model.Units.GroupBy(u => u.AssetName))
+                {
+                    <optgroup label="@g.Key">
+                        @foreach (var u in g)
+                        {
+                            <option value="@u.Id" data-rent="@u.MonthlyRent.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-sale="@(u.SalePrice?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")"
+                                    data-rent-title="@u.SuggestedRentTitle" data-sale-title="@u.SuggestedSaleTitle">@u.UnitNumber</option>
+                        }
+                    </optgroup>
+                }
+            </select>
+            <span asp-validation-for="UnitId" class="invalid-feedback d-block"></span>
+            <div class="form-text">The listing shows publicly only while the unit is available.</div>
+        </div>
+        <div class="mb-3"><label asp-for="Title" class="form-label"></label><input asp-for="Title" class="form-control" id="title" maxlength="120" /><span asp-validation-for="Title" class="invalid-feedback d-block"></span></div>
+        <div class="mb-3"><label asp-for="Price" class="form-label" id="price-label">@(Model.Type == ListingType.Sale ? "Asking price (KES)" : "Rent per month (KES)")</label><input asp-for="Price" class="form-control" id="price" inputmode="decimal" /></div>
+        <div class="mb-1"><label asp-for="Description" class="form-label"></label>
+            <textarea asp-for="Description" class="form-control" rows="6" maxlength="4000" placeholder="What makes it attractive: location and nearby amenities, water and power, parking, security, what's included in the rent or the payment plan."></textarea>
+            <span asp-validation-for="Description" class="invalid-feedback d-block"></span></div>
+    </section>
+    <button type="submit" class="btn btn-primary">Save draft and add photos</button>
+</form>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var form = document.getElementById('listing-form'), unit = document.getElementById('unit'), title = document.getElementById('title'), price = document.getElementById('price');
+            var lastSuggested = '';
+            function type() { return form.querySelector('input[name="Type"]:checked').value; }
+            function fill() {
+                var o = unit.selectedOptions[0]; if (!o || !o.value) return;
+                var sale = type() === 'Sale';
+                var suggested = sale ? o.dataset.saleTitle : o.dataset.rentTitle;
+                if (!title.value || title.value === lastSuggested) { title.value = suggested; lastSuggested = suggested; }
+                var p = sale ? o.dataset.sale : o.dataset.rent;
+                if (p && p !== '0') sbSet(price, Math.round(sbNum(p)));
+                document.getElementById('price-label').textContent = sale ? 'Asking price (KES)' : 'Rent per month (KES)';
+            }
+            unit.addEventListener('change', fill);
+            form.querySelectorAll('input[name="Type"]').forEach(function (r) { r.addEventListener('change', fill); });
+        })();
+    </script>
+}

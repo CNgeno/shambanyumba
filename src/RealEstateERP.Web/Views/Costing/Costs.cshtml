@@ -1,0 +1,137 @@
+@model CostsPageViewModel
+@{
+    var o = Model.Overview;
+    var pagePurpose = RealEstateERP.Core.Common.PropertyRules.Effective(o.Asset.Purpose, o.Asset.Type);
+    var pageCategories = Enum.GetValues<CostCategory>().Where(c => pagePurpose switch
+    {
+        PropertyPurpose.Let => RealEstateERP.Core.Common.CostingRules.IsRunningCost(c),
+        PropertyPurpose.Sell => RealEstateERP.Core.Common.CostingRules.IsDevelopmentCost(c),
+        _ => true
+    }).ToList();
+    var f = Model.Form;
+    ViewData["Title"] = $"{o.Asset.Name}: budget and costs";
+    var editing = f.Id is not null;
+}
+<partial name="_ProjectTabs" model="o" />
+
+<div class="property-grid property-grid-reverse">
+    <section class="panel p-0">
+        <div class="units-toolbar">
+            <nav class="filter-chips me-auto" aria-label="Filter cost lines">
+                <a asp-action="Costs" asp-route-id="@o.Asset.Id" class="filter-chip @(Model.Kind is null ? "is-active" : "")">All</a>
+                <a asp-action="Costs" asp-route-id="@o.Asset.Id" asp-route-kind="Budget" class="filter-chip @(Model.Kind == CostKind.Budget ? "is-active" : "")">Budget</a>
+                <a asp-action="Costs" asp-route-id="@o.Asset.Id" asp-route-kind="Actual" class="filter-chip @(Model.Kind == CostKind.Actual ? "is-active" : "")">Actual</a>
+            </nav>
+            <form method="get" class="d-flex gap-2">
+                <input type="hidden" name="id" value="@o.Asset.Id" />
+                <input type="hidden" name="kind" value="@Model.Kind" />
+                <select name="category" class="form-select form-select-sm" aria-label="Category" onchange="this.form.submit()">
+                    <option value="">All categories</option>
+                    @foreach (var c in pageCategories) { <option value="@c" selected="@(Model.Category == c)">@c.Display()</option> }
+                </select>
+            </form>
+        </div>
+        @if (Model.Lines.Count == 0)
+        {
+            <p class="text-body-secondary p-4 mb-0">No cost lines here yet. Add the budget first, then actual costs as they're paid.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead><tr><th>Date</th><th>Cost</th><th>Category</th><th class="text-end">Amount</th><th></th></tr></thead>
+                    <tbody>
+                    @foreach (var l in Model.Lines)
+                    {
+                        <tr class="@(f.Id == l.Id ? "table-active" : "")">
+                            <td class="text-nowrap small">@(l.Date?.ToString("d MMM yyyy") ?? "—")</td>
+                            <td>
+                                <span class="fw-semibold">@l.Description</span>
+                                <span class="status-chip @(l.Kind == CostKind.Budget ? "status-info" : "status-neutral") ms-1">@l.Kind</span>
+                                <div class="small text-body-secondary">@(l.UnitNumber is null ? (RealEstateERP.Core.Common.PropertyRules.Effective(o.Asset.Purpose, o.Asset.Type) == PropertyPurpose.Let ? "Whole estate" : "Whole project") : l.UnitNumber)@(l.Supplier is null ? "" : $", {l.Supplier}")@(l.Reference is null ? "" : $", ref {l.Reference}")</div>
+                                @if (l.HasReceipt) { <a asp-action="Receipt" asp-route-costId="@l.Id" target="_blank" class="small"><i class="bi bi-paperclip"></i> Receipt</a> }
+                            </td>
+                            <td class="small">@l.Category.Display()</td>
+                            <td class="text-end">@l.Amount.Kes()</td>
+                            <td class="text-end text-nowrap">
+                                @if (Model.CanEdit)
+                                {
+                                    <a asp-action="Costs" asp-route-id="@o.Asset.Id" asp-route-edit="@l.Id" class="btn btn-sm btn-link" aria-label="Edit"><i class="bi bi-pencil"></i></a>
+                                    <form method="post" asp-action="DeleteCost" asp-route-id="@o.Asset.Id" class="d-inline" onsubmit="return confirm('Remove this cost line?');">
+                                        <input type="hidden" name="costId" value="@l.Id" />
+                                        <button type="submit" class="btn btn-sm btn-link text-danger" aria-label="Remove"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    <aside>
+        @if (Model.CanEdit)
+        {
+            <form method="post" asp-action="SaveCost" enctype="multipart/form-data" class="panel" id="cost-form">
+                <h2 class="panel-title mb-2">@(editing ? "Edit cost line" : "Add a cost")</h2>
+                <input type="hidden" name="Id" value="@f.Id" />
+                <input type="hidden" name="AssetId" value="@o.Asset.Id" />
+                <div class="btn-group w-100 mb-2" role="group" aria-label="Budget or actual">
+                    @foreach (var k in Enum.GetValues<CostKind>())
+                    {
+                        <input type="radio" class="btn-check" name="Kind" id="kind-@k" value="@k" checked="@(f.Kind == k)" />
+                        <label class="btn btn-outline-primary btn-sm" for="kind-@k">@(k == CostKind.Budget ? "Budget estimate" : "Actual cost")</label>
+                    }
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small mb-1" for="cost-cat">Category</label>
+                    @{
+                        // A property to let records running costs; a property for sale records development costs; both: everything.
+                        var costPurpose = RealEstateERP.Core.Common.PropertyRules.Effective(o.Asset.Purpose, o.Asset.Type);
+                        var allowed = Enum.GetValues<CostCategory>().Where(c => costPurpose switch
+                        {
+                            PropertyPurpose.Let => RealEstateERP.Core.Common.CostingRules.IsRunningCost(c),
+                            PropertyPurpose.Sell => RealEstateERP.Core.Common.CostingRules.IsDevelopmentCost(c),
+                            _ => true
+                        }).ToList();
+                        var chosen = allowed.Contains(f.Category) ? f.Category : (costPurpose == PropertyPurpose.Let ? CostCategory.Repairs : allowed.First());
+                    }
+                    <select id="cost-cat" name="Category" class="form-select form-select-sm">
+                        @foreach (var g in allowed.GroupBy(RealEstateERP.Core.Common.CostingRules.Group))
+                        {
+                            <optgroup label="@g.Key.Display()">@foreach (var c in g) { <option value="@c" selected="@(chosen == c)">@c.Display()</option> }</optgroup>
+                        }
+                    </select>
+                </div>
+                <div class="mb-2"><label class="form-label small mb-1" for="cost-desc">Description</label><input id="cost-desc" name="Description" value="@f.Description" class="form-control form-control-sm" required maxlength="200" placeholder="@(RealEstateERP.Core.Common.PropertyRules.Effective(o.Asset.Purpose, o.Asset.Type) == PropertyPurpose.Let ? "e.g. Plumbing repair, H3" : "e.g. Murram access roads")" /></div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><label class="form-label small mb-1" for="cost-amount">Amount (KES)</label><input id="cost-amount" name="Amount" value="@(f.Amount > 0 ? f.Amount.ToString("0.##") : "")" class="form-control form-control-sm" inputmode="decimal" required /></div>
+                    <div class="col-6"><label class="form-label small mb-1" for="cost-date">Date</label><input id="cost-date" name="Date" type="date" value="@f.Date?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" /></div>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small mb-1" for="cost-unit">Applies to</label>
+                    <select id="cost-unit" name="UnitId" class="form-select form-select-sm">
+                        <option value="">@(RealEstateERP.Core.Common.PropertyRules.Effective(o.Asset.Purpose, o.Asset.Type) == PropertyPurpose.Let ? "Whole estate (shared)" : "Whole project (shared)")</option>
+                        @foreach (var u in o.Units) { <option value="@u.UnitId" selected="@(f.UnitId == u.UnitId)">@u.UnitNumber only</option> }
+                    </select>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6"><input name="Supplier" value="@f.Supplier" class="form-control form-control-sm" placeholder="Supplier" aria-label="Supplier" maxlength="150" /></div>
+                    <div class="col-6"><input name="Reference" value="@f.Reference" class="form-control form-control-sm" placeholder="Invoice / ref" aria-label="Reference" maxlength="100" /></div>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label small mb-1" for="cost-receipt">Receipt @(f.HasReceipt ? "(replace)" : "(optional)")</label>
+                    <input id="cost-receipt" name="receipt" type="file" accept=".pdf,.jpg,.jpeg,.png" class="form-control form-control-sm" />
+                </div>
+                <textarea name="Notes" class="form-control form-control-sm mb-2" rows="2" placeholder="Notes" aria-label="Notes" maxlength="500">@f.Notes</textarea>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-sm btn-primary flex-grow-1">@(editing ? "Save changes" : "Add")</button>
+                    @if (editing) { <a asp-action="Costs" asp-route-id="@o.Asset.Id" class="btn btn-sm btn-outline-secondary">Cancel</a> }
+                </div>
+                <p class="form-text mb-0">Budget lines are your estimates; actual costs need the date paid. Letting costs (agent and management fees) reduce rental income rather than adding to the development cost.</p>
+            </form>
+        }
+    </aside>
+</div>

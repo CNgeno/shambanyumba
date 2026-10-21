@@ -1,0 +1,52 @@
+@model IReadOnlyList<ProjectSummaryRow>
+@{
+    ViewData["Title"] = "Costs and margins";
+    var withCosts = Model.Where(r => r.HasCosts).ToList();
+}
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">Costs and margins</h1>
+        <p class="page-sub">What each property cost to buy and develop, what it earns, and the margin you're making</p>
+    </div>
+</div>
+
+@if (withCosts.Count > 0)
+{
+    <section class="stat-strip mb-3">
+        <div class="stat"><span class="stat-label">Expected total cost</span><span class="stat-value">@withCosts.Sum(r => r.ExpectedTotal).Kes()</span><span class="stat-note">@withCosts.Sum(r => r.ActualTotal).Kes() spent so far</span></div>
+        <div class="stat"><span class="stat-label">Projected sales revenue</span><span class="stat-value">@withCosts.Sum(r => r.ProjectedSalesRevenue).Kes()</span></div>
+        <div class="stat"><span class="stat-label">Annual rent roll</span><span class="stat-value">@withCosts.Sum(r => r.AnnualRentRoll).Kes()</span></div>
+        <div class="stat"><span class="stat-label">Projects with costs</span><span class="stat-value">@withCosts.Count</span><span class="stat-note">of @Model.Count properties</span></div>
+    </section>
+}
+
+<section class="panel p-0">
+    @if (Model.Count == 0)
+    {
+        <div class="empty-state"><i class="bi bi-buildings" aria-hidden="true"></i><h2 class="h6">No properties yet</h2><p>Add a property first.</p></div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr><th>Property</th><th class="text-end">Budget</th><th class="text-end">Spent</th><th class="text-end">Expected cost</th><th class="text-end">Sales revenue</th><th class="text-end">Margin</th><th class="text-end">Rent roll</th><th class="text-end">Yield</th></tr></thead>
+                <tbody>
+                @foreach (var r in Model)
+                {
+                    <tr>
+                        <td><a asp-action="Project" asp-route-id="@r.AssetId" class="row-link fw-semibold">@r.Name</a><div class="small text-body-secondary">@r.Type.Display(), @r.Units units@(r.HasCosts ? "" : ", no costs yet")</div></td>
+                        <td class="text-end">@(r.BudgetTotal > 0 ? r.BudgetTotal.ToString("N0") : "—")</td>
+                        <td class="text-end">@(r.ActualTotal > 0 ? r.ActualTotal.ToString("N0") : "—")</td>
+                        <td class="text-end fw-semibold">@(r.ExpectedTotal > 0 ? r.ExpectedTotal.ToString("N0") : "—")</td>
+                        <td class="text-end">@(r.ProjectedSalesRevenue > 0 ? r.ProjectedSalesRevenue.ToString("N0") : "—")</td>
+                        <td class="text-end"><partial name="_MarginBadge" model="r.HasCosts ? r.ProjectedMarginPercent : null" /></td>
+                        <td class="text-end">@(r.AnnualRentRoll > 0 ? r.AnnualRentRoll.ToString("N0") : "—")</td>
+                        <td class="text-end">@(r.HasCosts && r.GrossYield is decimal y ? $"{y:0.#}%" : "—")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+<p class="small text-body-secondary mt-2">Expected cost is the budget, or the actual spend where it's already higher. Margins and yields are management figures, not tax accounts.</p>

@@ -1,0 +1,93 @@
+@model BusinessProfileForm
+@{
+    ViewData["Title"] = "Business settings";
+}
+<div class="page-head"><h1 class="page-title">Business settings</h1></div>
+
+<div class="settings-grid">
+    <partial name="_SettingsNav" />
+    <div>
+        <section class="panel mb-3">
+            <h2 class="panel-title mb-3">Business details</h2>
+            <p class="small text-body-secondary">Shown on invoices, receipts and statements.</p>
+            <form method="post" asp-action="Index" class="form-narrow" novalidate>
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger small" role="alert"></div>
+                <div class="row g-3">
+                    <div class="col-sm-8">
+                        <label asp-for="Name" class="form-label"></label>
+                        <input asp-for="Name" class="form-control" />
+                        <span asp-validation-for="Name" class="invalid-feedback d-block"></span>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input asp-for="ManagesForOthers" class="form-check-input" />
+                            <label asp-for="ManagesForOthers" class="form-check-label"></label>
+                        </div>
+                        <div class="form-text">Adds owners, management contracts, owner statements and agent logins (Agent and Enterprise plans, or during the trial). Letting and selling follow your properties.</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <label asp-for="Email" class="form-label"></label>
+                        <input asp-for="Email" class="form-control" type="email" />
+                        <span asp-validation-for="Email" class="invalid-feedback d-block"></span>
+                    </div>
+                    <div class="col-sm-6">
+                        <label asp-for="Phone" class="form-label"></label>
+                        <input asp-for="Phone" class="form-control" type="tel" />
+                    </div>
+                    <div class="col-sm-8">
+                        <label asp-for="PhysicalAddress" class="form-label"></label>
+                        <input asp-for="PhysicalAddress" class="form-control" />
+                    </div>
+                    <div class="col-sm-4">
+                        <label asp-for="KraPin" class="form-label"></label>
+                        <input asp-for="KraPin" class="form-control text-uppercase" />
+                        <span asp-validation-for="KraPin" class="invalid-feedback d-block"></span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary mt-3">Save details</button>
+            </form>
+        </section>
+
+        <section class="panel">
+            <h2 class="panel-title mb-3">Logo</h2>
+            <div class="d-flex flex-wrap align-items-center gap-3">
+                <div class="logo-preview">
+                    @if (Model.HasLogo) { <img src="@Url.Action("LogoImage")" alt="Current logo" /> }
+                    else { <span class="small text-body-secondary">No logo</span> }
+                </div>
+                <form method="post" asp-action="Logo" enctype="multipart/form-data" class="d-flex flex-wrap gap-2 align-items-center">
+                    <input type="file" name="file" accept=".png,.jpg,.jpeg" class="form-control form-control-sm" style="max-width: 260px" aria-label="Logo file" />
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Upload</button>
+                </form>
+                @if (Model.HasLogo)
+                {
+                    <form method="post" asp-action="Logo" class="m-0">
+                        <input type="hidden" name="remove" value="true" />
+                        <button type="submit" class="btn btn-sm btn-link text-danger">Remove</button>
+                    </form>
+                }
+            </div>
+            <p class="form-text mb-0 mt-2">PNG or JPG, up to 2 MB. A wide logo on a white background looks best on documents.</p>
+        </section>
+    </div>
+@if (ViewData["Referral"] is CustomerReferral referral)
+{
+    var refLink = $"https://shambanyumba.com/?ref={referral.Code}";
+    var refText = Uri.EscapeDataString($"I manage my rentals with ShambaNyumba. Try it free for 2 months: {refLink}");
+    <section class="panel mt-3 referral-panel">
+        <h2 class="panel-title mb-1"><i class="bi bi-gift me-1"></i>Refer a landlord, get a month free</h2>
+        <p class="small text-body-secondary">Share your link. When a landlord, agency or developer you refer subscribes, your subscription runs a month longer, every time.</p>
+        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+            <code id="ref-link">@refLink</code>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard && navigator.clipboard.writeText(document.getElementById('ref-link').textContent); this.textContent='Copied';">Copy</button>
+            <a class="btn btn-sm btn-success" href="https://wa.me/?text=@refText" target="_blank" rel="noopener"><i class="bi bi-whatsapp me-1"></i>Share on WhatsApp</a>
+        </div>
+        <p class="small mb-0">Your code: <strong>@referral.Code</strong> · referred: <strong>@referral.Referred</strong> · subscribed so far: <strong>@referral.Paying</strong> (one free month each)</p>
+    </section>
+}
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,61 @@
+@model SelectBusinessViewModel
+@{
+    ViewData["Title"] = "Choose a business";
+    Layout = "_LayoutAuth";
+}
+<h1 class="auth-title">Choose a business</h1>
+<p class="auth-sub">Pick the business you want to work in. You can switch at any time.</p>
+
+@if (TempData["Error"] is string error) { <div class="alert alert-danger small">@error</div> }
+
+@if (Model.Invitations.Count > 0)
+{
+    <h2 class="h6 mt-2">Invitations</h2>
+    <div class="business-list mb-4">
+        @foreach (var i in Model.Invitations)
+        {
+            <form method="post" asp-controller="Invitations" asp-action="AcceptPending">
+                <input type="hidden" name="id" value="@i.Id" />
+                <button type="submit" class="business-option is-invite">
+                    <span>
+                        <span class="d-block fw-semibold">@i.BusinessName</span>
+                        <span class="d-block small text-body-secondary">You're invited as @i.Role</span>
+                    </span>
+                    <span class="btn btn-sm btn-primary">Accept</span>
+                </button>
+            </form>
+        }
+    </div>
+}
+
+@if (Model.Businesses.Count > 0)
+{
+    <div class="business-list mb-4">
+        @foreach (var b in Model.Businesses)
+        {
+            <form method="post" asp-action="Choose">
+                <input type="hidden" name="businessId" value="@b.BusinessId" />
+                <button type="submit" class="business-option">
+                    <span>
+                        <span class="d-block fw-semibold">@b.BusinessName</span>
+                        <span class="d-block small text-body-secondary">@b.Type.Display()</span>
+                    </span>
+                    <span class="role-badge">@RealEstateERP.Core.Common.RoleLabels.For(b.Role, b.Type)</span>
+                </button>
+            </form>
+        }
+    </div>
+}
+
+@if (User.IsInRole(RealEstateERP.Core.Constants.AppRoles.SuperAdmin))
+{
+    <a asp-controller="AdminSubscriptions" asp-action="Index" class="btn btn-primary w-100 mb-2"><i class="bi bi-shield-check me-1"></i>Open platform admin</a>
+}
+<a asp-action="Create" class="btn btn-outline-primary w-100"><i class="bi bi-plus-lg me-1"></i>Create @(Model.Businesses.Count > 0 ? "another" : "a") business</a>
+
+<div class="d-flex justify-content-center gap-3 mt-3 small">
+    <a asp-area="Identity" asp-page="/Account/Manage/Index">Account settings</a>
+    <form method="post" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="/" class="m-0">
+        <button type="submit" class="btn btn-link btn-sm p-0 text-body-secondary">Sign out</button>
+    </form>
+</div>

@@ -1,0 +1,22 @@
+@model IReadOnlyList<NotificationRow>
+@{ ViewData["Title"] = "Notifications"; }
+<div class="page-head"><div class="me-auto"><h1 class="page-title">Notifications</h1><p class="page-sub">Leads, automatic runs, expiring leases and approvals for this business</p></div></div>
+<section class="panel p-0">
+    @if (Model.Count == 0) { <div class="empty-state"><i class="bi bi-bell" aria-hidden="true"></i><h2 class="h6">Nothing yet</h2><p>New leads, automatic invoicing results and approvals will appear here.</p></div> }
+    else
+    {
+        <ul class="attention-list">
+            @foreach (var n in Model)
+            {
+                <li class="@(n.IsUnread ? "is-unread" : "")">
+                    <i class="bi @(n.Type switch { NotificationType.Lead => "bi-person-lines-fill", NotificationType.Automation => "bi-lightning-charge", NotificationType.LeaseExpiring => "bi-calendar-x", NotificationType.CreditsApproved => "bi-coin", NotificationType.SubscriptionApproved => "bi-credit-card", _ => "bi-info-circle" })"></i>
+                    <span>
+                        @if (n.Url is not null) { <a href="@n.Url" class="fw-semibold row-link">@n.Title</a> } else { <span class="fw-semibold">@n.Title</span> }
+                        @if (n.Body is not null) { <span class="small text-body-secondary d-block">@n.Body</span> }
+                    </span>
+                    <span class="ms-auto small text-body-secondary text-nowrap">@n.CreatedAtUtc.ToEatDateTime()</span>
+                </li>
+            }
+        </ul>
+    }
+</section>

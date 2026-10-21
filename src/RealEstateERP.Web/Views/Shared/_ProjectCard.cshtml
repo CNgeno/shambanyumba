@@ -1,0 +1,45 @@
+@model ProjectCard
+@{
+    var c = Model;
+}
+<article class="panel project-card">
+    <div class="d-flex align-items-start gap-2 mb-2">
+        <div class="me-auto">
+            <a asp-controller="Properties" asp-action="Details" asp-route-id="@c.AssetId" class="row-link fw-semibold">@c.Name</a>
+            <div class="small text-body-secondary">@c.Type.Display()@(c.Acres is decimal ac ? $", {ac:0.##} acres" : "")@(c.Title is null ? "" : $", {c.Title}")</div>
+        </div>
+        <partial name="_MarginBadge" model="c.HasCosts && c.Plots > 0 ? c.MarginPercent : null" />
+    </div>
+
+    @if (c.Plots == 0)
+    {
+        <p class="small text-body-secondary mb-2">@(c.HasCosts ? "Costs recorded. Next: create the plots." : "Next: enter the purchase price and a budget, then create the plots.")</p>
+    }
+    else
+    {
+        <div class="plot-bar mb-1" role="img" aria-label="@c.Sold sold, @c.Reserved reserved, @c.Available available of @c.Plots plots">
+            <span class="pb-sold" style="width: @(c.Plots == 0 ? 0 : c.Sold * 100 / c.Plots)%"></span>
+            <span class="pb-reserved" style="width: @(c.Plots == 0 ? 0 : c.Reserved * 100 / c.Plots)%"></span>
+        </div>
+        <div class="small mb-2"><strong>@c.Sold</strong> sold · <strong>@c.Reserved</strong> reserved · <strong>@c.Available</strong> available of @c.Plots plots</div>
+    }
+
+    <dl class="project-figures mb-2">
+        <div><dt>Expected cost</dt><dd>@c.ExpectedCost.Kes()</dd></div>
+        <div><dt>Spent</dt><dd>@c.Spent.Kes()</dd></div>
+        <div><dt>Collected</dt><dd>@c.Collected.Kes()</dd></div>
+        <div><dt>Overdue</dt><dd class="@(c.Overdue > 0 ? "text-danger fw-semibold" : "")">@c.Overdue.Kes()</dd></div>
+    </dl>
+    @if (c.Plots > 0 && c.HasCosts)
+    {
+        <p class="small mb-2">
+            @if (c.UnitsToBreakEven == 0) { <span class="text-success"><i class="bi bi-check2-circle me-1"></i>Sales agreed cover the expected cost.</span> }
+            else if (c.UnitsToBreakEven is int n) { <span><i class="bi bi-flag me-1"></i>Sell @n more to break even.</span> }
+            else { <span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Unsold stock won't cover the expected cost.</span> }
+        </p>
+    }
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-controller="Costing" asp-action="Project" asp-route-id="@c.AssetId" class="btn btn-sm btn-outline-primary">Costs and margins</a>
+        @if (c.Available > 0) { <a asp-controller="Sales" asp-action="Create" class="btn btn-sm btn-outline-primary">New sale</a> }
+    </div>
+</article>

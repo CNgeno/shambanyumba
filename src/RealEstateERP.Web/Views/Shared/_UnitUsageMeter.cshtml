@@ -1,0 +1,17 @@
+@model UnitUsage
+@if (Model.Limit is int limit)
+{
+    var tone = Model.Percent >= 100 ? "is-full" : Model.Percent >= 80 ? "is-near" : "";
+    <div class="usage-meter @tone">
+        <div class="d-flex flex-wrap justify-content-between gap-2 small mb-1">
+            <span><strong>@Model.Used</strong> of @limit units used on @Model.PlanName</span>
+            @if (Model.Percent >= 80)
+            {
+                <a asp-controller="Subscription" asp-action="Renew">Upgrade plan</a>
+            }
+        </div>
+        <div class="progress" role="progressbar" aria-label="Units used" aria-valuenow="@Model.Used" aria-valuemin="0" aria-valuemax="@limit">
+            <div class="progress-bar" style="width: @(Model.Percent)%"></div>
+        </div>
+    </div>
+}

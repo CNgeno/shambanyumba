@@ -1,0 +1,76 @@
+@model RemittancesIndexViewModel
+@{
+    ViewData["Title"] = "Owner remittances";
+    var monthDate = DateOnly.ParseExact(Model.Month + "-01", "yyyy-MM-dd");
+    var done = Model.Remittances.Where(r => r.Status != RemittanceStatus.Cancelled).Select(r => r.ContractId).ToHashSet();
+    var todo = Model.ActiveContracts.Where(c => !done.Contains(c.Id)).ToList();
+    var live = Model.Remittances.Where(r => r.Status != RemittanceStatus.Cancelled).ToList();
+}
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">Owner remittances</h1>
+        <p class="page-sub">Monthly statements: what you collected for each owner, your commission, and what you pay them</p>
+    </div>
+    <a asp-action="AgentCommissions" asp-route-month="@Model.Month" class="btn btn-outline-primary">Agent commission</a>
+    <form method="get" class="d-flex gap-2">
+        <input type="month" name="month" value="@Model.Month" class="form-control" aria-label="Month" onchange="this.form.submit()" />
+    </form>
+</div>
+
+<section class="stat-strip mb-3">
+    <div class="stat"><span class="stat-label">Collected for owners</span><span class="stat-value">@live.Sum(r => r.GrossCollections).Kes()</span><span class="stat-note">@monthDate.ToString("MMMM yyyy")</span></div>
+    <div class="stat"><span class="stat-label">Your commission</span><span class="stat-value">@live.Sum(r => r.CommissionAmount).Kes()</span></div>
+    <div class="stat"><span class="stat-label">Paid to owners</span><span class="stat-value">@live.Where(r => r.Status == RemittanceStatus.Paid).Sum(r => r.NetPayable).Kes()</span></div>
+    <div class="stat"><span class="stat-label">Still to pay</span><span class="stat-value">@live.Where(r => r.Status != RemittanceStatus.Paid).Sum(r => r.NetPayable).Kes()</span><span class="stat-note">@todo.Count contract(s) not prepared</span></div>
+</section>
+
+@if (todo.Count > 0 && Model.CanEdit)
+{
+    <section class="panel p-0 mb-3">
+        <div class="units-toolbar"><h2 class="panel-title">To prepare for @monthDate.ToString("MMMM yyyy")</h2></div>
+        <ul class="attention-list">
+            @foreach (var c in todo)
+            {
+                <li>
+                    <span class="fw-semibold">@c.OwnerName</span>
+                    <span class="small text-body-secondary">@c.ContractNumber, @(c.PropertyNames ?? "no properties")</span>
+                    <a asp-action="Prepare" asp-route-contractId="@c.Id" asp-route-month="@Model.Month" class="btn btn-sm btn-primary ms-auto">Prepare</a>
+                </li>
+            }
+        </ul>
+    </section>
+}
+
+<section class="panel p-0">
+    <div class="units-toolbar">
+        <h2 class="panel-title me-auto">Statements</h2>
+        <nav class="filter-chips" aria-label="Filter by status">
+            <a asp-action="Index" asp-route-month="@Model.Month" class="filter-chip @(Model.Status is null ? "is-active" : "")">All</a>
+            @foreach (var s in Enum.GetValues<RemittanceStatus>()) { <a asp-action="Index" asp-route-month="@Model.Month" asp-route-status="@s" class="filter-chip @(Model.Status == s ? "is-active" : "")">@s</a> }
+        </nav>
+    </div>
+    @if (Model.Remittances.Count == 0) { <p class="text-body-secondary p-4 mb-0">No statements for this month yet.</p> }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr><th>Statement</th><th>Owner</th><th class="text-end">Collected</th><th class="text-end">Commission</th><th class="text-end">Payable</th><th>Due by</th><th>Status</th></tr></thead>
+                <tbody>
+                @foreach (var r in Model.Remittances)
+                {
+                    var late = r.Status is RemittanceStatus.Draft or RemittanceStatus.Approved && r.DueBy < DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3));
+                    <tr>
+                        <td><a asp-action="Details" asp-route-id="@r.Id" class="row-link fw-semibold">@r.RemittanceNumber</a><div class="small text-body-secondary">@r.ContractNumber</div></td>
+                        <td>@r.OwnerName</td>
+                        <td class="text-end">@r.GrossCollections.Kes()</td>
+                        <td class="text-end">@r.CommissionAmount.Kes()</td>
+                        <td class="text-end fw-semibold">@r.NetPayable.Kes()</td>
+                        <td class="text-nowrap @(late ? "text-danger fw-semibold" : "")">@r.DueBy?.ToString("d MMM yyyy")</td>
+                        <td><partial name="_RemittanceStatusChip" model="r.Status" /></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

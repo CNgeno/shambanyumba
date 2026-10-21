@@ -1,0 +1,65 @@
+@model ContractForm
+@{
+    var isNew = Model.Id is null;
+    ViewData["Title"] = isNew ? "New management contract" : $"Edit {Model.ContractNumber}";
+}
+<a asp-action="@(isNew ? "Index" : "Details")" asp-route-id="@Model.Id" class="back-link"><i class="bi bi-arrow-left"></i>@(isNew ? "Contracts" : Model.ContractNumber)</a>
+<h1 class="page-title mb-4">@ViewData["Title"]</h1>
+<form method="post" asp-action="Save" class="form-narrow" id="contract-form" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <input type="hidden" asp-for="Id" />
+    <section class="panel mb-3">
+        <div class="row g-3">
+            <div class="col-sm-6">
+                <label asp-for="OwnerId" class="form-label"></label>
+                <select asp-for="OwnerId" class="form-select" disabled="@(Model.Status == ContractStatus.Active)">
+                    <option value="">Select the owner...</option>
+                    @foreach (var o in Model.Owners) { <option value="@o.Id">@o.FullName</option> }
+                </select>
+                @if (Model.Status == ContractStatus.Active) { <input type="hidden" asp-for="OwnerId" /> }
+                <span asp-validation-for="OwnerId" class="invalid-feedback d-block"></span>
+                @if (Model.Owners.Count == 0) { <div class="form-text"><a asp-controller="Owners" asp-action="Create">Add an owner first</a></div> }
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="AgentId" class="form-label"></label>
+                <select asp-for="AgentId" class="form-select">
+                    <option value="">No agent</option>
+                    @foreach (var a in Model.Agents) { <option value="@a.Id">@a.FullName</option> }
+                </select>
+            </div>
+            <div class="col-sm-6"><label asp-for="StartDate" class="form-label"></label><input asp-for="StartDate" type="date" class="form-control" /></div>
+            <div class="col-sm-6"><label asp-for="EndDate" class="form-label"></label><input asp-for="EndDate" type="date" class="form-control" /><div class="form-text">Leave blank if it runs until ended.</div></div>
+        </div>
+    </section>
+    <section class="panel mb-3">
+        <h2 class="panel-title mb-3">Commission and payment</h2>
+        <div class="row g-3">
+            <div class="col-12">
+                @foreach (var t in Enum.GetValues<CommissionType>())
+                {
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="CommissionType" id="ct-@t" value="@t" checked="@(Model.CommissionType == t)" />
+                        <label class="form-check-label" for="ct-@t">@t.Display()</label>
+                    </div>
+                }
+            </div>
+            <div class="col-sm-6" data-for="PercentOfCollections"><label asp-for="CommissionPercent" class="form-label"></label><input asp-for="CommissionPercent" class="form-control" inputmode="decimal" />
+                <div class="form-text">Of rent and charges actually collected each month. Deposits are never commissioned.</div></div>
+            <div class="col-sm-6" data-for="FixedMonthly"><label asp-for="FixedMonthlyFee" class="form-label"></label><input asp-for="FixedMonthlyFee" class="form-control" inputmode="decimal" /></div>
+            <div class="col-sm-6"><label asp-for="RemittanceDay" class="form-label"></label><input asp-for="RemittanceDay" class="form-control" inputmode="numeric" />
+                <div class="form-text">Day of the next month the owner is paid by.</div></div>
+            <div class="col-12"><label asp-for="Notes" class="form-label"></label><textarea asp-for="Notes" class="form-control" rows="2"></textarea></div>
+        </div>
+    </section>
+    <button type="submit" class="btn btn-primary">@(isNew ? "Create draft contract" : "Save changes")</button>
+</form>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var f = document.getElementById('contract-form');
+            function sync() { var t = f.querySelector('input[name="CommissionType"]:checked').value; f.querySelectorAll('[data-for]').forEach(function (el) { el.hidden = el.dataset.for !== t; }); }
+            f.querySelectorAll('input[name="CommissionType"]').forEach(function (r) { r.addEventListener('change', sync); }); sync();
+        })();
+    </script>
+}

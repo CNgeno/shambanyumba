@@ -1,0 +1,73 @@
+@model TenantStatementViewModel
+@{
+    var s = Model.Statement;
+    var t = s.Tenant;
+    ViewData["Title"] = $"Statement, {t.FullName}";
+    string Amount(decimal v) => v == 0 ? "" : v.ToString("N2");
+    string Bal(decimal v) => v < 0 ? $"{-v:N2} CR" : v.ToString("N2");
+}
+<div class="no-print">
+    <a asp-action="Details" asp-route-id="@t.Id" class="back-link"><i class="bi bi-arrow-left"></i>@t.FullName</a>
+    <div class="page-head">
+        <h1 class="page-title me-auto">Statement</h1>
+        <form method="get" class="d-flex flex-wrap align-items-end gap-2">
+            <div><label for="st-from" class="form-label small mb-1">From</label><input id="st-from" name="from" type="date" value="@Model.From?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" /></div>
+            <div><label for="st-to" class="form-label small mb-1">To</label><input id="st-to" name="to" type="date" value="@Model.To?.ToString("yyyy-MM-dd")" class="form-control form-control-sm" /></div>
+            <button type="submit" class="btn btn-sm btn-outline-primary">Show</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer me-1"></i>Print</button>
+            <a asp-action="StatementPdf" asp-route-id="@t.Id" asp-route-from="@Model.From?.ToString("yyyy-MM-dd")" asp-route-to="@Model.To?.ToString("yyyy-MM-dd")" class="btn btn-sm btn-outline-secondary" title="Uses 2 credits"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</a>
+        </form>
+    </div>
+</div>
+
+<article class="invoice-doc panel statement-doc">
+    <header class="invoice-head">
+        <div>
+            <div class="invoice-biz">@Model.BusinessName</div>
+            <div class="small text-body-secondary">Tenant statement</div>
+        </div>
+        <dl class="invoice-meta">
+            <dt>Tenant</dt><dd>@t.FullName</dd>
+            <dt>Period</dt><dd>@(s.From?.ToString("d MMM yyyy") ?? "Start") to @s.To.ToString("d MMM yyyy")</dd>
+            <dt>Balance</dt><dd>@Bal(s.ClosingBalance)</dd>
+        </dl>
+    </header>
+
+    <div class="table-responsive">
+        <table class="table invoice-lines mb-0">
+            <thead><tr><th>Date</th><th>Reference</th><th>Details</th><th class="text-end">Charged</th><th class="text-end">Paid</th><th class="text-end">Balance</th></tr></thead>
+            <tbody>
+                @if (s.From is not null)
+                {
+                    <tr class="text-body-secondary"><td colspan="5">Balance brought forward</td><td class="text-end">@Bal(s.OpeningBalance)</td></tr>
+                }
+                @if (s.Entries.Count == 0)
+                {
+                    <tr><td colspan="6" class="text-body-secondary">No activity in this period.</td></tr>
+                }
+                @foreach (var e in s.Entries)
+                {
+                    <tr class="@(e.Type is StatementEntryType.Reversal ? "text-danger" : e.Type is StatementEntryType.DepositRefund ? "text-body-secondary" : "")">
+                        <td class="text-nowrap">@e.Date.ToString("d MMM yyyy")</td>
+                        <td class="text-nowrap">
+                            @if (e.LinkController is not null && e.LinkId is int id) { <a asp-controller="@e.LinkController" asp-action="Details" asp-route-id="@id">@e.Reference</a> }
+                            else { @e.Reference }
+                        </td>
+                        <td>@e.Description</td>
+                        <td class="text-end">@Amount(e.Debit)</td>
+                        <td class="text-end">@Amount(e.Credit)</td>
+                        <td class="text-end">@Bal(e.Balance)</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr><td colspan="3" class="text-end">Totals</td><td class="text-end">@s.TotalDebits.ToString("N2")</td><td class="text-end">@s.TotalCredits.ToString("N2")</td><td></td></tr>
+                <tr class="invoice-total"><td colspan="5" class="text-end">@(s.ClosingBalance >= 0 ? "Amount owing (KES)" : "In credit (KES)")</td><td class="text-end">@Bal(s.ClosingBalance)</td></tr>
+            </tfoot>
+        </table>
+    </div>
+    @if (Model.To is null && s.ClosingBalance != Model.Balance.Net)
+    {
+        <p class="small text-danger mt-3 mb-0 no-print">Note: this statement doesn't match the account balance (@Bal(Model.Balance.Net)). Please report it.</p>
+    }
+</article>

@@ -1,0 +1,24 @@
+@model PublicListingCard
+<a class="listing-card" href="/marketplace/@Model.Id/@Model.Slug">
+    <div class="listing-photo">
+        @if (Model.CoverPhotoId is int photo)
+        {
+            <img src="/marketplace/photo/@photo" alt="" loading="lazy" />
+        }
+        else
+        {
+            <div class="listing-photo-empty" aria-hidden="true"><i class="bi @(Model.UnitType == UnitType.Plot ? "bi-map" : "bi-building")"></i></div>
+        }
+        <span class="listing-type @(Model.Type == ListingType.Sale ? "is-sale" : "")">@Model.Type.Display()</span>
+    </div>
+    <div class="listing-body">
+        <div class="listing-price">KES @Model.Price.ToString("N0")@if (Model.Type == ListingType.Rent) { <small> / month</small> }</div>
+        <h3 class="listing-title">@Model.Title</h3>
+        <div class="listing-meta"><i class="bi bi-geo-alt"></i>@Model.Location@(Model.County is null ? "" : $", {Model.County}")</div>
+        <div class="listing-facts">
+            @if (Model.UnitType == UnitType.Plot && Model.SizeSqm is decimal sq) { <span><i class="bi bi-arrows-fullscreen"></i>@sq.ToString("N0") sqm</span> }
+            @if (Model.Bedrooms is int b) { <span><i class="bi bi-door-closed"></i>@(b == 0 ? "Studio" : $"{b} bed")</span> }
+            @if (Model.Bathrooms is int ba && ba > 0) { <span><i class="bi bi-droplet"></i>@ba bath</span> }
+        </div>
+    </div>
+</a>

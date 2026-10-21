@@ -1,0 +1,10 @@
+@using Microsoft.AspNetCore.Hosting
+@using Microsoft.Extensions.Hosting
+@inject IWebHostEnvironment Env
+@if (Env.IsDevelopment())
+{
+    <div class="demo-hint">
+        <i class="bi bi-wrench-adjustable me-1"></i>Development: emails aren't really sent.
+        <a href="/dev/mailbox" target="_blank">Open the dev mailbox</a> to read them.
+    </div>
+}

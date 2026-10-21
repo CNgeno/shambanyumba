@@ -1,0 +1,28 @@
+@model ProjectOverview
+@{
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+    string Css(string a) => string.Equals(action, a, StringComparison.OrdinalIgnoreCase) ? "is-active" : "";
+    var purpose = RealEstateERP.Core.Common.PropertyRules.Effective(Model.Asset.Purpose, Model.Asset.Type);
+    // The sidebar shows the group for this property: running costs of an estate are letting work.
+    ViewData["Workspace"] = purpose switch { PropertyPurpose.Let => "Letting", PropertyPurpose.Sell => "Selling", _ => null };
+}
+<a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Costs and margins</a>
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">@Model.Asset.Name</h1>
+        <p class="page-sub">@Model.Asset.Type.Display(), @Model.Units.Count units. <a asp-controller="Properties" asp-action="Details" asp-route-id="@Model.Asset.Id">Open the property</a></p>
+    </div>
+</div>
+<nav class="filter-chips mb-3" aria-label="Project sections">
+    @if (purpose == PropertyPurpose.Let)
+    {
+        <a asp-action="Project" asp-route-id="@Model.Asset.Id" class="filter-chip @Css("Project")">Income and yield</a>
+        <a asp-action="Costs" asp-route-id="@Model.Asset.Id" class="filter-chip @Css("Costs")">Running costs</a>
+    }
+    else
+    {
+        <a asp-action="Project" asp-route-id="@Model.Asset.Id" class="filter-chip @Css("Project")">Margins</a>
+        <a asp-action="Costs" asp-route-id="@Model.Asset.Id" class="filter-chip @Css("Costs")">Budget and costs</a>
+        <a asp-action="Setup" asp-route-id="@Model.Asset.Id" class="filter-chip @Css("Setup")">Purchase and subdivision</a>
+    }
+</nav>

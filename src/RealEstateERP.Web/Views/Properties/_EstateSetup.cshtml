@@ -1,0 +1,46 @@
+@model EstatePanelModel
+@{
+    var setup = Model.Setup;
+    string? ActionFor(string key) => key switch
+    {
+        "units" => Url.Action("Bulk", "Units", new { assetId = Model.AssetId }),
+        "photos" => "#estate-photos",
+        "charges" => "#estate-charges",
+        "readings" => Model.Charges.FirstOrDefault(c => c.IsMetered) is { } m ? Url.Action("Sheet", "Readings", new { assetId = Model.AssetId, chargeId = m.ChargeDefinitionId }) : null,
+        "leases" => Url.Action("Create", "Leases"),
+        "invoices" => Url.Action("Generate", "Invoices"),
+        "listing" => Url.Action("Automation", "BusinessSettings"),
+        _ => null
+    };
+    string LabelFor(string key) => key switch
+    {
+        "units" => "Add units", "photos" => "Add photos", "charges" => "Set charges", "readings" => "Enter readings",
+        "leases" => "Create a lease", "invoices" => "Generate invoices", "listing" => "Set up listing", _ => "Open"
+    };
+}
+@if (!setup.Complete)
+{
+    <section class="panel mb-3" aria-labelledby="estate-setup-title">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <h2 class="panel-title me-auto" id="estate-setup-title">Set up this estate</h2>
+            <span class="small text-body-secondary">@setup.Steps.Count(s => s.Done && !s.Optional) of @setup.RequiredCount done</span>
+        </div>
+        <ol class="setup-steps">
+            @foreach (var step in setup.Steps)
+            {
+                var isNext = setup.Next?.Key == step.Key;
+                <li class="@(step.Done ? "is-done" : "") @(isNext ? "is-next" : "")">
+                    <span class="setup-mark" aria-hidden="true">@if (step.Done) { <i class="bi bi-check-lg"></i> }</span>
+                    <span class="me-auto">
+                        <span class="fw-semibold">@step.Title</span>@if (step.Optional) { <span class="small text-body-secondary"> (optional)</span> }
+                        <span class="small text-body-secondary d-block">@step.Description</span>
+                    </span>
+                    @if (!step.Done && Model.CanEdit && ActionFor(step.Key) is string url)
+                    {
+                        <a href="@url" class="btn btn-sm @(isNext ? "btn-primary" : "btn-outline-primary")">@LabelFor(step.Key)</a>
+                    }
+                </li>
+            }
+        </ol>
+    </section>
+}

@@ -1,0 +1,60 @@
+@model PenaltiesViewModel
+@{
+    ViewData["Title"] = "Late penalties";
+}
+<a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Arrears</a>
+<h1 class="page-title">Late penalties</h1>
+<p class="text-body-secondary mb-3">
+    Invoices still unpaid after their grace period (@Model.DefaultGraceDays days after the due date unless the unit sets its own).
+    The penalty is the unit's fixed late penalty if it has one, otherwise @Model.DefaultPercent.ToString("0.##")% of the overdue balance.
+    Each invoice can be penalised only once. Penalties are issued as separate invoices due in 7 days.
+</p>
+
+@if (Model.Candidates.Count == 0)
+{
+    <section class="panel empty-state">
+        <i class="bi bi-check2-circle" aria-hidden="true"></i>
+        <h2 class="h6">No penalties due</h2>
+        <p>Every overdue invoice is either within its grace period or already penalised.</p>
+    </section>
+}
+else
+{
+    <form method="post" asp-action="Penalties" id="penalty-form">
+        <section class="panel p-0 mb-3">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead><tr>
+                        <th style="width: 40px"><input type="checkbox" class="form-check-input" id="select-all" checked aria-label="Select all" /></th>
+                        <th>Invoice</th><th>Tenant</th><th>Due</th><th class="text-end">Days late</th><th class="text-end">Balance</th><th class="text-end">Penalty</th>
+                    </tr></thead>
+                    <tbody>
+                    @foreach (var c in Model.Candidates)
+                    {
+                        <tr>
+                            <td><input type="checkbox" class="form-check-input pick" name="invoiceIds" value="@c.InvoiceId" checked aria-label="Penalise @c.InvoiceNumber" /></td>
+                            <td><a asp-controller="Invoices" asp-action="Details" asp-route-id="@c.InvoiceId">@c.InvoiceNumber</a></td>
+                            <td>@c.TenantName@if (c.UnitNumber is not null) { <div class="small text-body-secondary">@c.UnitNumber</div> }</td>
+                            <td class="text-nowrap">@c.DueDate.ToString("d MMM yyyy")</td>
+                            <td class="text-end">@c.DaysOverdue</td>
+                            <td class="text-end">@c.Balance.Kes()</td>
+                            <td class="text-end fw-semibold">@c.Penalty.Kes()<div class="small text-body-secondary fw-normal">@(c.IsFixed ? "unit's fixed penalty" : "% of balance")</div></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <button type="submit" class="btn btn-primary" onclick="return confirm('Issue penalty invoices for the selected invoices?');">Issue selected penalties</button>
+    </form>
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            var all = document.getElementById('select-all');
+            if (!all) return;
+            all.addEventListener('change', function () { document.querySelectorAll('.pick').forEach(function (c) { c.checked = all.checked; }); });
+        })();
+    </script>
+}

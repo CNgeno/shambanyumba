@@ -1,0 +1,50 @@
+@model IReadOnlyList<ListingSummary>
+@{
+    ViewData["Title"] = "Listings";
+    var canEdit = ViewData["CanEdit"] is true;
+    var status = ViewData["Status"] as ListingStatus?;
+}
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">Listings</h1>
+        <p class="page-sub">Your units on the public <a href="/marketplace" target="_blank">Properties</a> pages. Listing is free; you pay credits only for verified enquiries.</p>
+    </div>
+    <a asp-controller="Leads" asp-action="Index" class="btn btn-outline-primary"><i class="bi bi-person-lines-fill me-1"></i>Leads</a>
+    @if (canEdit) { <a asp-action="Create" class="btn btn-primary"><i class="bi bi-megaphone me-1"></i>New listing</a> }
+</div>
+<section class="panel p-0">
+    <div class="units-toolbar">
+        <nav class="filter-chips" aria-label="Filter listings">
+            <a asp-action="Index" class="filter-chip @(status is null ? "is-active" : "")">Open</a>
+            @foreach (var s in Enum.GetValues<ListingStatus>()) { <a asp-action="Index" asp-route-status="@s" class="filter-chip @(status == s ? "is-active" : "")">@s</a> }
+        </nav>
+    </div>
+    @if (Model.Count == 0)
+    {
+        <div class="empty-state"><i class="bi bi-megaphone" aria-hidden="true"></i><h2 class="h6">No listings here</h2>
+            <p>Advertise a vacant unit to let, or a unit or plot for sale. It shows publicly while the unit is available.</p>
+            @if (canEdit) { <a asp-action="Create" class="btn btn-primary">New listing</a> }</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr><th>Listing</th><th>Unit</th><th class="text-end">Price</th><th class="text-end">Photos</th><th class="text-end">Views</th><th class="text-end">Leads</th><th>Status</th></tr></thead>
+                <tbody>
+                @foreach (var l in Model)
+                {
+                    <tr>
+                        <td><a asp-action="Edit" asp-route-id="@l.Id" class="row-link fw-semibold">@l.Title</a><div class="small text-body-secondary">@l.Type.Display()</div></td>
+                        <td>@l.UnitNumber<div class="small text-body-secondary">@l.AssetName</div></td>
+                        <td class="text-end text-nowrap">@l.Price.Kes()@(l.Type == ListingType.Rent ? "/mo" : "")</td>
+                        <td class="text-end @(l.Photos == 0 ? "text-warning-emphasis" : "")">@l.Photos</td>
+                        <td class="text-end">@l.ViewCount</td>
+                        <td class="text-end">@l.Leads</td>
+                        <td><partial name="_ListingStatusChip" model="l" /></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

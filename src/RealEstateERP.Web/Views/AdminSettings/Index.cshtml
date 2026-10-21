@@ -1,0 +1,105 @@
+@model AdminSettingsViewModel
+@{
+    ViewData["Title"] = "Settings";
+    var e = Model.Email;
+}
+<h1 class="page-title">Settings</h1>
+<p class="text-body-secondary mb-4">Platform-wide values. Changes take effect immediately.</p>
+
+<section class="panel mb-4" aria-labelledby="email-title">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <h2 class="h6 mb-0 me-auto" id="email-title"><i class="bi bi-envelope me-1"></i>Email (SMTP)</h2>
+        <span class="small text-body-secondary"><i class="bi bi-broadcast me-1"></i>Now: @Model.Transport</span>
+    </div>
+    <form method="post" asp-action="SaveEmail" autocomplete="off">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label small mb-1" for="smtp-host">SMTP server</label>
+                <input id="smtp-host" name="Host" value="@e.Host" class="form-control form-control-sm" placeholder="smtp-relay.brevo.com" />
+                <div class="form-text">Leave blank to use the appsettings EmailSettings section instead.</div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small mb-1" for="smtp-port">Port</label>
+                <input id="smtp-port" name="Port" value="@e.Port" class="form-control form-control-sm" inputmode="numeric" />
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <div class="form-check form-switch mb-1">
+                    <input class="form-check-input" type="checkbox" role="switch" id="smtp-ssl" name="EnableSsl" value="true" checked="@e.EnableSsl" />
+                    <input type="hidden" name="EnableSsl" value="false" />
+                    <label class="form-check-label small" for="smtp-ssl">Use SSL/TLS</label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small mb-1" for="smtp-user">Login</label>
+                <input id="smtp-user" name="UserName" value="@e.UserName" class="form-control form-control-sm" autocomplete="off" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small mb-1" for="smtp-pass">Password / SMTP key</label>
+                <input id="smtp-pass" name="NewPassword" type="password" class="form-control form-control-sm" autocomplete="new-password"
+                       placeholder="@(Model.HasPassword ? "Saved (leave blank to keep it)" : "Not set")" />
+                <div class="form-text">
+                    Stored encrypted and never shown again.
+                    @if (Model.HasPassword)
+                    {
+                        <span class="form-check form-check-inline ms-1 mb-0">
+                            <input class="form-check-input" type="checkbox" id="smtp-clear" name="ClearPassword" value="true" />
+                            <label class="form-check-label" for="smtp-clear">Remove saved password</label>
+                        </span>
+                    }
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small mb-1" for="smtp-from">Sender address</label>
+                <input id="smtp-from" name="FromAddress" value="@e.FromAddress" type="email" class="form-control form-control-sm" placeholder="no-reply@yourdomain.co.ke" />
+                <div class="form-text">Must be verified with your provider. An address on your own domain (with SPF/DKIM) avoids the spam folder.</div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label small mb-1" for="smtp-name">Sender name</label>
+                <input id="smtp-name" name="FromName" value="@e.FromName" class="form-control form-control-sm" placeholder="ShambaNyumba" />
+            </div>
+        </div>
+        <button type="submit" class="btn btn-sm btn-primary mt-3">Save email settings</button>
+    </form>
+
+    <form method="post" asp-action="TestEmail" class="d-flex flex-wrap gap-2 align-items-center mt-3 pt-3 border-top">
+        <label class="small fw-semibold" for="test-to">Send a test email to</label>
+        <input id="test-to" name="to" type="email" value="@Model.AdminEmail" class="form-control form-control-sm" style="max-width: 280px" required />
+        <button type="submit" class="btn btn-sm btn-outline-primary">Send test</button>
+    </form>
+</section>
+
+@foreach (var group in Model.Settings.GroupBy(s => s.Group))
+{
+    <section class="panel mb-4">
+        <h2 class="h6 mb-3">@group.Key</h2>
+        @foreach (var s in group)
+        {
+            <form method="post" asp-action="Update" class="setting-row">
+                <input type="hidden" name="key" value="@s.Key" />
+                <div class="setting-label">
+                    <label for="setting-@s.Id" class="fw-semibold d-block">@s.Key</label>
+                    <span class="small text-body-secondary">@s.Description</span>
+                </div>
+                <div class="setting-input">
+                    @if (s.ValueType == ConfigValueType.Boolean)
+                    {
+                        <select id="setting-@s.Id" name="value" class="form-select form-select-sm">
+                            <option value="true" selected="@(s.Value == "true")">true</option>
+                            <option value="false" selected="@(s.Value != "true")">false</option>
+                        </select>
+                    }
+                    else if (s.ValueType == ConfigValueType.Secret)
+                    {
+                        <input id="setting-@s.Id" name="value" type="password" class="form-control form-control-sm" placeholder="Enter a new value to replace it" autocomplete="new-password" />
+                    }
+                    else
+                    {
+                        <input id="setting-@s.Id" name="value" value="@s.Value" class="form-control form-control-sm"
+                               inputmode="@(s.ValueType is ConfigValueType.Integer or ConfigValueType.Decimal ? "decimal" : "text")" />
+                    }
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
+                </div>
+            </form>
+        }
+    </section>
+}

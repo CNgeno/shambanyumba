@@ -1,0 +1,44 @@
+@model PricingViewModel
+@{
+    ViewData["Title"] = "Pricing";
+}
+<section class="page-head">
+    <div class="container">
+        <h1>Pricing</h1>
+        <p class="section-intro">Monthly plans in Kenya shillings. Every new account starts with a free trial; pay by M-PESA or bank transfer when you're ready.</p>
+    </div>
+</section>
+<section class="section pt-3">
+    <div class="container">
+        <div class="row g-3">
+            @foreach (var p in Model.Plans)
+            {
+                var isTrial = string.Equals(p.Code, Model.TrialPlanCode, StringComparison.OrdinalIgnoreCase);
+                <div class="col-md-6 col-xl-3">
+                    <div class="price-card @(isTrial ? "is-trial" : "")">
+                        <h3>@p.Name</h3>
+                        @if (p.ForBusinessType is not null)
+                        {
+                            <p class="small text-body-secondary mb-1">For @(p.ForBusinessType.Value.ToString().ToLowerInvariant()) businesses</p>
+                        }
+                        <p class="text-body-secondary">@p.Description</p>
+                        <p class="price mb-0">@p.MonthlyFee.Kes() <small>/ month</small></p>
+                        <ul>
+                            <li><i class="bi bi-check2"></i>@p.UnitLimit.UnitLimitText()</li>
+                            <li><i class="bi bi-check2"></i>@p.CreditsPerMonth credits per month</li>
+                            <li><i class="bi bi-check2"></i>@(p.TrialDays)-day free trial</li>
+                        </ul>
+                        @if (isTrial)
+                        {
+                            <p class="small fw-semibold mb-2">Your free trial runs on this plan.</p>
+                        }
+                        <a asp-area="Identity" asp-page="/Account/Register" class="btn @(isTrial ? "btn-gradient" : "btn-outline-primary") mt-auto">Start free trial</a>
+                    </div>
+                </div>
+            }
+        </div>
+        <p class="small text-body-secondary mt-4 mb-0">
+            Credits are used for PDFs, SMS and bulk actions (for example, 1 credit per invoice PDF). Extra credit bundles can be bought any time.
+        </p>
+    </div>
+</section>

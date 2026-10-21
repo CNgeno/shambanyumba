@@ -1,0 +1,34 @@
+@model RealEstateERP.Web.ViewComponents.BusinessSwitcherModel
+<div class="dropdown biz-switcher">
+    <button class="biz-switcher-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <span class="biz-avatar" aria-hidden="true">@UserDisplay.Initials(Model.Current.BusinessName)</span>
+        <span class="biz-text">
+            <span class="biz-name">@Model.Current.BusinessName</span>
+            <span class="biz-role">@Model.CurrentLabel</span>
+        </span>
+        <i class="bi bi-chevron-expand ms-auto" aria-hidden="true"></i>
+        <span class="visually-hidden">Switch business</span>
+    </button>
+    <ul class="dropdown-menu biz-menu">
+        @if (Model.Others.Count > 0)
+        {
+            <li><h6 class="dropdown-header">Switch to</h6></li>
+            @foreach (var b in Model.Others)
+            {
+                <li>
+                    <form method="post" asp-area="" asp-controller="Business" asp-action="Choose" class="m-0">
+                        <input type="hidden" name="businessId" value="@b.BusinessId" />
+                        <button type="submit" class="dropdown-item d-flex align-items-center gap-2">
+                            <span class="biz-avatar biz-avatar-sm" aria-hidden="true">@UserDisplay.Initials(b.BusinessName)</span>
+                            <span class="text-truncate">@b.BusinessName</span>
+                            <span class="small text-body-secondary ms-auto">@RealEstateERP.Core.Common.RoleLabels.For(b.Role, b.Type)</span>
+                        </button>
+                    </form>
+                </li>
+            }
+            <li><hr class="dropdown-divider" /></li>
+        }
+        <li><a class="dropdown-item" asp-area="" asp-controller="Business" asp-action="Create"><i class="bi bi-plus-lg me-2"></i>Create a business</a></li>
+        <li><a class="dropdown-item" asp-area="" asp-controller="Business" asp-action="Select"><i class="bi bi-buildings me-2"></i>All my businesses</a></li>
+    </ul>
+</div>

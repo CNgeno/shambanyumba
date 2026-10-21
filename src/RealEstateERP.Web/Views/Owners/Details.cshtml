@@ -1,0 +1,76 @@
+@model OwnerDetailsViewModel
+@{
+    var o = Model.Owner;
+    ViewData["Title"] = o.FullName;
+}
+<a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Owners</a>
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">@o.FullName</h1>
+        <p class="page-sub">@o.Type@if (o.Phone is not null) { <span>, <a href="tel:@o.Phone">@RealEstateERP.Core.Common.KenyanPhone.Display(o.Phone)</a></span> }@if (o.Email is not null) { <span>, <a href="mailto:@o.Email">@o.Email</a></span> }</p>
+    </div>
+    @if (Model.CanEdit)
+    {
+        <a asp-controller="Contracts" asp-action="Create" asp-route-ownerId="@o.Id" class="btn btn-primary"><i class="bi bi-file-earmark-plus me-1"></i>New contract</a>
+        <a asp-action="Edit" asp-route-id="@o.Id" class="btn btn-outline-primary">Edit</a>
+    }
+</div>
+<div class="property-grid property-grid-reverse">
+    <div>
+        <section class="panel p-0 mb-3">
+            <div class="units-toolbar"><h2 class="panel-title">Management contracts</h2></div>
+            @if (Model.Contracts.Count == 0) { <p class="small text-body-secondary px-4 py-3 mb-0">No contracts yet.</p> }
+            else
+            {
+                <ul class="attention-list">
+                    @foreach (var c in Model.Contracts)
+                    {
+                        <li>
+                            <a asp-controller="Contracts" asp-action="Details" asp-route-id="@c.Id" class="row-link fw-semibold">@c.ContractNumber</a>
+                            <span class="small text-body-secondary">@(c.PropertyNames ?? "No properties"), @(c.CommissionType == CommissionType.FixedMonthly ? c.FixedMonthlyFee.Kes() + " a month" : $"{c.CommissionPercent:0.##}%")</span>
+                            <span class="ms-auto"><partial name="_ContractStatusChip" model="c.Status" /></span>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+        <section class="panel p-0">
+            <div class="units-toolbar"><h2 class="panel-title">Statements and payments</h2></div>
+            @if (Model.Remittances.Count == 0) { <p class="small text-body-secondary px-4 py-3 mb-0">No statements yet.</p> }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead><tr><th>Statement</th><th>Month</th><th class="text-end">Collected</th><th class="text-end">Commission</th><th class="text-end">Payable</th><th>Status</th></tr></thead>
+                        <tbody>
+                        @foreach (var r in Model.Remittances)
+                        {
+                            <tr>
+                                <td><a asp-controller="Remittances" asp-action="Details" asp-route-id="@r.Id" class="row-link fw-semibold">@r.RemittanceNumber</a></td>
+                                <td>@r.PeriodStart.ToString("MMMM yyyy")</td>
+                                <td class="text-end">@r.GrossCollections.Kes()</td>
+                                <td class="text-end">@r.CommissionAmount.Kes()</td>
+                                <td class="text-end fw-semibold">@r.NetPayable.Kes()</td>
+                                <td><partial name="_RemittanceStatusChip" model="r.Status" /></td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    </div>
+    <aside>
+        <section class="panel facts">
+            <h2 class="panel-title mb-2">Payout and details</h2>
+            <dl class="mb-0">
+                <dt>Paid by</dt><dd>@o.PayoutMethod.Display()</dd>
+                @if (o.PayoutMethod == PayoutMethod.Bank) { <dt>Bank</dt><dd>@o.BankName</dd><dt>Account</dt><dd>@o.BankAccountName<br />@o.BankAccountNumber</dd> }
+                @if (o.PayoutMethod == PayoutMethod.Mpesa) { <dt>M-PESA</dt><dd>@RealEstateERP.Core.Common.KenyanPhone.Display(o.MpesaNumber)</dd> }
+                <dt>ID / reg.</dt><dd>@(o.IdNumber ?? "Not recorded")</dd>
+                <dt>KRA PIN</dt><dd>@(o.KraPin ?? "Not recorded")</dd>
+                @if (!string.IsNullOrWhiteSpace(o.Notes)) { <dt>Notes</dt><dd>@o.Notes</dd> }
+            </dl>
+        </section>
+    </aside>
+</div>

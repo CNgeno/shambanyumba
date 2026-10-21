@@ -1,0 +1,29 @@
+@{
+    // Account settings live inside the app shell, with their own navigation.
+    Layout = "/Views/Shared/_Layout.cshtml";
+    var active = ViewData["ActivePage"] as string ?? "";
+    string Css(params string[] pages) => pages.Contains(active, StringComparer.OrdinalIgnoreCase) ? "active" : "";
+}
+<div class="page-head">
+    <div>
+        <h1 class="page-title">Your account</h1>
+        <p class="page-sub">@User.Identity?.Name</p>
+    </div>
+</div>
+
+<div class="settings-grid">
+    <nav class="settings-nav" aria-label="Account settings">
+        <a class="settings-link @Css("Index")" asp-area="Identity" asp-page="/Account/Manage/Index"><i class="bi bi-person"></i>Profile</a>
+        <a class="settings-link @Css("Email")" asp-area="Identity" asp-page="/Account/Manage/Email"><i class="bi bi-envelope"></i>Email</a>
+        <a class="settings-link @Css("ChangePassword", "SetPassword")" asp-area="Identity" asp-page="/Account/Manage/ChangePassword"><i class="bi bi-key"></i>Password</a>
+        <a class="settings-link @Css("TwoFactorAuthentication")" asp-area="Identity" asp-page="/Account/Manage/TwoFactorAuthentication"><i class="bi bi-shield-lock"></i>Two-step sign-in</a>
+        <a class="settings-link @Css("PersonalData")" asp-area="Identity" asp-page="/Account/Manage/PersonalData"><i class="bi bi-download"></i>Your data</a>
+    </nav>
+    <section class="panel settings-body">
+        @RenderBody()
+    </section>
+</div>
+
+@section Scripts {
+    @await RenderSectionAsync("Scripts", required: false)
+}

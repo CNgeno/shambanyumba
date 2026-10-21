@@ -1,0 +1,112 @@
+@model SetupPageViewModel
+@{
+    var o = Model.Overview;
+    var f = Model.Form;
+    var sub = o.Subdivision;
+    ViewData["Title"] = $"{o.Asset.Name}: purchase and subdivision";
+    var isLand = f.AssetType == AssetType.Land || sub.Plots > 0;
+    var nextPlot = sub.Plots + 1;
+}
+<partial name="_ProjectTabs" model="o" />
+
+<form method="post" asp-action="Setup" class="form-narrow" novalidate>
+    <input type="hidden" asp-for="Form.AssetId" name="AssetId" />
+    <section class="panel mb-3">
+        <h2 class="panel-title mb-3">Purchase details</h2>
+        <div class="row g-3">
+            <div class="col-sm-6"><label class="form-label" for="acq-cost">Purchase price (KES)</label><input id="acq-cost" name="AcquisitionCost" value="@f.AcquisitionCost?.ToString("0.##")" class="form-control" inputmode="decimal" />
+                <div class="form-text">Leave blank until it's bought.</div></div>
+            <div class="col-sm-6"><label class="form-label" for="est-land">Budgeted land price (KES)</label><input id="est-land" name="EstimatedLandCost" value="@f.EstimatedLandCost?.ToString("0.##")" class="form-control" inputmode="decimal" />
+                <div class="form-text">Your estimate before buying; used for the budget.</div></div>
+            <div class="col-sm-6"><label class="form-label" for="acq-date">Purchase date</label><input id="acq-date" name="AcquisitionDate" type="date" value="@f.AcquisitionDate?.ToString("yyyy-MM-dd")" class="form-control" /></div>
+            <div class="col-sm-6"><label class="form-label" for="seller">Bought from</label><input id="seller" name="SellerName" value="@f.SellerName" class="form-control" maxlength="150" /></div>
+            <div class="col-sm-6"><label class="form-label" for="title">Title / mother title number</label><input id="title" name="TitleDeedNumber" value="@f.TitleDeedNumber" class="form-control text-uppercase" maxlength="100" /></div>
+            <div class="col-sm-6"><label class="form-label" for="acres">Land size (acres)</label><input id="acres" name="LandSizeAcres" value="@f.LandSizeAcres?.ToString("0.####")" class="form-control" inputmode="decimal" /></div>
+        </div>
+        <p class="form-text mb-0 mt-2">Stamp duty, legal and valuation fees go in Budget and costs under Purchase costs.</p>
+    </section>
+
+    <section class="panel mb-3">
+        <h2 class="panel-title mb-3">How shared costs reach each unit</h2>
+        @foreach (var m in Enum.GetValues<CostAllocationMethod>())
+        {
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="CostAllocation" id="ca-@m" value="@m" checked="@(f.CostAllocation == m)" />
+                <label class="form-check-label" for="ca-@m">@m.Display()
+                    <span class="small text-body-secondary">@(m switch { CostAllocationMethod.BySize => "fairest for plots and different-sized units", CostAllocationMethod.Equal => "simple, for identical units", _ => "pricier units carry more of the cost" })</span></label>
+            </div>
+        }
+        <p class="form-text mb-0">Costs entered against a single unit always stay with that unit.</p>
+    </section>
+
+    @if (isLand)
+    {
+        <section class="panel mb-3">
+            <h2 class="panel-title mb-3">Subdivision approval</h2>
+            <div class="row g-3">
+                <div class="col-sm-7"><label class="form-label" for="sub-ref">Approval / mutation reference</label><input id="sub-ref" name="SubdivisionReference" value="@f.SubdivisionReference" class="form-control" maxlength="100" /></div>
+                <div class="col-sm-5"><label class="form-label" for="sub-date">Approved on</label><input id="sub-date" name="SubdivisionApprovedOn" type="date" value="@f.SubdivisionApprovedOn?.ToString("yyyy-MM-dd")" class="form-control" /></div>
+            </div>
+        </section>
+    }
+    else
+    {
+        <input type="hidden" name="SubdivisionReference" value="@f.SubdivisionReference" />
+        <input type="hidden" name="SubdivisionApprovedOn" value="@f.SubdivisionApprovedOn?.ToString("yyyy-MM-dd")" />
+    }
+    @if (Model.CanEdit) { <button type="submit" class="btn btn-primary mb-4">Save project details</button> }
+</form>
+
+@if (isLand || Model.CanEdit)
+{
+    <section class="panel mb-3">
+        <h2 class="panel-title mb-2">Subdivision into plots</h2>
+        <section class="stat-strip mb-3 stat-strip-3">
+            <div class="stat"><span class="stat-label">Total land</span><span class="stat-value">@(sub.TotalAreaSqm is decimal t ? $"{t:N0} sqm" : "—")</span><span class="stat-note">@(f.LandSizeAcres is decimal ac ? $"{ac:0.##} acres" : "enter the land size above")</span></div>
+            <div class="stat"><span class="stat-label">In plots</span><span class="stat-value">@sub.PlottedSqm.ToString("N0") sqm</span><span class="stat-note">@sub.Plots plots, @sub.PlotsWithTitles with titles</span></div>
+            <div class="stat"><span class="stat-label">Roads and common areas</span><span class="stat-value">@(sub.SurrenderedSqm is decimal sv ? $"{sv:N0} sqm" : "—")</span><span class="stat-note">@(sub.SurrenderedPercent is decimal sp ? $"{sp:0.#}% of the land, carried by the plots" : "")</span></div>
+        </section>
+
+        @if (Model.CanEdit)
+        {
+            <form method="post" asp-action="CreatePlots" asp-route-id="@o.Asset.Id" class="row g-2 align-items-end mb-3">
+                <div class="col-sm-2"><label class="form-label small mb-1" for="pl-prefix">Name</label><input id="pl-prefix" name="prefix" value="Plot " class="form-control form-control-sm" /></div>
+                <div class="col-sm-2"><label class="form-label small mb-1" for="pl-start">Starting at</label><input id="pl-start" name="startNumber" value="@nextPlot" class="form-control form-control-sm" inputmode="numeric" /></div>
+                <div class="col-sm-2"><label class="form-label small mb-1" for="pl-count">How many</label><input id="pl-count" name="count" value="10" class="form-control form-control-sm" inputmode="numeric" /></div>
+                <div class="col-sm-2"><label class="form-label small mb-1" for="pl-size">Size (sqm)</label><input id="pl-size" name="sizeSqm" value="450" class="form-control form-control-sm" inputmode="decimal" /></div>
+                <div class="col-sm-2"><label class="form-label small mb-1" for="pl-price">Price (KES)</label><input id="pl-price" name="salePrice" class="form-control form-control-sm" inputmode="decimal" /></div>
+                <div class="col-sm-2"><button type="submit" class="btn btn-sm btn-outline-primary w-100">Create plots</button></div>
+            </form>
+        }
+
+        @{ var plots = o.Units.Where(u => u.Type == UnitType.Plot).ToList(); }
+        @if (plots.Count > 0)
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead><tr><th>Plot</th><th class="text-end">Size</th><th>Title number</th></tr></thead>
+                    <tbody>
+                    @foreach (var p in plots)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@p.UnitNumber</td>
+                            <td class="text-end">@(p.SizeSqm?.ToString("N0") ?? "—") sqm</td>
+                            <td>
+                                @if (Model.CanEdit)
+                                {
+                                    <form method="post" asp-action="SetTitle" asp-route-id="@o.Asset.Id" class="d-flex gap-1">
+                                        <input type="hidden" name="unitId" value="@p.UnitId" />
+                                        <input name="titleNumber" value="@p.TitleNumber" class="form-control form-control-sm text-uppercase" style="max-width: 280px" aria-label="Title for @p.UnitNumber" placeholder="e.g. KAJIADO/KITENGELA/5678/2" />
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary">Save</button>
+                                    </form>
+                                }
+                                else { @(p.TitleNumber ?? "—") }
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+}

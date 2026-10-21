@@ -1,0 +1,76 @@
+@model PropertiesIndexViewModel
+@{
+    ViewData["Title"] = "Properties";
+    var t = Model.Totals;
+}
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">Properties</h1>
+        <p class="page-sub">@Model.Assets.Count @(Model.Assets.Count == 1 ? "property" : "properties"), @t.Total units</p>
+    </div>
+    @if (Model.CanEdit)
+    {
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Add property</a>
+    }
+</div>
+
+@if (Model.Assets.Count == 0)
+{
+    <section class="panel empty-state">
+        <i class="bi bi-buildings" aria-hidden="true"></i>
+        <h2 class="h5">Add your first property</h2>
+        <p>Start with a building, estate or piece of land. You can add blocks, floors and units next.</p>
+        @if (Model.CanEdit)
+        {
+            <a asp-action="Create" class="btn btn-primary">Add property</a>
+        }
+    </section>
+}
+else
+{
+    <section class="stat-strip mb-3" aria-label="Portfolio summary">
+        <div class="stat"><span class="stat-label">Units</span><span class="stat-value">@t.Total</span></div>
+        <div class="stat"><span class="stat-label">Occupancy</span><span class="stat-value">@t.OccupancyPercent.ToString("0.#")%</span><span class="stat-note">@t.Occupied of @t.Lettable lettable</span></div>
+        <div class="stat"><span class="stat-label">Vacant</span><span class="stat-value">@t.Available</span><span class="stat-note">@t.Reserved reserved</span></div>
+        <div class="stat"><span class="stat-label">Monthly rent roll</span><span class="stat-value">@t.LettableRent.Kes()</span><span class="stat-note">if fully let</span></div>
+    </section>
+
+    <partial name="_UnitUsageMeter" model="Model.Usage" />
+
+    <section class="panel p-0 mt-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 property-table">
+                <thead>
+                    <tr>
+                        <th>Property</th>
+                        <th class="text-end">Units</th>
+                        <th class="text-end">Vacant</th>
+                        <th style="min-width: 160px">Occupancy</th>
+                        <th class="text-end">Rent roll</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @foreach (var a in Model.Assets)
+                {
+                    <tr>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@a.Id" class="row-link fw-semibold">@a.Name</a>
+                            <div class="small text-body-secondary">
+                                <span class="purpose-chip purpose-@a.Purpose.ToString().ToLowerInvariant()">@a.Purpose.Display()</span>
+                                @a.Type.Display()@(string.IsNullOrEmpty(a.Location) ? "" : $", {a.Location}")@(string.IsNullOrEmpty(a.County) ? "" : $", {a.County}")
+                            </div>
+                        </td>
+                        <td class="text-end">@a.Stats.Total</td>
+                        <td class="text-end">@a.Stats.Available</td>
+                        <td>
+                            <div class="occ-bar" aria-hidden="true"><span style="width: @(a.Stats.OccupancyPercent.ToString(System.Globalization.CultureInfo.InvariantCulture))%"></span></div>
+                            <span class="small">@a.Stats.OccupancyPercent.ToString("0.#")%</span>
+                        </td>
+                        <td class="text-end">@a.Stats.LettableRent.Kes()</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}

@@ -1,0 +1,136 @@
+@model TeamViewModel
+@{
+    ViewData["Title"] = "Team";
+    var roles = Enum.GetValues<BusinessRole>().Where(r => Model.IsOwner || r != BusinessRole.Owner).ToList();
+    string RoleHelp(BusinessRole r) => r switch
+    {
+        BusinessRole.Owner => "Everything, including the team, billing and removing the business",
+        BusinessRole.Admin => "Everything except managing Owners",
+        BusinessRole.User => "Day-to-day work: tenants, leases, invoices, payments",
+        _ => "Can look at everything, can't change anything"
+    };
+}
+<div class="page-head"><h1 class="page-title">Business settings</h1></div>
+
+<div class="settings-grid">
+    <partial name="_SettingsNav" />
+    <div>
+        <section class="panel mb-3">
+            <h2 class="panel-title mb-2">Invite someone</h2>
+            <form method="post" asp-action="Invite" class="row g-2 align-items-end">
+                <div class="col-md-6">
+                    <label for="invite-email" class="form-label small mb-1">Email</label>
+                    <input id="invite-email" name="email" type="email" class="form-control" required placeholder="name@example.com" />
+                </div>
+                <div class="col-md-3">
+                    <label for="invite-role" class="form-label small mb-1">Role</label>
+                    <select id="invite-role" name="role" class="form-select">
+                        @foreach (var r in roles) { <option value="@r" selected="@(r == BusinessRole.User)">@Model.Label(r)</option> }
+                    </select>
+                </div>
+                <div class="col-md-3"><button type="submit" class="btn btn-primary w-100">Send invitation</button></div>
+            </form>
+            <ul class="role-help small text-body-secondary mt-3 mb-0">
+                @foreach (var r in Enum.GetValues<BusinessRole>()) { <li><strong>@Model.Label(r):</strong> @RoleHelp(r)</li> }
+                @if (Model.BusinessType == BusinessType.Agency)
+                {
+                    <li><strong>Agent:</strong> invite them as User, then link them to their agent profile under Agency &gt; Agents. They'll see only their own contracts.</li>
+                }
+            </ul>
+        </section>
+
+        <section class="panel p-0 mb-3">
+            <div class="units-toolbar"><h2 class="panel-title">Members (@Model.Members.Count)</h2></div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead><tr><th>Name</th><th>Role</th><th>Finances</th><th>Joined</th><th></th></tr></thead>
+                    <tbody>
+                    @foreach (var m in Model.Members)
+                    {
+                        var locked = m.Role == BusinessRole.Owner && !Model.IsOwner;
+                        <tr>
+                            <td>
+                                <span class="fw-semibold">@(m.FullName ?? m.Email)</span>@if (m.IsYou) { <span class="small text-body-secondary"> (you)</span> }
+                                <div class="small text-body-secondary">@m.Email</div>
+                            </td>
+                            <td>
+                                @if (locked)
+                                {
+                                    <span class="role-badge">@Model.Label(m.Role)</span>
+                                }
+                                else
+                                {
+                                    <form method="post" asp-action="ChangeRole" class="m-0">
+                                        <input type="hidden" name="id" value="@m.MembershipId" />
+                                        <select name="role" class="form-select form-select-sm role-select" onchange="this.form.submit()" aria-label="Role for @(m.FullName ?? m.Email)">
+                                            @foreach (var r in roles) { <option value="@r" selected="@(m.Role == r)">@Model.Label(r)</option> }
+                                        </select>
+                                    </form>
+                                }
+                            </td>
+                            <td class="small">
+                                @if (m.Role is BusinessRole.Owner or BusinessRole.Admin) { <span class="text-body-secondary">Always</span> }
+                                else
+                                {
+                                    <form method="post" asp-action="SetFinances" asp-route-id="@m.MembershipId" class="m-0">
+                                        <input type="hidden" name="canView" value="@(!m.CanViewFinancials ? "true" : "false")" />
+                                        <div class="form-check form-switch m-0">
+                                            <input class="form-check-input" type="checkbox" role="switch" checked="@m.CanViewFinancials" onchange="this.form.submit()" id="fin-@m.MembershipId" aria-label="Can see finances" />
+                                            <label class="form-check-label" for="fin-@m.MembershipId">@(m.CanViewFinancials ? "Can see" : "Hidden")</label>
+                                        </div>
+                                    </form>
+                                }
+                            </td>
+                            <td class="small text-nowrap">@m.JoinedAtUtc.ToEatDate()</td>
+                            <td class="text-end">
+                                @if (!locked)
+                                {
+                                    <form method="post" asp-action="Remove" class="m-0" onsubmit="return confirm('@(m.IsYou ? "Leave this business? You will lose access." : "Remove this person from the business?")');">
+                                        <input type="hidden" name="id" value="@m.MembershipId" />
+                                        <button type="submit" class="btn btn-sm btn-link text-danger">@(m.IsYou ? "Leave" : "Remove")</button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        @if (Model.Invitations.Count > 0)
+        {
+            <section class="panel p-0">
+                <div class="units-toolbar"><h2 class="panel-title">Waiting to accept (@Model.Invitations.Count)</h2></div>
+                <ul class="attention-list">
+                    @foreach (var i in Model.Invitations)
+                    {
+                        <li>
+                            <span class="fw-semibold">@i.Email</span>
+                            <span class="small text-body-secondary">@i.Role, sent @i.SentAtUtc.ToEatDate()@(i.InvitedBy is null ? "" : $" by {i.InvitedBy}"), expires @i.ExpiresAtUtc.ToEatDate()</span>
+                            <span class="ms-auto d-flex gap-1">
+                                <form method="post" asp-action="Resend" class="m-0"><input type="hidden" name="id" value="@i.Id" /><button type="submit" class="btn btn-sm btn-outline-primary">Resend</button></form>
+                                <form method="post" asp-action="Revoke" class="m-0"><input type="hidden" name="id" value="@i.Id" /><button type="submit" class="btn btn-sm btn-link text-danger">Cancel</button></form>
+                            </span>
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+        <section class="panel mt-3">
+            <h2 class="panel-title mb-2">Who can do what</h2>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0 small">
+                    <thead><tr><th>Role</th><th>Can</th><th>Can't</th></tr></thead>
+                    <tbody>
+                        <tr><td class="fw-semibold">Owner</td><td>Everything, including subscription, team and Owners</td><td>—</td></tr>
+                        <tr><td class="fw-semibold">Admin</td><td>Everything except managing Owners</td><td>Change or remove an Owner</td></tr>
+                        <tr><td class="fw-semibold">User</td><td>Day-to-day work: tenants, leases, invoices, payments, readings, sales, listings</td><td>Settings, team, subscription; finances unless allowed</td></tr>
+                        <tr><td class="fw-semibold">Viewer</td><td>Look, not change</td><td>Any changes; finances unless allowed</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="small text-body-secondary mt-2 mb-0"><strong>Finances</strong> means rent reports, costs and margins, running costs, net income and sales reports. Users and Viewers see them only when you switch it on above.</p>
+        </section>
+    </div>
+</div>

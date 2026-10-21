@@ -1,0 +1,540 @@
+@model PropertyDetailsViewModel
+@{
+    var d = Model.Details;
+    var a = d.Asset;
+    var s = d.Stats;
+    ViewData["Title"] = a.Name;
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+    string FilterUrl(UnitStatus? status, int? node) => Url.Action("Details", new { id = a.Id, status, node }) + "#units";
+}
+<a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Properties</a>
+
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">@a.Name</h1>
+        <p class="page-sub">
+            @a.Type.Display()
+            @if (!string.IsNullOrEmpty(a.Location)) { <span>, @a.Location</span> }
+            @if (!string.IsNullOrEmpty(a.County)) { <span>, @a.County County</span> }
+            @if (ViewData["ManagedFor"] is ValueTuple<int, string, int> m)
+            {
+                <span class="status-chip status-info ms-1">Managed for <a asp-controller="Owners" asp-action="Details" asp-route-id="@m.Item1">@m.Item2</a></span>
+            }
+            @if (a.LifecycleState != AssetLifecycle.Operational)
+            {
+                <span class="status-chip status-neutral ms-1">@a.LifecycleState.Display()</span>
+            }
+        </p>
+    </div>
+    @if (Model.CanEdit)
+    {
+        <div class="d-flex flex-wrap gap-2">
+            @if (ViewData["Project"] is LandProjectModel)
+            {
+                <a asp-controller="Costing" asp-action="Setup" asp-route-id="@a.Id" class="btn btn-primary"><i class="bi bi-grid-3x3-gap me-1"></i>Create plots</a>
+            }
+            else
+            {
+            <div class="btn-group">
+                <a asp-controller="Units" asp-action="Create" asp-route-assetId="@a.Id" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Add unit</a>
+                <button type="button" class="btn btn-primary dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="visually-hidden">More ways to add units</span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" asp-controller="Units" asp-action="Bulk" asp-route-assetId="@a.Id"><i class="bi bi-grid-3x3-gap me-2"></i>Add many units at once</a></li>
+                </ul>
+            </div>
+            }
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Property actions">
+                    <i class="bi bi-three-dots"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" asp-action="Edit" asp-route-id="@a.Id"><i class="bi bi-pencil me-2"></i>Edit property</a></li>
+                    @if (User.FindFirst(RealEstateERP.Core.Constants.AppClaimTypes.BusinessType)?.Value is "Developer" or "Owner")
+                    {
+                        <li><a class="dropdown-item" asp-controller="Costing" asp-action="Project" asp-route-id="@a.Id"><i class="bi bi-calculator me-2"></i>Costs and margins</a></li>
+                    }
+                    @if (Model.CanAdmin)
+                    {
+                        <li><hr class="dropdown-divider" /></li>
+                        <li>
+                            <form method="post" asp-action="Delete" asp-route-id="@a.Id" class="m-0" onsubmit="return confirm('Delete this property? This only works when it has no units.');">
+                                <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i>Delete property</button>
+                            </form>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
+</div>
+
+@if (ViewData["Project"] is LandProjectModel project)
+{
+    <partial name="_LandProject" model="project" />
+}
+else
+{
+<section class="stat-strip mb-3" aria-label="Property summary">
+    <div class="stat"><span class="stat-label">Units</span><span class="stat-value">@s.Total</span>@if (s.Inactive > 0){<span class="stat-note">@s.Inactive inactive</span>}</div>
+    <div class="stat"><span class="stat-label">Occupancy</span><span class="stat-value">@s.OccupancyPercent.ToString("0.#")%</span><span class="stat-note">@s.Occupied of @s.Lettable lettable</span></div>
+    <div class="stat"><span class="stat-label">Vacant</span><span class="stat-value">@s.Available</span><span class="stat-note">@s.Reserved reserved</span></div>
+    <div class="stat"><span class="stat-label">Monthly rent roll</span><span class="stat-value">@s.LettableRent.Kes()</span><span class="stat-note">@s.OccupiedRent.Kes() from occupied units</span></div>
+</section>
+}
+@if (ViewData["Estate"] is EstatePanelModel estatePanel)
+{
+    <partial name="_EstateSetup" model="estatePanel" />
+}
+
+
+<div class="property-grid">
+    <aside>
+        <partial name="_PropertyEnquiries" />
+        @if (ViewData["Project"] is LandProjectModel landSide)
+        {
+            <section class="panel mb-3">
+                <h2 class="panel-title mb-2">Subdivision</h2>
+                <p class="small text-body-secondary mb-2">Plots are created, priced and given title numbers under Purchase and plots.</p>
+                <dl class="small mb-2">
+                    <dt class="fw-normal text-body-secondary">Approval</dt><dd>@(landSide.Overview.Asset.SubdivisionReference ?? "Not recorded")</dd>
+                    <dt class="fw-normal text-body-secondary">Plots with titles</dt><dd>@landSide.Overview.Subdivision.PlotsWithTitles of @landSide.Overview.Subdivision.Plots</dd>
+                </dl>
+                @if (landSide.CanEdit) { <a asp-controller="Costing" asp-action="Setup" asp-route-id="@landSide.Overview.Asset.Id" class="btn btn-sm btn-outline-primary">Purchase and plots</a> }
+            </section>
+        }
+        else
+        {
+            @if (ViewData["Estate"] is EstatePanelModel estateSide)
+            {
+                @if (estateSide.CanSeeFinances) { <partial name="_EstateRunningCosts" model="estateSide" /> }
+                <partial name="_EstateCharges" model="estateSide" />
+                <partial name="_EstatePhotos" model="estateSide" />
+            }
+        <section class="panel mb-3" id="structure">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <h2 class="panel-title me-auto">Blocks and floors</h2>
+                @if (Model.CanEdit)
+                {
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#nodeModal" data-mode="add">
+                        <i class="bi bi-plus-lg"></i> Add
+                    </button>
+                }
+            </div>
+
+            @if (d.Tree.Count == 0)
+            {
+                <p class="small text-body-secondary mb-0">
+                    None yet. Add blocks and floors for apartment buildings and estates, or add units directly for a single building or a row of shops.
+                </p>
+            }
+            else
+            {
+                <ul class="tree">
+                    <li class="tree-row @(Model.NodeFilter is null ? "is-active" : "")">
+                        <a href="@FilterUrl(Model.StatusFilter, null)" class="tree-link"><i class="bi bi-house-door"></i>All units<span class="tree-count">@s.Total</span></a>
+                    </li>
+                    @foreach (var n in d.Tree)
+                    {
+                        <li class="tree-row @(Model.NodeFilter == n.Id ? "is-active" : "")" style="--depth: @n.Depth">
+                            <a href="@FilterUrl(Model.StatusFilter, n.Id)" class="tree-link">
+                                <i class="bi @(n.NodeType == StructureNodeType.Floor ? "bi-layers" : "bi-building")"></i>
+                                <span class="text-truncate">@n.Name</span>
+                                <span class="tree-count">@n.UnitCount</span>
+                            </a>
+                            @if (Model.CanEdit)
+                            {
+                                <div class="dropdown tree-actions">
+                                    <button class="btn btn-sm btn-link text-body-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions for @n.Name">
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item" asp-controller="Units" asp-action="Create" asp-route-assetId="@a.Id" asp-route-nodeId="@n.Id"><i class="bi bi-plus-lg me-2"></i>Add unit here</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Units" asp-action="Bulk" asp-route-assetId="@a.Id" asp-route-nodeId="@n.Id"><i class="bi bi-grid-3x3-gap me-2"></i>Add many units here</a></li>
+                                        <li>
+                                            <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#nodeModal" data-mode="add" data-parent="@n.Id">
+                                                <i class="bi bi-diagram-3 me-2"></i>Add a floor inside
+                                            </button>
+                                        </li>
+                                        <li>
+                                            <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#nodeModal" data-mode="edit"
+                                                    data-node="@n.Id" data-name="@n.Name" data-type="@n.NodeType" data-parent="@n.ParentId" data-sort="@n.SortOrder">
+                                                <i class="bi bi-pencil me-2"></i>Rename or move
+                                            </button>
+                                        </li>
+                                        <li><hr class="dropdown-divider" /></li>
+                                        <li>
+                                            <form method="post" asp-action="DeleteNode" asp-route-id="@a.Id" class="m-0">
+                                                <input type="hidden" name="nodeId" value="@n.Id" />
+                                                <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i>Delete</button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+        }
+
+        <section class="panel facts">
+            <h2 class="panel-title mb-2">Property details</h2>
+            <dl class="mb-0">
+                <dt>Title deed</dt><dd>@(a.TitleDeedNumber ?? "Not recorded")</dd>
+                <dt>Land size</dt><dd>@(a.LandSizeAcres is decimal acres ? $"{acres:0.####} acres" : "Not recorded")</dd>
+                <dt>Acquired</dt><dd>@(a.AcquisitionCost is decimal cost ? cost.Kes() : "Cost not recorded")@(a.AcquisitionDate is DateOnly date ? $", {date:d MMM yyyy}" : "")</dd>
+                @if (!string.IsNullOrWhiteSpace(a.Description))
+                {
+                    <dt>Notes</dt><dd>@a.Description</dd>
+                }
+            </dl>
+        </section>
+    </aside>
+
+    <section class="panel p-0" id="units">
+        <div class="units-toolbar">
+            <h2 class="panel-title me-auto">@(ViewData["Project"] is LandProjectModel ? "Plots" : "Units")</h2>
+            <nav class="filter-chips" aria-label="Filter by status">
+                <a href="@FilterUrl(null, Model.NodeFilter)" class="filter-chip @(Model.StatusFilter is null ? "is-active" : "")">All</a>
+                @foreach (var st in Enum.GetValues<UnitStatus>())
+                {
+                    var count = s.CountOf(st);
+                    if (count == 0 && Model.StatusFilter != st) { continue; }
+                    <a href="@FilterUrl(st, Model.NodeFilter)" class="filter-chip @(Model.StatusFilter == st ? "is-active" : "")">@st <span>@count</span></a>
+                }
+            </nav>
+        </div>
+
+        @if (d.Units.Count == 0 && ViewData["Project"] is LandProjectModel)
+        {
+            <div class="empty-state">
+                <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i>
+                <h3 class="h6">No plots yet</h3>
+                <p>Plots come from subdividing the land: enter the land size and approval, then create the plots with their sizes and prices.</p>
+                @if (Model.CanEdit)
+                {
+                    <div class="d-flex flex-wrap justify-content-center gap-2">
+                        <a asp-controller="Costing" asp-action="Setup" asp-route-id="@a.Id" class="btn btn-primary">Create plots</a>
+                        <a asp-controller="Units" asp-action="Create" asp-route-assetId="@a.Id" class="btn btn-outline-primary">Add one plot</a>
+                    </div>
+                }
+            </div>
+        }
+        else if (d.Units.Count == 0)
+        {
+            <div class="empty-state">
+                <i class="bi bi-door-open" aria-hidden="true"></i>
+                <h3 class="h6">No units yet</h3>
+                <p>Add units one at a time, or add a whole floor at once (for example A101 to A110).</p>
+                @if (Model.CanEdit)
+                {
+                    <div class="d-flex flex-wrap justify-content-center gap-2">
+                        <a asp-controller="Units" asp-action="Bulk" asp-route-assetId="@a.Id" class="btn btn-primary">Add many units</a>
+                        <a asp-controller="Units" asp-action="Create" asp-route-assetId="@a.Id" class="btn btn-outline-primary">Add one unit</a>
+                    </div>
+                }
+            </div>
+        }
+        else if (Model.VisibleUnits.Count == 0)
+        {
+            <p class="text-body-secondary p-4 mb-0">No units match this filter. <a href="@FilterUrl(null, null)">Show all units</a></p>
+        }
+        else
+        {
+            @if (ViewData["Project"] is LandProjectModel land)
+            {
+                var plotInfo = land.Overview.Units.ToDictionary(x => x.UnitId);
+                var canSell = true;   // a for-sale property means the business has sales
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 table-stack">
+                        <thead>
+                            <tr>
+                                <th>Plot</th>
+                                <th>Buyer</th>
+                                <th>Size</th>
+                                <th class="text-end">Price</th>
+                                <th class="text-end">Paid</th>
+                                <th>Status</th>
+                                <th class="text-end"><span class="visually-hidden">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var u in Model.VisibleUnits)
+                        {
+                            plotInfo.TryGetValue(u.Id, out var info);
+                            var sale = info is { SaleId: not null } ? info : null;   // the plot's live sale, if any
+                            var sold = sale is not null;
+                            var price = info?.Price ?? u.SalePrice;
+                            <tr>
+                                <td>
+                                    <span class="fw-semibold">@u.UnitNumber</span>
+                                    @if (info?.TitleNumber is string title) { <div class="small text-body-secondary">@title</div> }
+                                </td>
+                                <td>
+                                    @if (sale is not null)
+                                    {
+                                        <a asp-controller="Sales" asp-action="Details" asp-route-id="@sale.SaleId" class="row-link">@sale.BuyerName</a>
+                                        <div class="small"><a asp-controller="Sales" asp-action="Details" asp-route-id="@sale.SaleId" class="text-body-secondary">View sale</a></div>
+                                    }
+                                    else if (Model.CanEdit && canSell && u.Status == UnitStatus.Available)
+                                    {
+                                        <a asp-controller="Sales" asp-action="Create" asp-route-unitId="@u.Id" class="small">New sale</a>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-body-secondary">—</span>
+                                    }
+                                </td>
+                                <td>@(u.SizeSqm is decimal size ? $"{size:0.#} m²" : "—")</td>
+                                <td class="text-end">@(price is decimal pr ? pr.Kes() : "—")</td>
+                                <td class="text-end">
+                                    @if (sale is not null && price is decimal total)
+                                    {
+                                        <span>@sale.Collected.Kes()</span>
+                                        <div class="small text-body-secondary">@((total - sale.Collected) > 0 ? $"{total - sale.Collected:N0} to pay" : "paid in full")</div>
+                                    }
+                                    else { <span class="text-body-secondary">—</span> }
+                                </td>
+                                <td><partial name="_UnitStatusChip" model="u.Status" /></td>
+                                <td class="text-end">
+                                    @if (Model.CanEdit)
+                                    {
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-link text-body-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions for @u.UnitNumber">
+                                                <i class="bi bi-three-dots-vertical"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                @if (sale is not null)
+                                                {
+                                                    <li><a class="dropdown-item" asp-controller="Sales" asp-action="Details" asp-route-id="@sale.SaleId"><i class="bi bi-house-check me-2"></i>View sale</a></li>
+                                                }
+                                                else if (canSell && u.Status == UnitStatus.Available)
+                                                {
+                                                    <li><a class="dropdown-item" asp-controller="Sales" asp-action="Create" asp-route-unitId="@u.Id"><i class="bi bi-house-add me-2"></i>New sale</a></li>
+                                                    <li><a class="dropdown-item" asp-controller="Listings" asp-action="Create" asp-route-unitId="@u.Id" asp-route-type="Sale"><i class="bi bi-megaphone me-2"></i>List for sale</a></li>
+                                                }
+                                                <li><a class="dropdown-item" asp-controller="Units" asp-action="Edit" asp-route-id="@u.Id"><i class="bi bi-pencil me-2"></i>Edit plot</a></li>
+                                                @if (!sold)
+                                                {
+                                                    var plotTargets = RealEstateERP.Core.Common.UnitStatusRules.ManualTargets(u.Status);
+                                                    @if (plotTargets.Count > 0)
+                                                    {
+                                                        <li><hr class="dropdown-divider" /></li>
+                                                        @foreach (var target in plotTargets)
+                                                        {
+                                                            <li>
+                                                                <form method="post" asp-controller="Units" asp-action="ChangeStatus" asp-route-id="@u.Id" class="m-0">
+                                                                    <input type="hidden" name="status" value="@target" />
+                                                                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                                                    <button type="submit" class="dropdown-item">Mark as @target.ToString().ToLowerInvariant()</button>
+                                                                </form>
+                                                            </li>
+                                                        }
+                                                    }
+                                                    @if (u.Status is UnitStatus.Available or UnitStatus.Inactive)
+                                                    {
+                                                        <li><hr class="dropdown-divider" /></li>
+                                                        <li>
+                                                            <form method="post" asp-controller="Units" asp-action="Delete" asp-route-id="@u.Id" class="m-0" onsubmit="return confirm('Delete this plot?');">
+                                                                <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i>Delete</button>
+                                                            </form>
+                                                        </li>
+                                                    }
+                                                }
+                                            </ul>
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Unit</th>
+                            <th>Tenant</th>
+                            <th>Type</th>
+                            <th class="text-end">Rent</th>
+                            <th>Status</th>
+                            <th class="text-end"><span class="visually-hidden">Actions</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var u in Model.VisibleUnits)
+                    {
+                        <tr>
+                            <td>
+                                <span class="fw-semibold">@u.UnitNumber</span>
+                                @if (u.NodePath is not null) { <div class="small text-body-secondary">@u.NodePath</div> }
+                            </td>
+                            <td>
+                                @if (u.TenantName is not null)
+                                {
+                                    <a asp-controller="Tenants" asp-action="Details" asp-route-id="@u.TenantId" class="row-link">@u.TenantName</a>
+                                    <div class="small"><a asp-controller="Leases" asp-action="Details" asp-route-id="@u.ActiveLeaseId" class="text-body-secondary">View lease</a></div>
+                                }
+                                else if (Model.CanEdit && u.Status is UnitStatus.Available or UnitStatus.Reserved)
+                                {
+                                    <a asp-controller="Leases" asp-action="Create" asp-route-unitId="@u.Id" class="small">Create lease</a>
+                                }
+                                else
+                                {
+                                    <span class="text-body-secondary">—</span>
+                                }
+                            </td>
+                            <td>
+                                @u.Type.Display()
+                                @if (u.Bedrooms is int beds && beds > 0) { <span class="text-body-secondary">, @beds bed</span> }
+                                @if (u.SizeSqm is decimal size) { <div class="small text-body-secondary">@size.ToString("0.#") m²</div> }
+                            </td>
+                            <td class="text-end">
+                                @if (u.Type == UnitType.Plot && u.SalePrice is decimal price)
+                                {
+                                    <span>@price.Kes()</span><div class="small text-body-secondary">sale price</div>
+                                }
+                                else
+                                {
+                                    @u.MonthlyRent.Kes()
+                                }
+                            </td>
+                            <td><partial name="_UnitStatusChip" model="u.Status" /></td>
+                            <td class="text-end">
+                                @if (Model.CanEdit)
+                                {
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-link text-body-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Actions for unit @u.UnitNumber">
+                                            <i class="bi bi-three-dots-vertical"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            @if (u.Status is UnitStatus.Available or UnitStatus.Reserved)
+                                            {
+                                                <li><a class="dropdown-item" asp-controller="Leases" asp-action="Create" asp-route-unitId="@u.Id"><i class="bi bi-file-earmark-plus me-2"></i>Create lease</a></li>
+                                            }
+                                            <li><a class="dropdown-item" asp-controller="Units" asp-action="Edit" asp-route-id="@u.Id"><i class="bi bi-pencil me-2"></i>Edit</a></li>
+                                            <li><a class="dropdown-item" asp-controller="Estate" asp-action="UnitPhotos" asp-route-unitId="@u.Id"><i class="bi bi-images me-2"></i>Interior photos</a></li>
+                                            @{ var targets = RealEstateERP.Core.Common.UnitStatusRules.ManualTargets(u.Status); }
+                                            @if (targets.Count > 0)
+                                            {
+                                                <li><hr class="dropdown-divider" /></li>
+                                                @foreach (var target in targets)
+                                                {
+                                                    <li>
+                                                        <form method="post" asp-controller="Units" asp-action="ChangeStatus" asp-route-id="@u.Id" class="m-0">
+                                                            <input type="hidden" name="status" value="@target" />
+                                                            <input type="hidden" name="returnUrl" value="@returnUrl" />
+                                                            <button type="submit" class="dropdown-item">Mark as @target.ToString().ToLowerInvariant()</button>
+                                                        </form>
+                                                    </li>
+                                                }
+                                            }
+                                            @if (u.Status is UnitStatus.Available or UnitStatus.Inactive)
+                                            {
+                                                <li><hr class="dropdown-divider" /></li>
+                                                <li>
+                                                    <form method="post" asp-controller="Units" asp-action="Delete" asp-route-id="@u.Id" class="m-0" onsubmit="return confirm('Delete this unit?');">
+                                                        <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i>Delete</button>
+                                                    </form>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+            }
+        }
+    </section>
+</div>
+
+@if (Model.CanEdit)
+{
+    <div class="modal fade" id="nodeModal" tabindex="-1" aria-labelledby="nodeModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <form method="post" class="modal-content" id="nodeForm"
+                  data-add-action="@Url.Action("AddNode", new { id = a.Id })" data-edit-action="@Url.Action("UpdateNode", new { id = a.Id })">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="nodeId" id="nodeId" />
+                <div class="modal-header">
+                    <h2 class="modal-title h5" id="nodeModalTitle">Add block or floor</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="nodeName" class="form-label">Name</label>
+                        <input id="nodeName" name="Name" class="form-control" maxlength="100" required placeholder="e.g. Block A, First floor" />
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-sm-6">
+                            <label for="nodeType" class="form-label">Type</label>
+                            <select id="nodeType" name="NodeType" class="form-select">
+                                @foreach (var nt in Enum.GetValues<StructureNodeType>())
+                                {
+                                    <option value="@nt">@nt</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="nodeSort" class="form-label">Order</label>
+                            <input id="nodeSort" name="SortOrder" type="number" class="form-control" value="0" />
+                        </div>
+                        <div class="col-12">
+                            <label for="nodeParent" class="form-label">Inside</label>
+                            <select id="nodeParent" name="ParentId" class="form-select">
+                                <option value="">@a.Name (top level)</option>
+                                @foreach (var n in d.Tree)
+                                {
+                                    <option value="@n.Id">@n.Path</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="nodeSubmit">Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            var modal = document.getElementById('nodeModal');
+            if (!modal) return;
+            var form = document.getElementById('nodeForm');
+            modal.addEventListener('show.bs.modal', function (e) {
+                var b = e.relatedTarget || {};
+                var ds = b.dataset || {};
+                var edit = ds.mode === 'edit';
+                form.action = edit ? form.dataset.editAction : form.dataset.addAction;
+                document.getElementById('nodeModalTitle').textContent = edit ? 'Rename or move' : 'Add block or floor';
+                document.getElementById('nodeSubmit').textContent = edit ? 'Save' : 'Add';
+                document.getElementById('nodeId').value = edit ? ds.node : '';
+                document.getElementById('nodeName').value = edit ? ds.name : '';
+                document.getElementById('nodeType').value = edit ? ds.type : (ds.parent ? 'Floor' : 'Block');
+                document.getElementById('nodeSort').value = edit ? ds.sort : '0';
+                document.getElementById('nodeParent').value = ds.parent || '';
+                // A node can't be moved inside itself; the server also blocks descendants.
+                Array.prototype.forEach.call(document.getElementById('nodeParent').options, function (o) {
+                    o.disabled = edit && o.value === ds.node;
+                });
+            });
+            modal.addEventListener('shown.bs.modal', function () { document.getElementById('nodeName').focus(); });
+        })();
+    </script>
+}

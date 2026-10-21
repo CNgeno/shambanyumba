@@ -1,0 +1,2 @@
+@model SaleStatus
+<span class="status-chip @(Model switch { SaleStatus.Completed => "status-ok", SaleStatus.Active => "status-info", SaleStatus.Reserved => "status-warn", _ => "status-muted" })">@Model</span>

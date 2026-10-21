@@ -1,0 +1,116 @@
+@model TenantFormViewModel
+@{
+    var isNew = Model.Id is null;
+    ViewData["Title"] = isNew ? "Add tenant" : $"Edit {Model.FullName}";
+}
+@if (isNew)
+{
+    <a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Tenants</a>
+}
+else
+{
+    <a asp-action="Details" asp-route-id="@Model.Id" class="back-link"><i class="bi bi-arrow-left"></i>@Model.FullName</a>
+}
+<h1 class="page-title mb-4">@ViewData["Title"]</h1>
+
+<form method="post" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@Model.Id" class="form-narrow" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <input type="hidden" asp-for="ForUnitId" />
+
+    <section class="panel mb-3">
+        <div class="btn-group mb-3" role="group" aria-label="Tenant type">
+            <input type="radio" class="btn-check" name="Type" id="type-ind" value="@TenantType.Individual" checked="@(Model.Type == TenantType.Individual)" />
+            <label class="btn btn-outline-primary" for="type-ind"><i class="bi bi-person me-1"></i>Person</label>
+            <input type="radio" class="btn-check" name="Type" id="type-co" value="@TenantType.Company" checked="@(Model.Type == TenantType.Company)" />
+            <label class="btn btn-outline-primary" for="type-co"><i class="bi bi-shop me-1"></i>Company</label>
+        </div>
+        <div class="row g-3">
+            <div class="col-12">
+                <label asp-for="FullName" class="form-label" id="name-label">Full name</label>
+                <input asp-for="FullName" class="form-control" autofocus />
+                <span asp-validation-for="FullName" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-sm-4">
+                <label asp-for="IdType" class="form-label"></label>
+                <select asp-for="IdType" asp-items="Html.GetEnumSelectList<IdDocumentType>()" class="form-select"></select>
+            </div>
+            <div class="col-sm-4">
+                <label asp-for="IdNumber" class="form-label"></label>
+                <input asp-for="IdNumber" class="form-control" />
+            </div>
+            <div class="col-sm-4">
+                <label asp-for="KraPin" class="form-label"></label>
+                <input asp-for="KraPin" class="form-control text-uppercase" />
+            </div>
+        </div>
+    </section>
+
+    <section class="panel mb-3">
+        <h2 class="panel-title mb-3">Contact</h2>
+        <div class="row g-3">
+            <div class="col-sm-6">
+                <label asp-for="Phone" class="form-label"></label>
+                <input asp-for="Phone" class="form-control" type="tel" />
+                <div class="form-text">Used for SMS reminders later.</div>
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="AltPhone" class="form-label"></label>
+                <input asp-for="AltPhone" class="form-control" type="tel" />
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" type="email" />
+                <span asp-validation-for="Email" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="Employer" class="form-label"></label>
+                <input asp-for="Employer" class="form-control" />
+            </div>
+            <div class="col-12">
+                <label asp-for="PostalAddress" class="form-label"></label>
+                <input asp-for="PostalAddress" class="form-control" />
+            </div>
+        </div>
+    </section>
+
+    <section class="panel mb-3">
+        <h2 class="panel-title mb-3">Emergency contact</h2>
+        <div class="row g-3">
+            <div class="col-sm-5">
+                <label asp-for="EmergencyContactName" class="form-label"></label>
+                <input asp-for="EmergencyContactName" class="form-control" />
+            </div>
+            <div class="col-sm-4">
+                <label asp-for="EmergencyContactPhone" class="form-label"></label>
+                <input asp-for="EmergencyContactPhone" class="form-control" type="tel" />
+            </div>
+            <div class="col-sm-3">
+                <label asp-for="EmergencyContactRelationship" class="form-label"></label>
+                <input asp-for="EmergencyContactRelationship" class="form-control" />
+            </div>
+        </div>
+    </section>
+
+    <section class="panel mb-4">
+        <label asp-for="Notes" class="form-label"></label>
+        <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
+    </section>
+
+    <button type="submit" class="btn btn-primary">@(isNew ? (Model.ForUnitId is null ? "Add tenant" : "Add tenant and continue to lease") : "Save changes")</button>
+    <a asp-action="@(isNew ? "Index" : "Details")" asp-route-id="@Model.Id" class="btn btn-link">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var label = document.getElementById('name-label');
+            function sync() {
+                var company = document.getElementById('type-co').checked;
+                label.textContent = company ? 'Company name' : 'Full name';
+            }
+            document.querySelectorAll('input[name="Type"]').forEach(function (r) { r.addEventListener('change', sync); });
+            sync();
+        })();
+    </script>
+}

@@ -1,0 +1,178 @@
+@model SaleDetailsViewModel
+@{
+    var d = Model.Details;
+    var s = d.Sale;
+    ViewData["Title"] = s.SaleNumber;
+    var open = s.Status is SaleStatus.Reserved or SaleStatus.Active;
+    var balance = s.Price - s.AmountPaid;
+    var pct = s.Price == 0 ? 0 : (int)Math.Round(s.AmountPaid * 100 / s.Price);
+    var done = d.Milestones.Where(m => m.CompletedOn != null).Select(m => m.Type).ToHashSet();
+    var next = d.Milestones.OrderBy(m => m.Type).FirstOrDefault(m => m.CompletedOn == null);
+    var nextError = next is null ? null : RealEstateERP.Core.Common.SalesRules.MilestoneError(next.Type, done, balance);
+    var today = Model.Today.ToString("yyyy-MM-dd");
+}
+<a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Sales</a>
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">@s.SaleNumber <partial name="_SaleStatusChip" model="s.Status" /></h1>
+        <p class="page-sub">
+            <a asp-controller="Properties" asp-action="Details" asp-route-id="@s.Unit.AssetId">@s.Unit.Asset.Name</a>, @s.Unit.UnitNumber
+            sold to <a asp-controller="Buyers" asp-action="Details" asp-route-id="@s.BuyerId">@s.Buyer.FullName</a> on @s.SaleDate.ToString("d MMM yyyy")@if (s.Agent is not null) { <span>, agent @s.Agent.FullName</span> }
+        </p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-action="Statement" asp-route-id="@s.Id" class="btn btn-outline-secondary" title="Uses 2 credits"><i class="bi bi-file-earmark-pdf me-1"></i>Buyer statement</a>
+        @if (Model.CanAdmin && open && s.AmountPaid == 0)
+        {
+            <button type="button" class="btn btn-outline-danger" data-bs-toggle="collapse" data-bs-target="#cancel-form">Cancel sale</button>
+        }
+    </div>
+</div>
+
+@if (s.Status == SaleStatus.Cancelled)
+{
+    <div class="sub-banner sub-banner-warning"><i class="bi bi-x-circle"></i><span>Cancelled on @s.CancelledOn?.ToString("d MMM yyyy"): @s.CancelReason</span></div>
+}
+@if (Model.CanAdmin && open && s.AmountPaid == 0)
+{
+    <form method="post" asp-action="Cancel" asp-route-id="@s.Id" class="collapse panel mb-3" id="cancel-form">
+        <label for="cancel-reason" class="form-label fw-semibold">Why is this sale cancelled?</label>
+        <input id="cancel-reason" name="reason" class="form-control mb-2" required maxlength="500" placeholder="e.g. Buyer withdrew before paying the deposit" />
+        <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="makeUnitInactive" value="true" id="cancel-inactive" /><label class="form-check-label" for="cancel-inactive">Take the unit off the market (inactive) instead of making it available</label></div>
+        <button type="submit" class="btn btn-danger">Cancel sale</button>
+    </form>
+}
+
+<section class="stat-strip mb-3">
+    <div class="stat"><span class="stat-label">Price</span><span class="stat-value">@s.Price.Kes()</span><span class="stat-note">@(s.PaymentPlan == PaymentPlan.FullPayment ? "Full payment" : $"{s.InstalmentCount} {s.InstalmentFrequency.ToString().ToLowerInvariant()} instalments")</span></div>
+    <div class="stat"><span class="stat-label">Paid</span><span class="stat-value">@s.AmountPaid.Kes()</span><span class="stat-note">@pct% of the price</span></div>
+    <div class="stat"><span class="stat-label">Balance</span><span class="stat-value">@balance.Kes()</span></div>
+    <div class="stat"><span class="stat-label">Overdue</span><span class="stat-value @(d.OverdueAmount > 0 ? "text-danger" : "")">@d.OverdueAmount.Kes()</span></div>
+</section>
+<div class="progress mb-4" style="height: .5rem" role="progressbar" aria-label="Paid" aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width: @pct%"></div></div>
+
+<div class="property-grid property-grid-reverse">
+    <div>
+        <section class="panel p-0 mb-3">
+            <div class="units-toolbar"><h2 class="panel-title">Payment schedule</h2></div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead><tr><th>Item</th><th>Due</th><th class="text-end">Amount</th><th class="text-end">Paid</th><th>Status</th></tr></thead>
+                    <tbody>
+                    @foreach (var i in d.Schedule)
+                    {
+                        <tr>
+                            <td>@i.Description</td>
+                            <td class="text-nowrap">@i.DueDate.ToString("d MMM yyyy")</td>
+                            <td class="text-end">@i.Amount.Kes()</td>
+                            <td class="text-end">@(i.AmountPaid > 0 ? i.AmountPaid.Kes() : "—")</td>
+                            <td><partial name="_InstalmentStateChip" model="i.State" /></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel p-0">
+            <div class="units-toolbar"><h2 class="panel-title">Payments</h2></div>
+            @if (d.Payments.Count == 0) { <p class="small text-body-secondary px-4 py-3 mb-0">No payments yet.</p> }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead><tr><th>Receipt</th><th>Date</th><th>Method</th><th class="text-end">Amount</th><th></th></tr></thead>
+                        <tbody>
+                        @foreach (var p in d.Payments)
+                        {
+                            var reversed = p.Status == PaymentStatus.Reversed;
+                            <tr class="@(reversed ? "text-body-secondary" : "")">
+                                <td class="fw-semibold">@p.ReceiptNumber@if (reversed) { <div class="small text-danger fw-normal">Reversed: @p.ReversalReason</div> }</td>
+                                <td class="text-nowrap">@p.PaymentDate.ToString("d MMM yyyy")</td>
+                                <td>@p.Method.Display()<div class="small text-body-secondary">@p.Reference</div></td>
+                                <td class="text-end @(reversed ? "text-decoration-line-through" : "")">@p.Amount.Kes()</td>
+                                <td class="text-end">
+                                    @if (Model.CanAdmin && !reversed)
+                                    {
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-link text-body-secondary" type="button" data-bs-toggle="dropdown" aria-label="Reverse payment"><i class="bi bi-three-dots"></i></button>
+                                            <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 260px">
+                                                <form method="post" asp-action="ReversePayment" asp-route-id="@s.Id">
+                                                    <input type="hidden" name="paymentId" value="@p.Id" />
+                                                    <label class="form-label small" for="rev-@p.Id">Reason</label>
+                                                    <input id="rev-@p.Id" name="reason" class="form-control form-control-sm mb-2" required placeholder="e.g. Cheque bounced" />
+                                                    <button type="submit" class="btn btn-sm btn-danger w-100">Reverse payment</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    </div>
+
+    <aside>
+        @if (Model.CanEdit && open && balance > 0)
+        {
+            <form method="post" asp-action="RecordPayment" asp-route-id="@s.Id" class="panel mb-3">
+                <h2 class="panel-title mb-2">Record a payment</h2>
+                <div class="row g-2">
+                    <div class="col-6"><label class="form-label small mb-1" for="pay-date">Date</label><input id="pay-date" name="paymentDate" type="date" value="@today" max="@today" class="form-control form-control-sm" required /></div>
+                    <div class="col-6"><label class="form-label small mb-1" for="pay-amount">Amount</label><input id="pay-amount" name="amount" class="form-control form-control-sm" inputmode="decimal" required placeholder="@(d.OverdueAmount > 0 ? d.OverdueAmount.ToString("0.##") : "")" /></div>
+                    <div class="col-6"><label class="form-label small mb-1" for="pay-method">Method</label>
+                        <select id="pay-method" name="method" class="form-select form-select-sm">@foreach (var m in Enum.GetValues<PaymentMethod>()) { <option value="@m">@m.Display()</option> }</select></div>
+                    <div class="col-6"><label class="form-label small mb-1" for="pay-ref">Reference</label><input id="pay-ref" name="reference" class="form-control form-control-sm text-uppercase" /></div>
+                    <div class="col-12"><input name="notes" class="form-control form-control-sm" placeholder="Notes (optional)" aria-label="Notes" /></div>
+                </div>
+                <button type="submit" class="btn btn-sm btn-primary w-100 mt-2">Record payment</button>
+                <p class="form-text mb-0">Applied to the oldest unpaid instalment first. Balance @balance.Kes().</p>
+            </form>
+        }
+
+        <section class="panel">
+            <h2 class="panel-title mb-3">Transfer progress</h2>
+            <ol class="milestones">
+                @foreach (var m in d.Milestones.OrderBy(m => m.Type))
+                {
+                    var isDone = m.CompletedOn != null;
+                    <li class="@(isDone ? "is-done" : next?.Id == m.Id ? "is-next" : "")">
+                        <div class="fw-semibold">@m.Type.Display()</div>
+                        @if (isDone)
+                        {
+                            <div class="small text-body-secondary">@m.CompletedOn?.ToString("d MMM yyyy")@(m.Reference is null ? "" : $", {m.Reference}")</div>
+                            @if (m.Notes is not null) { <div class="small">@m.Notes</div> }
+                            @if (m.DocumentStorageKey is not null) { <a asp-action="MilestoneDocument" asp-route-milestoneId="@m.Id" target="_blank" class="small"><i class="bi bi-paperclip"></i> @m.DocumentFileName</a> }
+                        }
+                    </li>
+                }
+            </ol>
+            @if (Model.CanEdit && open && next is not null)
+            {
+                @if (nextError is not null)
+                {
+                    <p class="small text-body-secondary mb-0 mt-2"><i class="bi bi-info-circle me-1"></i>@nextError</p>
+                }
+                else
+                {
+                    <form method="post" asp-action="CompleteMilestone" asp-route-id="@s.Id" enctype="multipart/form-data" class="collections-form mt-2">
+                        <input type="hidden" name="type" value="@next.Type" />
+                        <p class="small fw-semibold mb-2">Record: @next.Type.Display()</p>
+                        <div class="row g-2">
+                            <div class="col-6"><label class="form-label small mb-1" for="ms-date">Date</label><input id="ms-date" name="completedOn" type="date" value="@today" max="@today" class="form-control form-control-sm" required /></div>
+                            <div class="col-6"><label class="form-label small mb-1" for="ms-ref">Reference</label><input id="ms-ref" name="reference" class="form-control form-control-sm" placeholder="@(next.Type == MilestoneType.TitleTransfer ? "Title number" : next.Type == MilestoneType.StampDuty ? "KRA receipt" : "")" /></div>
+                            <div class="col-12"><input name="notes" class="form-control form-control-sm" placeholder="Notes (optional)" aria-label="Notes" /></div>
+                            <div class="col-12"><input name="document" type="file" accept=".pdf,.jpg,.jpeg,.png" class="form-control form-control-sm" aria-label="Document" /></div>
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-primary w-100 mt-2">Mark complete</button>
+                        @if (next.Type == MilestoneType.Agreement) { <p class="form-text mb-0">The sale becomes active and the unit is marked sold.</p> }
+                    </form>
+                }
+            }
+        </section>
+    </aside>
+</div>

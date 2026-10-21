@@ -1,0 +1,25 @@
+@model DocumentUploadModel
+<form method="post" asp-controller="Tenants" asp-action="UploadDocument" asp-route-id="@Model.TenantId" enctype="multipart/form-data" class="doc-upload">
+    <input type="hidden" name="LeaseId" value="@Model.LeaseId" />
+    <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+    <div class="row g-2">
+        <div class="col-sm-6">
+            <label class="form-label small mb-1" for="docType-@Model.LeaseId">Type</label>
+            <select id="docType-@Model.LeaseId" name="DocumentType" class="form-select form-select-sm">
+                @foreach (var t in Enum.GetValues<TenantDocumentType>())
+                {
+                    <option value="@t" selected="@(t == Model.DefaultType)">@t.Display()</option>
+                }
+            </select>
+        </div>
+        <div class="col-sm-6">
+            <label class="form-label small mb-1" for="docTitle-@Model.LeaseId">Title (optional)</label>
+            <input id="docTitle-@Model.LeaseId" name="Title" class="form-control form-control-sm" maxlength="150" />
+        </div>
+        <div class="col-12">
+            <input name="File" type="file" class="form-control form-control-sm" accept=".jpg,.jpeg,.png,.pdf" required aria-label="File" />
+            <div class="form-text">JPG, PNG or PDF, up to @Model.MaxMb MB.</div>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-sm btn-outline-primary mt-2"><i class="bi bi-upload me-1"></i>Upload</button>
+</form>

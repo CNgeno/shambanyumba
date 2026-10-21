@@ -1,0 +1,135 @@
+@model LeaseDetailsViewModel
+@{
+    var d = Model.Details;
+    var l = d.Lease;
+    ViewData["Title"] = $"Lease {l.LeaseNumber}";
+    var returnUrl = Context.Request.Path.ToString();
+    var isActive = l.Status == LeaseStatus.Active;
+    var pastEnd = d.Expiry == LeaseExpiry.Ended;
+}
+<a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Leases</a>
+
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">@l.LeaseNumber <partial name="_LeaseStatusChip" model="new LeaseChip(l.Status, d.Expiry)" /></h1>
+        <p class="page-sub">
+            <a asp-controller="Tenants" asp-action="Details" asp-route-id="@l.TenantId">@l.Tenant.FullName</a>
+            renting <a asp-controller="Properties" asp-action="Details" asp-route-id="@l.Unit.AssetId">@l.Unit.UnitNumber, @l.Unit.Asset.Name</a>
+        </p>
+    </div>
+    @if (Model.CanEdit)
+    {
+        <div class="d-flex flex-wrap gap-2">
+            @if (l.Status == LeaseStatus.Draft)
+            {
+                <form method="post" asp-action="Activate" asp-route-id="@l.Id" class="m-0">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check2-circle me-1"></i>Activate</button>
+                </form>
+                <a asp-action="Edit" asp-route-id="@l.Id" class="btn btn-outline-primary">Edit draft</a>
+                <form method="post" asp-action="Delete" asp-route-id="@l.Id" class="m-0" onsubmit="return confirm('Delete this draft lease?');">
+                    <button type="submit" class="btn btn-outline-danger">Delete</button>
+                </form>
+            }
+            @if (isActive)
+            {
+                <a asp-action="Renew" asp-route-id="@l.Id" class="btn @(d.Expiry is LeaseExpiry.None ? "btn-outline-primary" : "btn-primary")"><i class="bi bi-arrow-repeat me-1"></i>Renew</a>
+                <a asp-action="Terminate" asp-route-id="@l.Id" class="btn btn-outline-danger">End early</a>
+            }
+        </div>
+    }
+</div>
+
+@if (isActive && pastEnd && Model.CanEdit)
+{
+    <div class="panel attention mb-3">
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            <div class="me-auto">
+                <strong>This lease ended on @l.EndDate!.Value.ToString("d MMM yyyy").</strong>
+                <div class="small text-body-secondary">If the tenant is staying, renew it. If they've left, end it so the unit becomes available.</div>
+            </div>
+            <form method="post" asp-action="EndAtExpiry" asp-route-id="@l.Id" class="d-flex flex-wrap align-items-center gap-2 m-0">
+                <div class="form-check mb-0">
+                    <input class="form-check-input" type="checkbox" name="makeUnitInactive" value="true" id="inactive" />
+                    <label class="form-check-label small" for="inactive">Make unit inactive</label>
+                </div>
+                <button type="submit" class="btn btn-outline-secondary">Tenant has left</button>
+            </form>
+        </div>
+    </div>
+}
+
+<div class="property-grid property-grid-reverse">
+    <div>
+        <section class="panel mb-3">
+            <h2 class="panel-title mb-3">Terms</h2>
+            <dl class="summary-grid mb-0">
+                <div><dt>Monthly rent</dt><dd>@l.MonthlyRent.Kes()</dd></div>
+                <div><dt>Deposit</dt><dd>@l.DepositAmount.Kes()</dd></div>
+                <div><dt>Starts</dt><dd>@l.StartDate.ToString("d MMM yyyy")</dd></div>
+                <div><dt>Ends</dt><dd>@(l.EndDate?.ToString("d MMM yyyy") ?? "Open-ended")</dd></div>
+                <div><dt>Rent due</dt><dd>Day @l.RentDueDay of each month</dd></div>
+                <div><dt>Notice period</dt><dd>@l.NoticePeriodDays days</dd></div>
+                @if (l.ActivatedAtUtc is not null)
+                {
+                    <div><dt>Activated</dt><dd>@l.ActivatedAtUtc.ToEatDate()</dd></div>
+                }
+            </dl>
+            @if (!string.IsNullOrWhiteSpace(l.Notes))
+            {
+                <p class="mt-3 mb-0 small"><span class="text-body-secondary">Notes:</span> @l.Notes</p>
+            }
+        </section>
+
+        @if (l.Status is LeaseStatus.Terminated or LeaseStatus.Expired)
+        {
+            <section class="panel mb-3">
+                <h2 class="panel-title mb-3">How it ended</h2>
+                <dl class="summary-grid mb-0">
+                    <div><dt>Ended on</dt><dd>@(l.EndedOn?.ToString("d MMM yyyy"))</dd></div>
+                    @if (l.NoticeGivenOn is not null) { <div><dt>Notice given</dt><dd>@l.NoticeGivenOn.Value.ToString("d MMM yyyy")</dd></div> }
+                    @if (l.TerminationPenalty is > 0) { <div><dt>Penalty</dt><dd>@l.TerminationPenalty.Value.Kes()</dd></div> }
+                    <div><dt>Deposit deductions</dt><dd>@((l.DepositDeductions ?? 0).Kes())</dd></div>
+                    <div><dt>Deposit to refund</dt><dd>@((l.DepositRefundDue ?? 0).Kes())</dd></div>
+                    <div><dt>Still to pay back</dt><dd>@Model.DepositRefundable.Kes()</dd></div>
+                </dl>
+                @if (Model.DepositRefundable > 0 && Model.CanEdit)
+                {
+                    <a asp-controller="Payments" asp-action="RefundDeposit" asp-route-leaseId="@l.Id" class="btn btn-sm btn-primary mt-3">Record deposit refund</a>
+                }
+                @if (l.TerminationReason is not null) { <p class="mt-3 mb-0 small"><span class="text-body-secondary">Reason:</span> @l.TerminationReason</p> }
+                @if (l.DepositNote is not null) { <p class="mt-1 mb-0 small"><span class="text-body-secondary">Deductions:</span> @l.DepositNote</p> }
+            </section>
+        }
+
+        <partial name="_LeaseBilling" model="Model.Billing" />
+
+        @if (d.RenewedFrom is not null || d.RenewedTo is not null)
+        {
+            <section class="panel mb-3">
+                <h2 class="panel-title mb-2">History</h2>
+                <ul class="history-list">
+                    @if (d.RenewedTo is { } to)
+                    {
+                        <li><i class="bi bi-arrow-up-right" aria-hidden="true"></i>Renewed as <a asp-action="Details" asp-route-id="@to.Id">@to.LeaseNumber</a> from @to.StartDate.ToString("d MMM yyyy")</li>
+                    }
+                    @if (d.RenewedFrom is { } from)
+                    {
+                        <li><i class="bi bi-arrow-down-left" aria-hidden="true"></i>Renewal of <a asp-action="Details" asp-route-id="@from.Id">@from.LeaseNumber</a> (@from.StartDate.ToString("d MMM yyyy") to @(from.EndDate?.ToString("d MMM yyyy")), @from.MonthlyRent.Kes())</li>
+                    }
+                </ul>
+            </section>
+        }
+    </div>
+
+    <aside>
+        <section class="panel">
+            <h2 class="panel-title mb-2">Signed agreement and documents</h2>
+            <partial name="_DocumentList" model="new DocumentListModel(d.Documents, Model.CanEdit, returnUrl)" />
+            @if (Model.CanEdit)
+            {
+                <hr />
+                <partial name="_DocumentUpload" model="new DocumentUploadModel(l.TenantId, l.Id, Model.MaxUploadMb, returnUrl, TenantDocumentType.LeaseAgreement)" />
+            }
+        </section>
+    </aside>
+</div>

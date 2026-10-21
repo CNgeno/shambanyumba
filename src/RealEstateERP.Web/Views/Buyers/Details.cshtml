@@ -1,0 +1,22 @@
+@model BuyerDetailsViewModel
+@{
+    var b = Model.Buyer;
+    ViewData["Title"] = b.FullName;
+}
+<a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Buyers</a>
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">@b.FullName</h1>
+        <p class="page-sub">@b.Type@if (b.Phone is not null) { <span>, <a href="tel:@b.Phone">@RealEstateERP.Core.Common.KenyanPhone.Display(b.Phone)</a></span> }@if (b.Email is not null) { <span>, <a href="mailto:@b.Email">@b.Email</a></span> }</p>
+    </div>
+    @if (Model.CanEdit)
+    {
+        <a asp-controller="Sales" asp-action="Create" asp-route-buyerId="@b.Id" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New sale</a>
+        <a asp-action="Edit" asp-route-id="@b.Id" class="btn btn-outline-primary">Edit</a>
+    }
+</div>
+<section class="panel p-0">
+    <div class="units-toolbar"><h2 class="panel-title">Purchases</h2></div>
+    @if (Model.Sales.Count == 0) { <p class="small text-body-secondary px-4 py-3 mb-0">No sales yet.</p> }
+    else { <partial name="/Views/Sales/_SalesTable.cshtml" model="Model.Sales" /> }
+</section>

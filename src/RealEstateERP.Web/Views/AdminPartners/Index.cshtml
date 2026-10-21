@@ -1,0 +1,43 @@
+@model IReadOnlyList<PartnerRow>
+@{ ViewData["Title"] = "Partners and referrals"; }
+<div class="page-head"><div class="me-auto"><h1 class="page-title">Partners and referrals</h1>
+    <p class="page-sub">Influencers, business developers and customers who bring new businesses. Each has a code and a link: shambanyumba.com/?ref=CODE</p></div></div>
+
+<section class="panel mb-3">
+    <h2 class="panel-title mb-2">Add a partner</h2>
+    <form method="post" asp-action="Create" class="row g-2 align-items-end">
+        <div class="col-md-3"><label class="form-label small mb-1" for="p-name">Name</label><input id="p-name" name="name" class="form-control form-control-sm" required /></div>
+        <div class="col-md-2"><label class="form-label small mb-1" for="p-kind">Type</label>
+            <select id="p-kind" name="kind" class="form-select form-select-sm">
+                @foreach (var k in new[] { PartnerKind.Influencer, PartnerKind.BusinessDeveloper, PartnerKind.Other }) { <option value="@k">@k.Display()</option> }
+            </select></div>
+        <div class="col-md-2"><label class="form-label small mb-1" for="p-code">Code (optional)</label><input id="p-code" name="code" class="form-control form-control-sm text-uppercase" placeholder="made from the name" /></div>
+        <div class="col-md-2"><label class="form-label small mb-1" for="p-comm">KES per paying customer</label><input id="p-comm" name="commission" class="form-control form-control-sm" inputmode="decimal" value="0" /></div>
+        <div class="col-md-2"><label class="form-label small mb-1" for="p-phone">Phone</label><input id="p-phone" name="phone" class="form-control form-control-sm" /></div>
+        <div class="col-md-1"><button type="submit" class="btn btn-sm btn-primary w-100">Add</button></div>
+    </form>
+    <p class="form-text mb-0">Customers get their own code automatically (Business settings > Refer a landlord) and earn a free month per paying referral.</p>
+</section>
+
+<section class="panel p-0">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0 table-stack">
+            <thead><tr><th>Partner</th><th>Code</th><th>Type</th><th class="text-end">Trials</th><th class="text-end">Paying</th><th class="text-end">Owed</th><th class="text-end">Paid</th></tr></thead>
+            <tbody>
+            @foreach (var p in Model)
+            {
+                <tr class="@(p.IsActive ? "" : "text-body-secondary")">
+                    <td><a asp-action="Details" asp-route-id="@p.Id" class="row-link fw-semibold">@p.Name</a>@if (!p.IsActive) { <span class="small"> (inactive)</span> }</td>
+                    <td><code>@p.Code</code></td>
+                    <td>@p.Kind.Display()</td>
+                    <td class="text-end">@p.Trials</td>
+                    <td class="text-end">@p.Paying</td>
+                    <td class="text-end @(p.Owed > 0 ? "text-danger fw-semibold" : "")">@p.Owed.ToString("N0")</td>
+                    <td class="text-end">@p.Paid.ToString("N0")</td>
+                </tr>
+            }
+            @if (Model.Count == 0) { <tr><td colspan="7" class="text-body-secondary small">No partners yet.</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</section>

@@ -1,0 +1,32 @@
+@model AgentForm
+@{
+    ViewData["Title"] = Model.Id is null ? "Add agent" : $"Edit {Model.FullName}";
+}
+<a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Agents</a>
+<h1 class="page-title mb-4">@ViewData["Title"]</h1>
+<form method="post" asp-action="Save" class="form-narrow panel" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <input type="hidden" asp-for="Id" />
+    <div class="row g-3">
+        <div class="col-12"><label asp-for="FullName" class="form-label"></label><input asp-for="FullName" class="form-control" autofocus /><span asp-validation-for="FullName" class="invalid-feedback d-block"></span></div>
+        <div class="col-sm-6"><label asp-for="LicenseNumber" class="form-label"></label><input asp-for="LicenseNumber" class="form-control text-uppercase" /></div>
+        <div class="col-sm-6"><label asp-for="CommissionSharePercent" class="form-label"></label><input asp-for="CommissionSharePercent" class="form-control" inputmode="decimal" />
+            <div class="form-text">Of the agency's commission on contracts assigned to them.</div></div>
+        <div class="col-sm-6"><label asp-for="Phone" class="form-label"></label><input asp-for="Phone" class="form-control" type="tel" /></div>
+        <div class="col-sm-6"><label asp-for="Email" class="form-label"></label><input asp-for="Email" class="form-control" type="email" /></div>
+        <div class="col-12">
+            <label asp-for="UserId" class="form-label"></label>
+            <select asp-for="UserId" class="form-select">
+                <option value="">No login (records only)</option>
+                @foreach (var m in Model.Members.Where(m => m.LinkedAgentName is null || m.UserId == Model.UserId))
+                {
+                    <option value="@m.UserId">@m.Name (@m.Email)</option>
+                }
+            </select>
+            <div class="form-text">Linked members with the User or Viewer role sign in as this agent and see only their own contracts. To add someone, invite them from <a asp-controller="BusinessSettings" asp-action="Team">Team</a> first.</div>
+        </div>
+        <div class="col-12"><div class="form-check form-switch"><input asp-for="IsActive" class="form-check-input" role="switch" /><label asp-for="IsActive" class="form-check-label"></label></div></div>
+    </div>
+    <button type="submit" class="btn btn-primary mt-3">Save agent</button>
+</form>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

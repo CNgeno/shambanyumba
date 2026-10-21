@@ -1,0 +1,111 @@
+@model ContractDetailsViewModel
+@{
+    var c = Model.Details.Contract;
+    ViewData["Title"] = c.ContractNumber;
+    var lastMonth = Model.Today.AddMonths(-1).ToString("yyyy-MM");
+}
+<a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Contracts</a>
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">@c.ContractNumber <partial name="_ContractStatusChip" model="c.Status" /></h1>
+        <p class="page-sub">Managing for <a asp-controller="Owners" asp-action="Details" asp-route-id="@c.OwnerId">@c.Owner.FullName</a>@if (c.Agent is not null) { <span>, agent @c.Agent.FullName</span> }</p>
+    </div>
+    @if (Model.CanPrepare && !Model.CanEdit && c.Status == ContractStatus.Active)
+    {
+        <a asp-controller="Remittances" asp-action="Prepare" asp-route-contractId="@c.Id" asp-route-month="@lastMonth" class="btn btn-primary"><i class="bi bi-calculator me-1"></i>Prepare last month's statement</a>
+    }
+    @if (Model.CanEdit)
+    {
+        <div class="d-flex flex-wrap gap-2">
+            @if (c.Status == ContractStatus.Draft)
+            {
+                <form method="post" asp-action="Activate" asp-route-id="@c.Id" class="m-0"><button type="submit" class="btn btn-primary"><i class="bi bi-check2-circle me-1"></i>Activate</button></form>
+            }
+            @if (c.Status == ContractStatus.Active)
+            {
+                <a asp-controller="Remittances" asp-action="Prepare" asp-route-contractId="@c.Id" asp-route-month="@lastMonth" class="btn btn-primary"><i class="bi bi-calculator me-1"></i>Prepare last month's statement</a>
+            }
+            @if (c.Status != ContractStatus.Ended) { <a asp-action="Edit" asp-route-id="@c.Id" class="btn btn-outline-primary">Edit terms</a> }
+            @if (c.Status == ContractStatus.Active)
+            {
+                <button type="button" class="btn btn-outline-danger" data-bs-toggle="collapse" data-bs-target="#end-form">End contract</button>
+            }
+        </div>
+    }
+</div>
+
+@if (c.Status == ContractStatus.Active && Model.CanEdit)
+{
+    <form method="post" asp-action="End" asp-route-id="@c.Id" class="collapse panel mb-3" id="end-form">
+        <label for="end-date" class="form-label fw-semibold">Last day you manage these properties</label>
+        <div class="d-flex flex-wrap gap-2">
+            <input id="end-date" name="endedOn" type="date" value="@Model.Today.ToString("yyyy-MM-dd")" class="form-control" style="max-width: 200px" required />
+            <button type="submit" class="btn btn-danger">End contract</button>
+        </div>
+        <div class="form-text">Past statements stay as they are. Prepare the final month's statement afterwards.</div>
+    </form>
+}
+
+<section class="stat-strip mb-3 stat-strip-3">
+    <div class="stat"><span class="stat-label">Commission</span><span class="stat-value">@(c.CommissionType == CommissionType.FixedMonthly ? c.FixedMonthlyFee.Kes() : $"{c.CommissionPercent:0.##}%")</span><span class="stat-note">@c.CommissionType.Display()</span></div>
+    <div class="stat"><span class="stat-label">Owner paid by</span><span class="stat-value">Day @c.RemittanceDay</span><span class="stat-note">of the following month</span></div>
+    <div class="stat"><span class="stat-label">Term</span><span class="stat-value">@c.StartDate.ToString("d MMM yyyy")</span><span class="stat-note">to @(c.EndedOn?.ToString("d MMM yyyy") ?? c.EndDate?.ToString("d MMM yyyy") ?? "open-ended")</span></div>
+</section>
+
+<div class="property-grid property-grid-reverse">
+    <section class="panel p-0">
+        <div class="units-toolbar"><h2 class="panel-title">Properties covered</h2></div>
+        @if (Model.Details.Properties.Count == 0) { <p class="small text-body-secondary px-4 py-3 mb-0">No properties yet. Add the buildings or estates this contract covers.</p> }
+        else
+        {
+            <ul class="attention-list">
+                @foreach (var p in Model.Details.Properties)
+                {
+                    <li class="@(p.RemovedOn is not null ? "text-body-secondary" : "")">
+                        <a asp-controller="Properties" asp-action="Details" asp-route-id="@p.AssetId" class="row-link fw-semibold">@p.AssetName</a>
+                        <span class="small text-body-secondary">@p.Units units, from @p.AddedOn.ToString("d MMM yyyy")@(p.RemovedOn is DateOnly r ? $" to {r:d MMM yyyy}" : "")</span>
+                        @if (Model.CanEdit && p.RemovedOn is null && c.Status != ContractStatus.Ended)
+                        {
+                            <form method="post" asp-action="RemoveProperty" asp-route-id="@c.Id" class="ms-auto m-0" onsubmit="return confirm('Stop managing this property under this contract?');">
+                                <input type="hidden" name="linkId" value="@p.LinkId" />
+                                <button type="submit" class="btn btn-sm btn-link text-danger">Remove</button>
+                            </form>
+                        }
+                    </li>
+                }
+            </ul>
+        }
+        @if (Model.CanEdit && c.Status != ContractStatus.Ended)
+        {
+            @if (Model.Available.Count > 0)
+            {
+                <form method="post" asp-action="AddProperty" asp-route-id="@c.Id" class="d-flex flex-wrap gap-2 px-4 py-3">
+                    <select name="assetId" class="form-select form-select-sm" style="max-width: 320px" aria-label="Property to add">
+                        @foreach (var a in Model.Available) { <option value="@a.AssetId">@a.Name (@a.Units units)</option> }
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-outline-primary">Add property</button>
+                </form>
+            }
+            else { <p class="small px-4 pb-3 mb-0">Every property is already under a contract. <a asp-controller="Properties" asp-action="Create">Add a property</a></p> }
+        }
+    </section>
+    <aside>
+        <section class="panel p-0">
+            <div class="units-toolbar"><h2 class="panel-title">Owner statements</h2></div>
+            @if (Model.Details.Remittances.Count == 0) { <p class="small text-body-secondary px-4 py-3 mb-0">None yet.</p> }
+            else
+            {
+                <ul class="attention-list">
+                    @foreach (var r in Model.Details.Remittances)
+                    {
+                        <li>
+                            <a asp-controller="Remittances" asp-action="Details" asp-route-id="@r.Id" class="row-link fw-semibold">@r.PeriodStart.ToString("MMM yyyy")</a>
+                            <span class="small">@r.NetPayable.Kes()</span>
+                            <span class="ms-auto"><partial name="_RemittanceStatusChip" model="r.Status" /></span>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    </aside>
+</div>

@@ -1,0 +1,114 @@
+@model BusinessReports
+@{
+    ViewData["Title"] = "Reports";
+    var months = ViewData["Months"] as int? ?? 12;
+    var maxMonth = Math.Max(1, Model.Collections.Max(c => Math.Max(c.Invoiced, c.Collected)));
+    var totalInvoiced = Model.Collections.Sum(c => c.Invoiced);
+    var totalCollected = Model.Collections.Sum(c => c.Collected);
+    string Pct(decimal part, decimal whole) => whole <= 0 ? "0" : Math.Round(part * 100 / whole, 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+}
+<div class="page-head">
+    <div class="me-auto"><h1 class="page-title">Reports</h1><p class="page-sub">@Model.From.ToString("MMM yyyy") to @Model.To.ToString("d MMM yyyy")</p></div>
+    <nav class="filter-chips" aria-label="Period">
+        @foreach (var m in new[] { 3, 6, 12, 24 }) { <a asp-action="Index" asp-route-months="@m" class="filter-chip @(months == m ? "is-active" : "")">@m months</a> }
+    </nav>
+</div>
+
+<section class="stat-strip mb-3">
+    <div class="stat"><span class="stat-label">Invoiced</span><span class="stat-value">@totalInvoiced.Kes()</span></div>
+    <div class="stat"><span class="stat-label">Collected</span><span class="stat-value">@totalCollected.Kes()</span></div>
+    <div class="stat"><span class="stat-label">Collection rate</span><span class="stat-value">@(totalInvoiced > 0 ? $"{Pct(totalCollected, totalInvoiced)}%" : "—")</span></div>
+    <div class="stat"><span class="stat-label">Vacant units</span><span class="stat-value">@Model.Vacant.Count</span><span class="stat-note">@Model.Vacant.Sum(v => v.MonthlyRent).Kes() a month unlet</span></div>
+</section>
+
+<section class="panel p-0 mb-3">
+    <div class="units-toolbar"><h2 class="panel-title">Invoiced and collected by month</h2></div>
+    <div class="table-responsive">
+        <table class="table align-middle mb-0 table-stack">
+            <thead><tr><th>Month</th><th>Invoiced</th><th>Collected</th><th class="text-end">Rate</th></tr></thead>
+            <tbody>
+            @foreach (var c in Model.Collections)
+            {
+                <tr>
+                    <td class="text-nowrap">@c.Month.ToString("MMM yyyy")</td>
+                    <td><div class="report-bar"><span class="bar-invoiced" style="width: @Pct(c.Invoiced, maxMonth)%"></span></div><span class="small">@c.Invoiced.ToString("N0")</span></td>
+                    <td><div class="report-bar"><span class="bar-collected" style="width: @Pct(c.Collected, maxMonth)%"></span></div><span class="small">@c.Collected.ToString("N0")</span></td>
+                    <td class="text-end">@(c.Rate is decimal r ? $"{r:0.#}%" : "—")</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="row g-3 mb-3">
+    @foreach (var (title, rows) in new[] { ("Revenue by property", Model.ByProperty), ("Revenue by unit type", Model.ByUnitType) })
+    {
+        <div class="col-lg-6">
+            <section class="panel p-0 h-100">
+                <div class="units-toolbar"><h2 class="panel-title">@title</h2></div>
+                @if (rows.Count == 0) { <p class="small text-body-secondary px-4 py-3 mb-0">No invoices in this period.</p> }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table align-middle mb-0 table-stack">
+                            <thead><tr><th>@(title.EndsWith("property") ? "Property" : "Type")</th><th class="text-end">Units</th><th class="text-end">Invoiced</th><th class="text-end">Collected</th>@if (title.EndsWith("property")) { <th class="text-end">Running costs</th><th class="text-end">Net income</th> }</tr></thead>
+                            <tbody>
+                            @foreach (var r in rows)
+                            {
+                                <tr><td class="fw-semibold">@r.Label</td><td class="text-end">@r.Units</td><td class="text-end">@r.Invoiced.ToString("N0")</td><td class="text-end">@r.Collected.ToString("N0")</td>
+                                    @if (title.EndsWith("property")) { <td class="text-end">@r.Expenses.ToString("N0")</td><td class="text-end fw-semibold @(r.Net < 0 ? "text-danger" : "")">@r.Net.ToString("N0")</td> }</tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </section>
+        </div>
+    }
+</div>
+
+<section class="panel p-0 mb-3">
+    <div class="units-toolbar"><h2 class="panel-title">Occupancy and turnover</h2></div>
+    <div class="table-responsive">
+        <table class="table align-middle mb-0 table-stack">
+            <thead><tr><th>Property</th><th class="text-end">Units</th><th class="text-end">Let</th><th class="text-end">Vacant</th><th class="text-end">Occupancy</th><th class="text-end">Tenants left (12 months)</th></tr></thead>
+            <tbody>
+            @foreach (var o in Model.Occupancy)
+            {
+                <tr>
+                    <td class="fw-semibold">@o.AssetName</td><td class="text-end">@o.Units</td><td class="text-end">@o.Occupied</td><td class="text-end">@o.Vacant</td>
+                    <td class="text-end">@(o.OccupancyPercent is decimal op ? $"{op:0.#}%" : "—")</td>
+                    <td class="text-end">@o.LeasesEnded12m @(o.TurnoverPercent is decimal tp && o.LeasesEnded12m > 0 ? $"({tp:0.#}%)" : "")</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel p-0">
+    <div class="units-toolbar"><h2 class="panel-title">Vacant units, longest first</h2></div>
+    @if (Model.Vacant.Count == 0) { <p class="small text-body-secondary px-4 py-3 mb-0">Every rental unit is let.</p> }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 table-stack">
+                <thead><tr><th>Unit</th><th>Vacant since</th><th class="text-end">Days</th><th class="text-end">Rent</th><th class="text-end">Rent lost so far</th></tr></thead>
+                <tbody>
+                @foreach (var v in Model.Vacant)
+                {
+                    <tr>
+                        <td class="fw-semibold">@v.UnitNumber<div class="small text-body-secondary fw-normal">@v.AssetName</div></td>
+                        <td class="text-nowrap">@v.VacantSince.ToString("d MMM yyyy")</td>
+                        <td class="text-end @(v.DaysVacant > 60 ? "text-danger fw-semibold" : "")">@v.DaysVacant</td>
+                        <td class="text-end">@v.MonthlyRent.ToString("N0")</td>
+                        <td class="text-end">@v.LostRentEstimate.ToString("N0")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+<p class="small text-body-secondary mt-2">Net income: rent collected less running costs (repairs, renovation, cleaning, advertising, owner-paid utilities, rates, security, agent fees) recorded under Costs. Invoiced: issued invoices dated in the month (cancelled excluded). Collected: payments received in the month (reversed excluded). Rent lost is an estimate at the unit's asking rent.</p>

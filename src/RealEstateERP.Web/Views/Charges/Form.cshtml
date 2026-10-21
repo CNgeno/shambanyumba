@@ -1,0 +1,97 @@
+@model ChargeFormViewModel
+@{
+    var isNew = Model.Id is null;
+    ViewData["Title"] = isNew ? "Add charge" : $"Edit {Model.Name}";
+}
+<a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Charges</a>
+<h1 class="page-title mb-4">@ViewData["Title"]</h1>
+
+<form method="post" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@Model.Id" class="form-narrow" id="charge-form" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <section class="panel mb-4">
+        <div class="row g-3">
+            <div class="col-12">
+                <label asp-for="Name" class="form-label"></label>
+                <input asp-for="Name" class="form-control" placeholder="e.g. Garbage collection" autofocus />
+                <span asp-validation-for="Name" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-12">
+                <label class="form-label">Type</label>
+                <div class="type-options">
+                    @foreach (var t in Enum.GetValues<ChargeType>())
+                    {
+                        <label class="type-option">
+                            <input type="radio" class="form-check-input" name="Type" value="@t" checked="@(Model.Type == t)" />
+                            <span>@t.Display()</span>
+                        </label>
+                    }
+                </div>
+            </div>
+            <div class="col-sm-6" data-for="amount">
+                <label asp-for="DefaultAmount" class="form-label"></label>
+                <input asp-for="DefaultAmount" class="form-control" inputmode="decimal" />
+                <span asp-validation-for="DefaultAmount" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-sm-6" data-for="recurring">
+                <label asp-for="Frequency" class="form-label"></label>
+                <select asp-for="Frequency" class="form-select" id="frequency">
+                    @foreach (var f in Enum.GetValues<ChargeFrequency>()) { <option value="@f">@f.Display()</option> }
+                </select>
+                <div class="form-text">The amount is charged each time it's billed (e.g. the quarter's or the year's amount).</div>
+            </div>
+            <div class="col-sm-6" data-for="periodic">
+                <label asp-for="AnchorMonth" class="form-label"></label>
+                <select asp-for="AnchorMonth" class="form-select">
+                    @for (var m = 1; m <= 12; m++) { <option value="@m">@System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(m)</option> }
+                </select>
+                <div class="form-text">Quarterly: this month and every 3 months after.</div>
+            </div>
+            <div class="col-sm-6" data-for="utility">
+                <label asp-for="UnitRate" class="form-label"></label>
+                <input asp-for="UnitRate" class="form-control" inputmode="decimal" />
+            </div>
+            <div class="col-sm-6" data-for="utility">
+                <label asp-for="UnitOfMeasure" class="form-label"></label>
+                <input asp-for="UnitOfMeasure" class="form-control" />
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="TaxPercent" class="form-label"></label>
+                <input asp-for="TaxPercent" class="form-control" inputmode="decimal" />
+                <div class="form-text">16 for VAT on commercial charges; 0 for residential.</div>
+            </div>
+            <div class="col-12">
+                <label asp-for="Description" class="form-label"></label>
+                <input asp-for="Description" class="form-control" />
+            </div>
+            <div class="col-12">
+                <div class="form-check form-switch">
+                    <input asp-for="IsActive" class="form-check-input" role="switch" />
+                    <label asp-for="IsActive" class="form-check-label"></label>
+                </div>
+            </div>
+        </div>
+    </section>
+    <button type="submit" class="btn btn-primary">@(isNew ? "Add charge" : "Save changes")</button>
+    <a asp-action="Index" class="btn btn-link">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var form = document.getElementById('charge-form');
+            function sync() {
+                var t = form.querySelector('input[name="Type"]:checked').value;
+                form.querySelectorAll('[data-for="utility"]').forEach(function (el) { el.hidden = t !== 'Utility'; });
+                form.querySelectorAll('[data-for="amount"]').forEach(function (el) { el.hidden = t === 'Utility'; });
+                form.querySelectorAll('[data-for="recurring"]').forEach(function (el) { el.hidden = t !== 'Recurring'; });
+                var freq = document.getElementById('frequency');
+                form.querySelectorAll('[data-for="periodic"]').forEach(function (el) { el.hidden = t !== 'Recurring' || !freq || freq.value === 'Monthly'; });
+            }
+            form.querySelectorAll('input[name="Type"]').forEach(function (r) { r.addEventListener('change', sync); });
+            var freqSelect = document.getElementById('frequency');
+            if (freqSelect) freqSelect.addEventListener('change', sync);
+            sync();
+        })();
+    </script>
+}

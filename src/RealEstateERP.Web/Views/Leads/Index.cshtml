@@ -1,0 +1,109 @@
+@model LeadsOverview
+@{
+    ViewData["Title"] = "Leads";
+    var stage = ViewData["Stage"] as LeadStage?;
+}
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">Leads</h1>
+        <p class="page-sub">People who enquired about your listings and confirmed their email. Each new lead uses @Model.CostPerLead credits; you have @Model.CreditBalance.</p>
+    </div>
+    <a asp-controller="Listings" asp-action="Index" class="btn btn-outline-primary">Listings</a>
+</div>
+
+@if (ViewData["Awaiting"] is IReadOnlyList<PendingEnquiry> { Count: > 0 } awaiting)
+{
+    <section class="panel mb-3 awaiting-panel">
+        <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-hourglass-split"></i>
+            <h2 class="panel-title me-auto mb-0">Awaiting confirmation (@awaiting.Count)</h2>
+        </div>
+        <p class="small text-body-secondary">These people enquired and were emailed a confirmation link. They become leads here (with their phone and email) as soon as they confirm. Nothing is charged until then.</p>
+        <ul class="list-unstyled mb-0">
+            @foreach (var e in awaiting)
+            {
+                <li class="d-flex flex-wrap gap-2 py-1 border-top small">
+                    <span class="fw-semibold">@e.FirstName</span>
+                    <span class="text-body-secondary">about</span>
+                    <a asp-controller="Listings" asp-action="Edit" asp-route-id="@e.ListingId">@e.ListingTitle</a>
+                    <span class="ms-auto text-body-secondary">@e.ReceivedAtUtc.ToEatDateTime() · link valid until @e.ConfirmBeforeUtc.ToEatDateTime()</span>
+                </li>
+            }
+        </ul>
+    </section>
+}
+
+@if (Model.AwaitingCredits > 0)
+{
+    <div class="sub-banner sub-banner-warning"><i class="bi bi-lock"></i>
+        <span>@Model.AwaitingCredits lead(s) are waiting. Opening each uses @Model.CostPerLead credits.</span>
+        <a asp-controller="Credits" asp-action="Index">Buy credits</a></div>
+}
+
+<section class="panel p-0">
+    <div class="units-toolbar">
+        <nav class="filter-chips" aria-label="Filter by stage">
+            <a asp-action="Index" class="filter-chip @(stage is null ? "is-active" : "")">All</a>
+            @foreach (var s in Enum.GetValues<LeadStage>()) { <a asp-action="Index" asp-route-stage="@s" class="filter-chip @(stage == s ? "is-active" : "")">@s</a> }
+        </nav>
+    </div>
+    @if (Model.Leads.Count == 0)
+    {
+        <div class="empty-state"><i class="bi bi-inbox" aria-hidden="true"></i><h2 class="h6">No leads yet</h2><p>Publish a listing with good photos. Verified enquiries appear here.</p></div>
+    }
+    else
+    {
+        <ul class="lead-list">
+            @foreach (var l in Model.Leads)
+            {
+                <li class="lead-item @(l.ContactVisible ? "" : "is-locked")">
+                    <div class="lead-main">
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            <span class="fw-semibold">@l.Name</span>
+                            @if (l.Status == LeadStatus.AwaitingCredits) { <span class="status-chip status-warn">Locked</span> }
+                            @if (l.Status == LeadStatus.Refunded) { <span class="status-chip status-muted">Refunded</span> }
+                            @if (l.IsRepeat) { <span class="status-chip status-neutral" title="Same person, same listing, within 30 days: not charged">Repeat, free</span> }
+                            <span class="small text-body-secondary ms-auto">@l.CreatedAtUtc.ToEatDateTime()</span>
+                        </div>
+                        <div class="small text-body-secondary">About <a asp-controller="Listings" asp-action="Edit" asp-route-id="@l.ListingId">@l.ListingTitle</a></div>
+                        @if (l.ContactVisible)
+                        {
+                            <div class="lead-contact">
+                                <a href="tel:@l.Phone"><i class="bi bi-telephone"></i> @RealEstateERP.Core.Common.KenyanPhone.Display(l.Phone)</a>
+                                <a href="https://wa.me/@l.Phone?.TrimStart('+')" target="_blank" rel="noopener"><i class="bi bi-whatsapp"></i> WhatsApp</a>
+                                <a href="mailto:@l.Email"><i class="bi bi-envelope"></i> @l.Email</a>
+                            </div>
+                            @if (l.Message is not null) { <p class="lead-message">"@l.Message"</p> }
+                        }
+                    </div>
+                    <div class="lead-actions">
+                        @if (l.Status == LeadStatus.AwaitingCredits)
+                        {
+                            <form method="post" asp-action="Unlock" asp-route-id="@l.Id"><button type="submit" class="btn btn-sm btn-primary">Open lead (@Model.CostPerLead credits)</button></form>
+                        }
+                        else if (l.Status != LeadStatus.Unverified)
+                        {
+                            <form method="post" asp-action="Update" asp-route-id="@l.Id" class="d-flex flex-wrap gap-1">
+                                <select name="stage" class="form-select form-select-sm" aria-label="Stage" style="max-width: 130px">
+                                    @foreach (var s in Enum.GetValues<LeadStage>()) { <option value="@s" selected="@(l.Stage == s)">@s</option> }
+                                </select>
+                                <input name="notes" value="@l.Notes" class="form-control form-control-sm" placeholder="Notes" aria-label="Notes" style="max-width: 200px" />
+                                <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
+                            </form>
+                            @if (l.Status == LeadStatus.Unlocked && !l.IsRepeat && l.UnlockedAtUtc > DateTime.UtcNow.AddDays(-Model.RefundDays))
+                            {
+                                <details class="mt-1 small">
+                                    <summary class="text-body-secondary">Report a fake lead</summary>
+                                    <form method="post" asp-action="Refund" asp-route-id="@l.Id" class="d-flex gap-1 mt-1">
+                                        <input name="reason" class="form-control form-control-sm" required placeholder="e.g. Number doesn't exist" aria-label="Reason" />
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Report</button>
+                                    </form>
+                                </details>
+                            }
+                        }
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</section>

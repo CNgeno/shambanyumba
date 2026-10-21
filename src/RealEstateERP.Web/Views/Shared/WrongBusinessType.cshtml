@@ -1,0 +1,12 @@
+@{
+    ViewData["Title"] ??= "Not set up for this yet";
+}
+<section class="panel empty-state">
+    <i class="bi bi-signpost-split" aria-hidden="true"></i>
+    <h1 class="h5">This needs @ViewData["Needed"]</h1>
+    <p>@ViewData["How"]</p>
+    <div class="d-flex flex-wrap gap-2 justify-content-center">
+        <a asp-area="" asp-controller="Properties" asp-action="Index" class="btn btn-outline-primary">Properties</a>
+        <a asp-area="" asp-controller="Dashboard" asp-action="Index" class="btn btn-primary">Back to the dashboard</a>
+    </div>
+</section>

@@ -1,0 +1,74 @@
+@model PlanEditViewModel
+@{
+    ViewData["Title"] = Model.Id is null ? "New plan" : $"Edit {Model.Name}";
+}
+<a asp-action="Index" class="d-inline-block mb-3"><i class="bi bi-arrow-left me-1"></i>Plans</a>
+<h1 class="page-title mb-4">@ViewData["Title"]</h1>
+
+<form method="post" asp-action="Save" class="panel form-narrow" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <input type="hidden" asp-for="Id" />
+
+    <div class="row g-3">
+        <div class="col-sm-4">
+            <label asp-for="Code" class="form-label"></label>
+            @if (Model.Id is null)
+            {
+                <input asp-for="Code" class="form-control text-uppercase" />
+            }
+            else
+            {
+                <input asp-for="Code" class="form-control" readonly />
+            }
+            <span asp-validation-for="Code" class="invalid-feedback d-block"></span>
+        </div>
+        <div class="col-sm-8">
+            <label asp-for="Name" class="form-label"></label>
+            <input asp-for="Name" class="form-control" />
+            <span asp-validation-for="Name" class="invalid-feedback d-block"></span>
+        </div>
+        <div class="col-12">
+            <label asp-for="Description" class="form-label"></label>
+            <input asp-for="Description" class="form-control" />
+        </div>
+        <div class="col-sm-6">
+            <label asp-for="MonthlyFee" class="form-label"></label>
+            <input asp-for="MonthlyFee" class="form-control" inputmode="decimal" />
+            <span asp-validation-for="MonthlyFee" class="invalid-feedback d-block"></span>
+        </div>
+        <div class="col-sm-6">
+            <label asp-for="UnitLimit" class="form-label"></label>
+            <input asp-for="UnitLimit" class="form-control" inputmode="numeric" />
+            <span asp-validation-for="UnitLimit" class="invalid-feedback d-block"></span>
+        </div>
+        <div class="col-sm-4">
+            <label asp-for="CreditsPerMonth" class="form-label"></label>
+            <input asp-for="CreditsPerMonth" class="form-control" inputmode="numeric" />
+        </div>
+        <div class="col-sm-4">
+            <label asp-for="TrialDays" class="form-label"></label>
+            <input asp-for="TrialDays" class="form-control" inputmode="numeric" />
+        </div>
+        <div class="col-sm-4">
+            <label asp-for="SortOrder" class="form-label"></label>
+            <input asp-for="SortOrder" class="form-control" inputmode="numeric" />
+        </div>
+        <div class="col-sm-6">
+            <label asp-for="ForBusinessType" class="form-label"></label>
+            <select asp-for="ForBusinessType" asp-items="Html.GetEnumSelectList<BusinessType>()" class="form-select">
+                <option value="">All business types</option>
+            </select>
+        </div>
+        <div class="col-sm-6 d-flex align-items-end">
+            <div class="form-check form-switch">
+                <input asp-for="IsActive" class="form-check-input" role="switch" />
+                <label asp-for="IsActive" class="form-check-label"></label>
+            </div>
+        </div>
+    </div>
+    <button type="submit" class="btn btn-primary mt-4">Save plan</button>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

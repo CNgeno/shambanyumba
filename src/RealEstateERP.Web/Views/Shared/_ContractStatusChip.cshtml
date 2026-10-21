@@ -1,0 +1,2 @@
+@model ContractStatus
+<span class="status-chip @(Model switch { ContractStatus.Active => "status-ok", ContractStatus.Draft => "status-info", _ => "status-muted" })">@Model</span>

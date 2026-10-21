@@ -1,0 +1,57 @@
+@page
+@model LoginModel
+@{
+    ViewData["Title"] = "Sign in";
+}
+<h1 class="auth-title">Sign in</h1>
+<p class="auth-sub">Welcome back. Sign in to manage your properties.</p>
+
+@if (Model.StatusMessage is not null)
+{
+    <div class="alert alert-success small" role="status">@Model.StatusMessage</div>
+}
+
+<form method="post" asp-route-returnUrl="@Model.ReturnUrl" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger small" role="alert"></div>
+    @if (Model.ShowResendLink)
+    {
+        <p class="small"><a asp-page="./ResendEmailConfirmation">Send the confirmation email again</a></p>
+    }
+
+    <div class="mb-3">
+        <label asp-for="Input.Email" class="form-label">Email</label>
+        <input asp-for="Input.Email" class="form-control" autocomplete="username" autofocus />
+        <span asp-validation-for="Input.Email" class="invalid-feedback d-block"></span>
+    </div>
+    <div class="mb-2">
+        <div class="d-flex justify-content-between align-items-baseline">
+            <label asp-for="Input.Password" class="form-label">Password</label>
+            <a asp-page="./ForgotPassword" class="small">Forgot password?</a>
+        </div>
+        <div class="input-group">
+            <input asp-for="Input.Password" class="form-control" autocomplete="current-password" id="password" />
+            <button type="button" class="btn btn-outline-secondary" data-toggle-password="password" aria-label="Show password"><i class="bi bi-eye"></i></button>
+        </div>
+        <span asp-validation-for="Input.Password" class="invalid-feedback d-block"></span>
+    </div>
+    <div class="form-check mb-3">
+        <input asp-for="Input.RememberMe" class="form-check-input" />
+        <label asp-for="Input.RememberMe" class="form-check-label small"></label>
+    </div>
+    <button type="submit" class="btn btn-primary w-100">Sign in</button>
+</form>
+
+<p class="auth-switch">New to ShambaNyumba? <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Create an account</a></p>
+<div class="demo-login">
+    <span class="small text-body-secondary">Just looking?</span>
+    <form method="post" asp-area="" asp-controller="Demo" asp-action="Start" class="d-inline">
+        <button type="submit" class="btn btn-sm btn-outline-primary">Try the live demo</button>
+    </form>
+    <form method="post" asp-area="" asp-controller="Demo" asp-action="Start" asp-route-as="agent" class="d-inline">
+        <button type="submit" class="btn btn-sm btn-link">as an agent</button>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

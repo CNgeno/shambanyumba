@@ -1,0 +1,93 @@
+@model LeaseBillingViewModel
+<section class="panel p-0 mb-3" id="billing">
+    <div class="units-toolbar">
+        <h2 class="panel-title me-auto">Monthly charges</h2>
+        <span class="small text-body-secondary">Added to every monthly invoice, on top of rent</span>
+    </div>
+    @if (Model.Charges.Count == 0)
+    {
+        <p class="small text-body-secondary px-4 pt-3 mb-2">No charges on this lease.</p>
+    }
+    else
+    {
+        <ul class="charge-list">
+            @foreach (var c in Model.Charges)
+            {
+                <li>
+                    <span class="fw-semibold">@c.Name</span>
+                    <span class="small text-body-secondary">
+                        @(c.Type == ChargeType.Utility ? $"metered, {(c.UnitRate ?? 0).Kes()} per {c.UnitOfMeasure}" : (c.Amount ?? 0).Kes())@(c.TaxPercent > 0 ? $" + {c.TaxPercent:0.##}% tax" : "")@(c.IsOverride ? ", special price" : "")
+                    </span>
+                    @if (Model.CanEdit && Model.CanAddCharges)
+                    {
+                        <form method="post" asp-controller="Charges" asp-action="RemoveFromLease" asp-route-id="@c.Id" class="ms-auto m-0">
+                            <input type="hidden" name="leaseId" value="@Model.LeaseId" />
+                            <button type="submit" class="btn btn-sm btn-link text-body-secondary" aria-label="Remove @c.Name"><i class="bi bi-x-lg"></i></button>
+                        </form>
+                    }
+                </li>
+            }
+        </ul>
+    }
+    @if (Model.CanEdit && Model.CanAddCharges)
+    {
+        var available = Model.AvailableCharges.Where(a => a.Type is ChargeType.Recurring or ChargeType.Utility && Model.Charges.All(c => c.ChargeDefinitionId != a.Id)).ToList();
+        @if (available.Count > 0)
+        {
+            <form method="post" asp-controller="Charges" asp-action="AddToLease" class="add-charge-form">
+                <input type="hidden" name="leaseId" value="@Model.LeaseId" />
+                <select name="chargeDefinitionId" class="form-select form-select-sm" aria-label="Charge" required>
+                    @foreach (var a in available)
+                    {
+                        <option value="@a.Id">@a.Name (@(a.Type == ChargeType.Utility ? $"{(a.UnitRate ?? 0).Kes()} per {a.UnitOfMeasure}" : (a.DefaultAmount ?? 0).Kes()))</option>
+                    }
+                </select>
+                <input name="amountOverride" class="form-control form-control-sm" inputmode="decimal" placeholder="Special amount (optional)" aria-label="Special amount" />
+                <input name="unitRateOverride" class="form-control form-control-sm" inputmode="decimal" placeholder="Special rate (utilities)" aria-label="Special rate" />
+                <button type="submit" class="btn btn-sm btn-outline-primary">Add charge</button>
+            </form>
+        }
+        else if (Model.AvailableCharges.Count == 0)
+        {
+            <p class="small px-4 pb-3 mb-0"><a asp-controller="Charges" asp-action="Index">Set up charges</a> such as garbage, security and water first.</p>
+        }
+    }
+</section>
+
+<section class="panel p-0 mb-3">
+    <div class="units-toolbar">
+        <h2 class="panel-title me-auto">Invoices</h2>
+        @if (Model.NeedsFinalInvoice && Model.CanEdit)
+        {
+            <form method="post" asp-controller="Invoices" asp-action="Final" class="m-0">
+                <input type="hidden" name="leaseId" value="@Model.LeaseId" />
+                <button type="submit" class="btn btn-sm btn-primary">Create final invoice for the penalty</button>
+            </form>
+        }
+    </div>
+    @if (Model.Invoices.Count == 0)
+    {
+        <p class="small text-body-secondary px-4 py-3 mb-0">No invoices yet. They're created by the monthly invoice run.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr><th>Invoice</th><th>Due</th><th class="text-end">Total</th><th class="text-end">Balance</th><th>Status</th></tr></thead>
+                <tbody>
+                @foreach (var i in Model.Invoices.Take(12))
+                {
+                    <tr>
+                        <td><a asp-controller="Invoices" asp-action="Details" asp-route-id="@i.Id" class="row-link fw-semibold">@i.InvoiceNumber</a>
+                            <div class="small text-body-secondary">@(i.PeriodStart?.ToString("MMMM yyyy") ?? i.Kind.ToString())</div></td>
+                        <td class="text-nowrap">@i.DueDate.ToString("d MMM yyyy")</td>
+                        <td class="text-end">@i.Total.Kes()</td>
+                        <td class="text-end">@(i.Status is InvoiceStatus.Cancelled or InvoiceStatus.WrittenOff or InvoiceStatus.Draft ? "—" : i.Balance.Kes())</td>
+                        <td><partial name="_InvoiceStatusChip" model="i.Status" /></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

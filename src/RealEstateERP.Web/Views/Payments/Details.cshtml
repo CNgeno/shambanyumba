@@ -1,0 +1,112 @@
+@model PaymentDetailsViewModel
+@{
+    var d = Model.Details;
+    var p = d.Payment;
+    ViewData["Title"] = $"Receipt {p.ReceiptNumber}";
+    var reversed = p.Status == PaymentStatus.Reversed;
+    var returnUrl = Context.Request.Path.ToString();
+}
+<div class="no-print">
+    <a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Payments</a>
+    <div class="page-head">
+        <div class="me-auto">
+            <h1 class="page-title">@p.ReceiptNumber @if (reversed) { <span class="status-chip status-bad">Reversed</span> }</h1>
+            <p class="page-sub"><a asp-controller="Tenants" asp-action="Details" asp-route-id="@p.TenantId">@p.Tenant.FullName</a></p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer me-1"></i>Print receipt</button>
+            <a asp-action="Pdf" asp-route-id="@p.Id" class="btn btn-outline-secondary" title="Uses 1 credit"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</a>
+            @if (!reversed && Model.CanEdit && !string.IsNullOrWhiteSpace(p.Tenant.Email))
+            {
+                <form method="post" asp-action="EmailReceipt" asp-route-id="@p.Id" class="m-0">
+                    <button type="submit" class="btn btn-outline-secondary" title="@(p.ReceiptEmailedAtUtc is DateTime sent ? $"Last emailed {sent.ToEatDateTime()}" : "Send to " + p.Tenant.Email)">
+                        <i class="bi bi-envelope me-1"></i>@(p.ReceiptEmailedAtUtc is null ? "Email receipt" : "Email again")
+                    </button>
+                </form>
+            }
+            @if (!reversed && Model.CanEdit && d.Unallocated > 0 && d.TenantBalance.Outstanding > 0)
+            {
+                <form method="post" asp-action="ApplyCredit" class="m-0">
+                    <input type="hidden" name="tenantId" value="@p.TenantId" />
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    <button type="submit" class="btn btn-primary">Apply credit to unpaid invoices</button>
+                </form>
+            }
+            @if (!reversed && Model.CanAdmin)
+            {
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More actions"><i class="bi bi-three-dots"></i></button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        @if (d.Unallocated > 0) { <li><a class="dropdown-item" asp-action="RefundOverpayment" asp-route-paymentId="@p.Id">Refund the unallocated @d.Unallocated.Kes()</a></li> }
+                        <li><button type="button" class="dropdown-item text-danger" data-bs-toggle="collapse" data-bs-target="#reverse-form">Reverse payment</button></li>
+                    </ul>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (!reversed && Model.CanAdmin)
+    {
+        <form method="post" asp-action="Reverse" asp-route-id="@p.Id" class="collapse panel mb-3" id="reverse-form">
+            <label for="reverse-reason" class="form-label fw-semibold">Why is this payment being reversed?</label>
+            <div class="d-flex flex-wrap gap-2">
+                <input id="reverse-reason" name="reason" class="form-control flex-grow-1" style="max-width: 480px" required maxlength="500" placeholder="e.g. Cheque bounced; recorded against the wrong tenant" />
+                <button type="submit" class="btn btn-danger">Reverse</button>
+            </div>
+            <div class="form-text">The receipt stays on record, marked reversed. The invoices it paid become unpaid again.</div>
+        </form>
+    }
+    @if (reversed)
+    {
+        <div class="sub-banner sub-banner-danger"><i class="bi bi-arrow-counterclockwise"></i><span>Reversed on @p.ReversedAtUtc.ToEatDateTime(): @p.ReversalReason</span></div>
+    }
+</div>
+
+<article class="invoice-doc panel @(reversed ? "is-void" : "")">
+    <header class="invoice-head">
+        <div>
+            <div class="invoice-biz">@Model.BusinessName</div>
+            <div class="small text-body-secondary">Official receipt</div>
+        </div>
+        <dl class="invoice-meta">
+            <dt>Receipt no.</dt><dd>@p.ReceiptNumber</dd>
+            <dt>Date</dt><dd>@p.PaymentDate.ToString("d MMM yyyy")</dd>
+            <dt>Method</dt><dd>@p.Method.Display()</dd>
+            @if (p.Reference is not null) { <dt>Reference</dt><dd class="font-monospace">@p.Reference</dd> }
+        </dl>
+    </header>
+
+    <div class="receipt-amount">
+        <div class="small text-body-secondary">Received from @(p.PayerName ?? p.Tenant.FullName)</div>
+        <div class="receipt-figure">KES @p.Amount.ToString("N2")</div>
+        @if (p.Lease is not null) { <div class="small">For unit @p.Lease.Unit.UnitNumber, @p.Lease.Unit.Asset.Name</div> }
+    </div>
+
+    <table class="table invoice-lines mb-0">
+        <thead><tr><th>Applied to</th><th>Due</th><th class="text-end">Amount</th></tr></thead>
+        <tbody>
+        @foreach (var a in d.Allocations)
+        {
+            <tr class="@(a.IsReversed ? "is-reversed" : "")">
+                <td><a asp-controller="Invoices" asp-action="Details" asp-route-id="@a.InvoiceId">@a.InvoiceNumber</a></td>
+                <td>@a.DueDate.ToString("d MMM yyyy")</td>
+                <td class="text-end">@a.Amount.ToString("N2")</td>
+            </tr>
+        }
+        @foreach (var r in d.Refunds)
+        {
+            <tr><td>Refunded (@r.RefundNumber)</td><td>@r.RefundDate.ToString("d MMM yyyy")</td><td class="text-end">@r.Amount.ToString("N2")</td></tr>
+        }
+        @if (d.Unallocated > 0)
+        {
+            <tr><td>Held as credit</td><td></td><td class="text-end">@d.Unallocated.ToString("N2")</td></tr>
+        }
+        </tbody>
+        <tfoot>
+            <tr class="invoice-total"><td colspan="2" class="text-end">Account balance after this payment</td>
+                <td class="text-end">@(d.TenantBalance.Net > 0 ? $"{d.TenantBalance.Net:N2} owing" : d.TenantBalance.Net < 0 ? $"{-d.TenantBalance.Net:N2} in credit" : "Nothing owing")</td></tr>
+        </tfoot>
+    </table>
+    @if (p.Notes is not null) { <p class="small mt-3 mb-0">@p.Notes</p> }
+    <p class="small text-body-secondary mt-3 mb-0">Thank you.</p>
+</article>

@@ -1,0 +1,159 @@
+@model ProjectOverview
+@{
+    ViewData["Title"] = $"{Model.Asset.Name}: margins";
+    var canEdit = ViewData["CanEdit"] is true;
+    var s = Model.Sales;
+    var r = Model.Rental;
+    var hasCosts = Model.Categories.Count > 0;
+}
+<partial name="_ProjectTabs" model="Model" />
+
+@if (!hasCosts)
+{
+    <section class="panel empty-state">
+        <i class="bi bi-calculator" aria-hidden="true"></i>
+        <h2 class="h5">No costs recorded yet</h2>
+        <p>Start with the purchase price, then add a budget for each kind of cost. Record actual spending as it happens to see the margin take shape.</p>
+        @if (canEdit)
+        {
+            <div class="d-flex justify-content-center gap-2">
+                <a asp-action="Setup" asp-route-id="@Model.Asset.Id" class="btn btn-primary">Enter purchase details</a>
+                <a asp-action="Costs" asp-route-id="@Model.Asset.Id" asp-route-add="Budget" class="btn btn-outline-primary">Add a budget</a>
+            </div>
+        }
+    </section>
+}
+else
+{
+    <section class="stat-strip mb-3">
+        <div class="stat"><span class="stat-label">Expected total cost</span><span class="stat-value">@Model.ExpectedTotal.Kes()</span><span class="stat-note">budget @Model.BudgetTotal.Kes()</span></div>
+        <div class="stat"><span class="stat-label">Spent so far</span><span class="stat-value">@Model.ActualTotal.Kes()</span>
+            <span class="stat-note">@(Model.ExpectedTotal == 0 ? "" : $"{Math.Round(Model.ActualTotal * 100 / Model.ExpectedTotal)}% of expected")</span></div>
+        @if (s.UnitsForSale > 0)
+        {
+            <div class="stat"><span class="stat-label">Projected sales revenue</span><span class="stat-value">@s.ProjectedRevenue.Kes()</span><span class="stat-note">@s.ContractedRevenue.Kes() agreed</span></div>
+            <div class="stat"><span class="stat-label">Projected margin</span><span class="stat-value @(s.ProjectedMargin < 0 ? "text-danger" : "")">@s.ProjectedMargin.Kes()</span><span class="stat-note"><partial name="_MarginBadge" model="s.ProjectedMarginPercent" /></span></div>
+        }
+        else if (r.LetUnits > 0)
+        {
+            <div class="stat"><span class="stat-label">Annual rent roll</span><span class="stat-value">@r.AnnualRentRoll.Kes()</span><span class="stat-note">@r.Occupied of @r.LetUnits let</span></div>
+            <div class="stat"><span class="stat-label">Gross yield</span><span class="stat-value">@(r.GrossYield is decimal gy ? $"{gy:0.#}%" : "—")</span><span class="stat-note">on cost</span></div>
+        }
+    </section>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-7">
+            <section class="panel p-0 h-100">
+                <div class="units-toolbar"><h2 class="panel-title me-auto">Budget against actual</h2><a asp-action="Costs" asp-route-id="@Model.Asset.Id" class="small">All cost lines</a></div>
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead><tr><th>Cost</th><th class="text-end">Budget</th><th class="text-end">Actual</th><th class="text-end">Expected</th><th class="text-end">Variance</th></tr></thead>
+                        <tbody>
+                        @foreach (var group in Model.Categories.Where(c => c.Group != CostGroup.Letting).GroupBy(c => c.Group))
+                        {
+                            <tr class="table-group-row"><td colspan="5">@group.Key</td></tr>
+                            @foreach (var c in group)
+                            {
+                                <tr>
+                                    <td>@c.Label</td>
+                                    <td class="text-end">@c.Budget.ToString("N0")</td>
+                                    <td class="text-end">@c.Actual.ToString("N0")</td>
+                                    <td class="text-end">@c.Expected.ToString("N0")</td>
+                                    <td class="text-end @(c.Variance > 0 && c.Budget > 0 ? "text-danger fw-semibold" : "text-body-secondary")">
+                                        @(c.Budget == 0 ? "no budget" : c.Variance > 0 ? $"+{c.Variance:N0} over" : c.Actual < c.Budget ? $"{(c.Budget - c.Actual):N0} left" : "on budget")
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        </tbody>
+                        <tfoot><tr class="invoice-total"><td>Development cost</td><td class="text-end">@Model.BudgetTotal.ToString("N0")</td><td class="text-end">@Model.ActualTotal.ToString("N0")</td><td class="text-end">@Model.ExpectedTotal.ToString("N0")</td><td></td></tr></tfoot>
+                    </table>
+                </div>
+            </section>
+        </div>
+        <div class="col-lg-5">
+            @if (s.UnitsForSale > 0)
+            {
+                <section class="panel mb-3">
+                    <h2 class="panel-title mb-2">Sales</h2>
+                    <dl class="summary-grid small mb-2">
+                        <div><dt>Sold or reserved</dt><dd>@s.Contracted of @s.UnitsForSale, @s.ContractedRevenue.Kes()</dd></div>
+                        <div><dt>Collected</dt><dd>@s.Collected.Kes()</dd></div>
+                        <div><dt>Unsold stock</dt><dd>@s.Unsold units, @s.UnsoldValue.Kes()</dd></div>
+                        <div><dt>Cost of these units</dt><dd>@s.Cost.Kes()</dd></div>
+                    </dl>
+                    <div class="breakeven @(s.UnitsToBreakEven == 0 ? "is-ok" : s.UnitsToBreakEven is null ? "is-bad" : "")">
+                        @if (s.UnitsToBreakEven == 0) { <span><i class="bi bi-check2-circle me-1"></i>Sales already agreed cover the expected cost. Every further sale is margin.</span> }
+                        else if (s.UnitsToBreakEven is int n) { <span><i class="bi bi-flag me-1"></i>Sell <strong>@n more</strong> unit@(n == 1 ? "" : "s") (at asking price) to cover the expected cost.</span> }
+                        else { <span><i class="bi bi-exclamation-triangle me-1"></i>Even selling everything at asking price won't cover the expected cost.</span> }
+                    </div>
+                </section>
+            }
+            @if (r.LetUnits > 0)
+            {
+                <section class="panel mb-3">
+                    <h2 class="panel-title mb-2">Rental, last 12 months</h2>
+                    <dl class="summary-grid small mb-0">
+                        <div><dt>Rent collected</dt><dd>@r.Collected12m.Kes()</dd></div>
+                        <div><dt>Letting costs</dt><dd>@r.LettingCosts12m.Kes()</dd></div>
+                        <div><dt>Net income</dt><dd class="fw-semibold">@r.NetIncome12m.Kes()</dd></div>
+                        <div><dt>Net yield</dt><dd>@(r.NetYield is decimal ny ? $"{ny:0.#}%" : "—") on @r.Cost.Kes()</dd></div>
+                        <div><dt>Annual rent roll</dt><dd>@r.AnnualRentRoll.Kes() (@(r.GrossYield is decimal gy2 ? $"{gy2:0.#}%" : "—") gross)</dd></div>
+                    </dl>
+                </section>
+            }
+            <p class="small text-body-secondary">Shared costs are spread @(Model.AllocationUsed switch { CostAllocationMethod.BySize => "by size", CostAllocationMethod.ByValue => "by sale value", _ => "equally" })
+                @if (Model.AllocationUsed != Model.Asset.CostAllocation) { <span class="text-warning-emphasis">(not every unit has a @(Model.Asset.CostAllocation == CostAllocationMethod.BySize ? "size" : "price"), so equally for now)</span> }.
+                Letting costs reduce rental income and aren't counted as development cost.</p>
+        </div>
+    </div>
+
+    <section class="panel p-0">
+        <div class="units-toolbar"><h2 class="panel-title">Units: cost and margin</h2></div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead><tr><th>Unit</th><th class="text-end">Cost</th><th>Price / rent</th><th class="text-end">Margin or yield</th><th>Status</th></tr></thead>
+                <tbody>
+                @foreach (var u in Model.Units)
+                {
+                    <tr>
+                        <td class="fw-semibold">@u.UnitNumber<div class="small text-body-secondary fw-normal">@(u.SizeSqm is decimal sq ? $"{sq:0.#} sqm" : u.Type.Display())@(u.TitleNumber is null ? "" : $", {u.TitleNumber}")</div></td>
+                        <td class="text-end">@u.Cost.Kes()@if (u.DirectCost > 0) { <div class="small text-body-secondary">incl. @u.DirectCost.Kes() own costs</div> }</td>
+                        <td>
+                            @switch (u.Mode)
+                            {
+                                case UnitRevenueMode.Sale:
+                                    @(u.Price?.Kes())
+                                    <div class="small text-body-secondary">@(u.Contracted ? $"sold to {u.BuyerName}" : "asking price")</div>
+                                    break;
+                                case UnitRevenueMode.Let:
+                                    @($"{u.MonthlyRent.Kes()} a month")
+                                    <div class="small text-body-secondary">@(u.IsLet ? "let" : "vacant")</div>
+                                    break;
+                                default:
+                                    <span class="text-body-secondary">No price or rent set</span>
+                                    break;
+                            }
+                        </td>
+                        <td class="text-end">
+                            @if (u.Mode == UnitRevenueMode.Sale)
+                            {
+                                <span class="@(u.Margin < 0 ? "text-danger" : "")">@u.Margin?.Kes()</span> <partial name="_MarginBadge" model="u.MarginPercent" />
+                            }
+                            else if (u.Mode == UnitRevenueMode.Let)
+                            {
+                                <span>@(u.GrossYield is decimal y ? $"{y:0.#}% gross" : "—")</span>
+                                @if (u.PaybackMonths is int pm) { <div class="small text-body-secondary">pays back in @(pm >= 24 ? $"{pm / 12.0:0.#} years" : $"{pm} months")</div> }
+                            }
+                        </td>
+                        <td>
+                            @if (u.SaleId is int sid) { <a asp-controller="Sales" asp-action="Details" asp-route-id="@sid" class="small">View sale</a> }
+                            else { <span class="small text-body-secondary">@u.Status</span> }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}

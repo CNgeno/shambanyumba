@@ -1,0 +1,9 @@
+@model decimal?
+@if (Model is decimal m)
+{
+    <span class="status-chip @(m < 0 ? "status-bad" : m < 15 ? "status-warn" : "status-ok")">@m.ToString("0.#")%</span>
+}
+else
+{
+    <span class="text-body-secondary">—</span>
+}

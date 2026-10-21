@@ -1,0 +1,59 @@
+@model CreateBusinessViewModel
+@{
+    ViewData["Title"] = "Create your business";
+    Layout = "_LayoutAuth";
+}
+<h1 class="h4 mb-1">Create your business</h1>
+<p class="text-body-secondary mb-4">This is the account your properties, tenants and invoices will live under.</p>
+
+<form method="post" asp-action="Create" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+    <div class="mb-3">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" autofocus />
+        <span asp-validation-for="Name" class="invalid-feedback d-block"></span>
+    </div>
+
+    <div class="form-check mb-3">
+        <input asp-for="ManagesForOthers" class="form-check-input" />
+        <label asp-for="ManagesForOthers" class="form-check-label"></label>
+        <div class="form-text">Leave unticked if the properties are yours. Whether each property is let or sold is chosen when you add it.</div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-sm-6">
+            <label asp-for="Email" class="form-label"></label>
+            <input asp-for="Email" class="form-control" type="email" />
+            <span asp-validation-for="Email" class="invalid-feedback d-block"></span>
+        </div>
+        <div class="col-sm-6">
+            <label asp-for="Phone" class="form-label"></label>
+            <input asp-for="Phone" class="form-control" type="tel" placeholder="07xx xxx xxx" />
+            <span asp-validation-for="Phone" class="invalid-feedback d-block"></span>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="PhysicalAddress" class="form-label"></label>
+        <input asp-for="PhysicalAddress" class="form-control" />
+        <span asp-validation-for="PhysicalAddress" class="invalid-feedback d-block"></span>
+    </div>
+
+    <div class="mb-4">
+        <label asp-for="KraPin" class="form-label"></label>
+        <input asp-for="KraPin" class="form-control text-uppercase" placeholder="A123456789Z" />
+        <span asp-validation-for="KraPin" class="invalid-feedback d-block"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="ReferralCode" class="form-label"></label>
+        <input asp-for="ReferralCode" class="form-control text-uppercase" value="@(Model?.ReferralCode ?? Context.Request.Cookies["sn_ref"])" placeholder="e.g. JALANG27" />
+        <div class="form-text">If someone recommended ShambaNyumba to you, enter their code.</div>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100">Create business</button>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

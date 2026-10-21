@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RealEstateERP.Core/RealEstateERP.Core.csproj" />
+    <Project Path="src/RealEstateERP.Infrastructure/RealEstateERP.Infrastructure.csproj" />
+    <Project Path="src/RealEstateERP.Web/RealEstateERP.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RealEstateERP.Tests/RealEstateERP.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,89 @@
+@model InvoicesIndexViewModel
+@{
+    ViewData["Title"] = "Invoices";
+    var s = Model.Summary;
+    string ViewUrl(InvoiceListView v) => Url.Action("Index", new { view = v, month = Model.Month, assetId = Model.AssetId, q = Model.Search })!;
+}
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">Invoices</h1>
+        <p class="page-sub">@s.IssuedCount issued, @s.DraftCount draft</p>
+    </div>
+    @if (Model.CanEdit)
+    {
+        <div class="d-flex flex-wrap gap-2">
+            <a asp-action="Generate" class="btn btn-primary"><i class="bi bi-lightning-charge me-1"></i>Generate monthly invoices</a>
+            <a asp-action="Create" class="btn btn-outline-primary"><i class="bi bi-plus-lg me-1"></i>One-off invoice</a>
+        </div>
+    }
+</div>
+
+<section class="stat-strip mb-3" aria-label="Billing summary">
+    <div class="stat"><span class="stat-label">Invoiced this month</span><span class="stat-value">@s.InvoicedThisMonth.Kes()</span></div>
+    <div class="stat"><span class="stat-label">Outstanding</span><span class="stat-value">@s.Outstanding.Kes()</span><span class="stat-note">across @s.IssuedCount invoices</span></div>
+    <div class="stat"><span class="stat-label">Overdue</span><span class="stat-value @(s.OverdueCount > 0 ? "text-danger" : "")">@s.OverdueAmount.Kes()</span><span class="stat-note">@s.OverdueCount invoice(s)</span></div>
+    <div class="stat"><span class="stat-label">Drafts to review</span><span class="stat-value">@s.DraftCount</span>
+        @if (s.DraftCount > 0 && Model.CanEdit)
+        {
+            <form method="post" asp-action="IssueAll" class="mt-1" onsubmit="return confirm('Issue all @s.DraftCount draft invoices?');">
+                <button type="submit" class="btn btn-sm btn-primary">Issue all drafts</button>
+            </form>
+        }
+    </div>
+</section>
+
+<section class="panel p-0">
+    <div class="units-toolbar">
+        <nav class="filter-chips me-auto" aria-label="Invoice views">
+            @foreach (var v in Enum.GetValues<InvoiceListView>())
+            {
+                <a href="@ViewUrl(v)" class="filter-chip @(Model.View == v ? "is-active" : "")">@(v == InvoiceListView.Cancelled ? "Cancelled / written off" : v.ToString())</a>
+            }
+        </nav>
+        <form method="get" class="d-flex flex-wrap gap-2" role="search">
+            <input type="hidden" name="view" value="@Model.View" />
+            <input type="month" name="month" value="@Model.Month" class="form-control form-control-sm" aria-label="Invoice month" onchange="this.form.submit()" />
+            <select name="assetId" class="form-select form-select-sm" aria-label="Property" onchange="this.form.submit()">
+                <option value="">All properties</option>
+                @foreach (var a in Model.Assets) { <option value="@a.Id" selected="@(Model.AssetId == a.Id)">@a.Name</option> }
+            </select>
+            <input type="search" name="q" value="@Model.Search" class="form-control form-control-sm" placeholder="Invoice no., tenant, unit" aria-label="Search invoices" />
+            <button type="submit" class="btn btn-sm btn-outline-primary">Search</button>
+        </form>
+    </div>
+
+    @if (Model.Invoices.Count == 0)
+    {
+        <div class="empty-state">
+            <i class="bi bi-receipt" aria-hidden="true"></i>
+            <h2 class="h6">No invoices here</h2>
+            <p>Generate this month's invoices for every active lease in one go, or create a one-off invoice.</p>
+            @if (Model.CanEdit) { <a asp-action="Generate" class="btn btn-primary">Generate monthly invoices</a> }
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 table-stack">
+                <thead><tr><th>Invoice</th><th>Tenant</th><th>Date</th><th>Due</th><th class="text-end">Total</th><th class="text-end">Balance</th><th>Status</th></tr></thead>
+                <tbody>
+                @foreach (var i in Model.Invoices)
+                {
+                    <tr>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@i.Id" class="row-link fw-semibold">@i.InvoiceNumber</a>
+                            <div class="small text-body-secondary">@(i.Kind == InvoiceKind.Monthly && i.PeriodStart is DateOnly p ? p.ToString("MMMM yyyy") : i.Kind.ToString())</div>
+                        </td>
+                        <td>@i.TenantName @if (i.UnitNumber is not null) { <div class="small text-body-secondary">@i.UnitNumber, @i.AssetName</div> }</td>
+                        <td class="text-nowrap">@i.InvoiceDate.ToString("d MMM yyyy")</td>
+                        <td class="text-nowrap">@i.DueDate.ToString("d MMM yyyy")</td>
+                        <td class="text-end">@i.Total.Kes()</td>
+                        <td class="text-end">@(i.Status is InvoiceStatus.Cancelled or InvoiceStatus.WrittenOff or InvoiceStatus.Draft ? "—" : i.Balance.Kes())</td>
+                        <td><partial name="_InvoiceStatusChip" model="i.Status" /></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

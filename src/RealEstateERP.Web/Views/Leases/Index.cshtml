@@ -1,0 +1,86 @@
+@model LeasesIndexViewModel
+@{
+    ViewData["Title"] = "Leases";
+    string ViewUrl(LeaseListView v) => Url.Action("Index", new { view = v, assetId = Model.AssetId, q = Model.Search })!;
+    int? CountFor(LeaseListView v) => v switch
+    {
+        LeaseListView.Active => Model.Counts.Active,
+        LeaseListView.EndingSoon => Model.Counts.EndingWithin90 + Model.Counts.Ended,
+        LeaseListView.Draft => Model.Counts.Drafts,
+        _ => null
+    };
+}
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">Leases</h1>
+        <p class="page-sub">@Model.Counts.Active active</p>
+    </div>
+    @if (Model.CanEdit)
+    {
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-file-earmark-plus me-1"></i>New lease</a>
+    }
+</div>
+
+@if (Model.Counts.Ended > 0 && Model.View != LeaseListView.EndingSoon)
+{
+    <div class="sub-banner sub-banner-warning" role="status">
+        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+        <span>@Model.Counts.Ended active @(Model.Counts.Ended == 1 ? "lease is" : "leases are") past the end date. Renew them, or end them if the tenant has left.</span>
+        <a href="@ViewUrl(LeaseListView.EndingSoon)" class="ms-auto fw-semibold">Review</a>
+    </div>
+}
+
+<section class="panel p-0">
+    <div class="units-toolbar">
+        <nav class="filter-chips me-auto" aria-label="Lease views">
+            @foreach (var v in Enum.GetValues<LeaseListView>())
+            {
+                var count = CountFor(v);
+                <a href="@ViewUrl(v)" class="filter-chip @(Model.View == v ? "is-active" : "")">@v.Display()@if (count is int c) {<span>@c</span>}</a>
+            }
+        </nav>
+        <form method="get" class="d-flex flex-wrap gap-2" role="search">
+            <input type="hidden" name="view" value="@Model.View" />
+            <select name="assetId" class="form-select form-select-sm" aria-label="Property" onchange="this.form.submit()">
+                <option value="">All properties</option>
+                @foreach (var a in Model.Assets)
+                {
+                    <option value="@a.Id" selected="@(Model.AssetId == a.Id)">@a.Name</option>
+                }
+            </select>
+            <input type="search" name="q" value="@Model.Search" class="form-control form-control-sm" placeholder="Tenant, unit or lease no." aria-label="Search leases" />
+            <button type="submit" class="btn btn-sm btn-outline-primary">Search</button>
+        </form>
+    </div>
+
+    @if (Model.Leases.Count == 0)
+    {
+        <div class="empty-state">
+            <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+            <h2 class="h6">No leases here</h2>
+            <p>Create a lease to link a tenant to an available unit.</p>
+            @if (Model.CanEdit) { <a asp-action="Create" class="btn btn-primary">New lease</a> }
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 table-stack">
+                <thead><tr><th>Lease</th><th>Tenant</th><th>Unit</th><th>Period</th><th class="text-end">Rent</th><th>Status</th></tr></thead>
+                <tbody>
+                @foreach (var l in Model.Leases)
+                {
+                    <tr>
+                        <td><a asp-action="Details" asp-route-id="@l.Id" class="row-link fw-semibold">@l.LeaseNumber</a></td>
+                        <td><a asp-controller="Tenants" asp-action="Details" asp-route-id="@l.TenantId" class="row-link">@l.TenantName</a></td>
+                        <td>@l.UnitNumber<div class="small text-body-secondary">@l.AssetName</div></td>
+                        <td class="text-nowrap small">@l.StartDate.ToString("d MMM yyyy")<br />to @(l.EndDate?.ToString("d MMM yyyy") ?? "open-ended")</td>
+                        <td class="text-end">@l.MonthlyRent.Kes()</td>
+                        <td><partial name="_LeaseStatusChip" model="new LeaseChip(l.Status, l.Expiry)" /></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

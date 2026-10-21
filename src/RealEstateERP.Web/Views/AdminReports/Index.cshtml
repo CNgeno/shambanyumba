@@ -1,0 +1,49 @@
+@model PlatformReports
+@{
+    ViewData["Title"] = "Platform reports";
+    var maxRev = Math.Max(1, Model.Months.Max(m => m.SubscriptionRevenue + m.CreditSales));
+    string Pct(decimal part) => Math.Round(part * 100 / maxRev, 1).ToString(System.Globalization.CultureInfo.InvariantCulture);
+}
+<h1 class="page-title">Platform reports</h1>
+<p class="text-body-secondary mb-3">Across all businesses.</p>
+
+<section class="stat-strip mb-3">
+    <div class="stat"><span class="stat-label">Monthly recurring revenue</span><span class="stat-value">@Model.Mrr.Kes()</span><span class="stat-note">paying businesses at plan price</span></div>
+    <div class="stat"><span class="stat-label">Active / grace</span><span class="stat-value">@Model.Active / @Model.Grace</span></div>
+    <div class="stat"><span class="stat-label">On trial</span><span class="stat-value">@Model.Trial</span></div>
+    <div class="stat"><span class="stat-label">Suspended</span><span class="stat-value">@Model.Suspended</span><span class="stat-note">@Model.ChurnedLast30Days lapsed in the last 30 days</span></div>
+</section>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <section class="panel p-0">
+            <div class="units-toolbar"><h2 class="panel-title">Last 12 months</h2></div>
+            <div class="table-responsive">
+                <table class="table align-middle mb-0 table-stack">
+                    <thead><tr><th>Month</th><th class="text-end">New businesses</th><th>Revenue (subscriptions + credits)</th><th class="text-end">Credits used</th></tr></thead>
+                    <tbody>
+                    @foreach (var m in Model.Months)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@m.Month.ToString("MMM yyyy")</td>
+                            <td class="text-end">@m.NewBusinesses</td>
+                            <td><div class="report-bar"><span class="bar-collected" style="width: @Pct(m.SubscriptionRevenue + m.CreditSales)%"></span></div>
+                                <span class="small">@m.SubscriptionRevenue.ToString("N0") + @m.CreditSales.ToString("N0")</span></td>
+                            <td class="text-end">@m.CreditsUsed.ToString("N0")</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+    <div class="col-lg-4">
+        <section class="panel p-0">
+            <div class="units-toolbar"><h2 class="panel-title">MRR by plan</h2></div>
+            <ul class="attention-list">
+                @foreach (var p in Model.ByPlan) { <li><span class="fw-semibold">@p.Plan</span><span class="small text-body-secondary">@p.Businesses business(es)</span><span class="ms-auto">@p.Mrr.Kes()</span></li> }
+                @if (Model.ByPlan.Count == 0) { <li class="small text-body-secondary">No paying businesses yet.</li> }
+            </ul>
+        </section>
+    </div>
+</div>

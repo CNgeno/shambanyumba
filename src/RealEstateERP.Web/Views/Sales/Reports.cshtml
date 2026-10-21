@@ -1,0 +1,104 @@
+@model SalesReportsViewModel
+@{
+    ViewData["Title"] = "Sales reports";
+    var t = Model.Totals;
+}
+<a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Sales</a>
+<div class="page-head"><h1 class="page-title">Sales reports</h1></div>
+
+<section class="panel p-0 mb-3">
+    <div class="units-toolbar"><h2 class="panel-title">Stock by project</h2></div>
+    @if (Model.Inventory.Count == 0) { <p class="small text-body-secondary px-4 py-3 mb-0">No units with a sale price yet. Set one on each unit you're selling.</p> }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead><tr><th>Project</th><th class="text-end">Units</th><th class="text-end">Available</th><th class="text-end">Reserved</th><th class="text-end">Sold</th><th>Sold</th><th class="text-end">Unsold value</th></tr></thead>
+                <tbody>
+                @foreach (var r in Model.Inventory)
+                {
+                    var soldPct = r.Units == 0 ? 0 : (int)Math.Round(r.Sold * 100.0 / r.Units);
+                    <tr>
+                        <td class="fw-semibold"><a asp-controller="Properties" asp-action="Details" asp-route-id="@r.AssetId" class="row-link">@r.AssetName</a></td>
+                        <td class="text-end">@r.Units</td>
+                        <td class="text-end">@r.Available</td>
+                        <td class="text-end">@r.Reserved</td>
+                        <td class="text-end">@r.Sold</td>
+                        <td style="min-width: 120px"><div class="occ"><span class="occ-bar"><span style="width: @soldPct%"></span></span><span class="small">@soldPct%</span></div></td>
+                        <td class="text-end">@r.AvailableValue.Kes()</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+<section class="panel p-0 mb-3">
+    <div class="units-toolbar"><h2 class="panel-title">Overdue instalments (@Model.Arrears.Count)</h2></div>
+    @if (Model.Arrears.Count == 0) { <p class="small text-body-secondary px-4 py-3 mb-0">Every buyer is up to date.</p> }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead><tr><th>Sale</th><th>Buyer</th><th class="text-end">Oldest</th><th class="text-end">1-30</th><th class="text-end">31-60</th><th class="text-end">61-90</th><th class="text-end">90+</th><th class="text-end">Overdue</th></tr></thead>
+                <tbody>
+                @foreach (var r in Model.Arrears)
+                {
+                    <tr>
+                        <td><a asp-action="Details" asp-route-id="@r.Sale.Id" class="row-link fw-semibold">@r.Sale.SaleNumber</a><div class="small text-body-secondary">@r.Sale.UnitNumber, @r.Sale.AssetName</div></td>
+                        <td>@r.Sale.BuyerName</td>
+                        <td class="text-end text-nowrap">@r.DaysOverdue days</td>
+                        <td class="text-end">@(r.Aging.Days1To30 > 0 ? r.Aging.Days1To30.ToString("N0") : "")</td>
+                        <td class="text-end">@(r.Aging.Days31To60 > 0 ? r.Aging.Days31To60.ToString("N0") : "")</td>
+                        <td class="text-end">@(r.Aging.Days61To90 > 0 ? r.Aging.Days61To90.ToString("N0") : "")</td>
+                        <td class="text-end text-danger">@(r.Aging.Over90 > 0 ? r.Aging.Over90.ToString("N0") : "")</td>
+                        <td class="text-end fw-semibold">@r.Aging.Total.Kes()</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+<div class="row g-3">
+    <div class="col-lg-6">
+        <section class="panel p-0 h-100">
+            <div class="units-toolbar"><h2 class="panel-title">Pipeline: reserved (@Model.Pipeline.Count)</h2></div>
+            @if (Model.Pipeline.Count == 0) { <p class="small text-body-secondary px-4 py-3 mb-0">No reservations waiting for an agreement.</p> }
+            else
+            {
+                <ul class="attention-list">
+                    @foreach (var s in Model.Pipeline)
+                    {
+                        <li>
+                            <a asp-action="Details" asp-route-id="@s.Id" class="row-link fw-semibold">@s.UnitNumber</a>
+                            <span class="small text-body-secondary">@s.BuyerName, reserved @s.SaleDate.ToString("d MMM"), paid @s.AmountPaid.Kes()</span>
+                            <span class="ms-auto small fw-semibold">@s.Price.Kes()</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    </div>
+    <div class="col-lg-6">
+        <section class="panel p-0 h-100">
+            <div class="units-toolbar"><h2 class="panel-title">Sold units (@Model.Sold.Count)</h2></div>
+            @if (Model.Sold.Count == 0) { <p class="small text-body-secondary px-4 py-3 mb-0">No signed sales yet.</p> }
+            else
+            {
+                <ul class="attention-list">
+                    @foreach (var s in Model.Sold)
+                    {
+                        <li>
+                            <a asp-action="Details" asp-route-id="@s.Id" class="row-link fw-semibold">@s.UnitNumber</a>
+                            <span class="small text-body-secondary">@s.BuyerName, @(s.Balance > 0 ? s.Balance.Kes() + " to pay" : "paid in full")</span>
+                            <span class="ms-auto"><partial name="_SaleStatusChip" model="s.Status" /></span>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    </div>
+</div>

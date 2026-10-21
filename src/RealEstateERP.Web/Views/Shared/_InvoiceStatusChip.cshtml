@@ -1,0 +1,14 @@
+@model InvoiceStatus
+@{
+    var css = Model switch
+    {
+        InvoiceStatus.Paid => "status-ok",
+        InvoiceStatus.Overdue => "status-bad",
+        InvoiceStatus.PartiallyPaid => "status-warn",
+        InvoiceStatus.Pending => "status-info",
+        InvoiceStatus.Draft => "status-neutral",
+        _ => "status-muted"
+    };
+    var text = Model == InvoiceStatus.Pending ? "Unpaid" : Model.Display();
+}
+<span class="status-chip @css">@text</span>

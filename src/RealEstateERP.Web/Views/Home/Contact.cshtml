@@ -1,0 +1,20 @@
+@model ContactViewModel
+@{
+    ViewData["Title"] = "Contact";
+}
+<section class="page-head">
+    <div class="container prose">
+        <h1>Contact</h1>
+        <p class="lead">Questions about plans, setup or moving your records over? Get in touch.</p>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+            @if (!string.IsNullOrWhiteSpace(Model.Email))
+            {
+                <a href="mailto:@Model.Email" class="btn btn-gradient"><i class="bi bi-envelope"></i> @Model.Email</a>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.Phone))
+            {
+                <a href="tel:@(Model.Phone.Replace(" ", string.Empty))" class="btn btn-outline-primary"><i class="bi bi-telephone"></i> @Model.Phone</a>
+            }
+        </div>
+    </div>
+</section>

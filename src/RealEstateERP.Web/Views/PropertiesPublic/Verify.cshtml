@@ -1,0 +1,15 @@
+@model VerifyResult
+@{
+    ViewData["Title"] = Model.Verified ? "Enquiry confirmed" : "Link not valid";
+}
+<section class="section">
+    <div class="container" style="max-width: 560px">
+        <div class="enquiry-card text-center">
+            <i class="bi @(Model.Verified ? "bi-check2-circle text-success" : "bi-exclamation-circle text-warning") enquiry-icon"></i>
+            <h1 class="h4">@ViewData["Title"]</h1>
+            @if (Model.ListingTitle is not null) { <p class="fw-semibold mb-1">@Model.ListingTitle</p> }
+            <p>@Model.Message</p>
+            <a href="/marketplace" class="btn btn-accent">Browse more properties</a>
+        </div>
+    </div>
+</section>

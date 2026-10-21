@@ -1,0 +1,59 @@
+@model CollectionsPanelModel
+<section class="panel mb-3" id="collections">
+    <div class="d-flex align-items-center gap-2 mb-2">
+        <h2 class="panel-title me-auto">Collections</h2>
+        <partial name="_CollectionStageChip" model="Model.Stage" />
+    </div>
+
+    @if (Model.CanEdit)
+    {
+        <form method="post" asp-controller="Arrears" asp-action="AddNote" class="collections-form mb-3">
+            <input type="hidden" name="TenantId" value="@Model.TenantId" />
+            <label for="cn-note" class="form-label small mb-1">What happened?</label>
+            <textarea id="cn-note" name="Note" class="form-control form-control-sm mb-2" rows="2" maxlength="1000" required placeholder="e.g. Called; promised to pay 5,000 on Friday"></textarea>
+            <div class="row g-2">
+                <div class="col-6">
+                    <label for="cn-stage" class="form-label small mb-1">Stage</label>
+                    <select id="cn-stage" name="Stage" class="form-select form-select-sm">
+                        @foreach (var s in Enum.GetValues<CollectionStage>()) { <option value="@s" selected="@(Model.Stage == s)">@s.Display()</option> }
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label for="cn-promise" class="form-label small mb-1">Promised to pay on</label>
+                    <input id="cn-promise" name="PromisedPaymentDate" type="date" class="form-control form-control-sm" />
+                </div>
+                @if (Model.Documents.Count > 0)
+                {
+                    <div class="col-12">
+                        <label for="cn-doc" class="form-label small mb-1">Attach a document (upload it under Documents first)</label>
+                        <select id="cn-doc" name="DocumentId" class="form-select form-select-sm">
+                            <option value="">None</option>
+                            @foreach (var d in Model.Documents) { <option value="@d.Id">@(d.Title ?? d.DocumentType.Display()), @d.FileName</option> }
+                        </select>
+                    </div>
+                }
+            </div>
+            <button type="submit" class="btn btn-sm btn-outline-primary mt-2">Save note</button>
+        </form>
+    }
+
+    @if (Model.Notes.Count == 0)
+    {
+        <p class="small text-body-secondary mb-0">No collections activity.</p>
+    }
+    else
+    {
+        <ol class="timeline">
+            @foreach (var n in Model.Notes)
+            {
+                <li>
+                    <div class="small text-body-secondary">@n.CreatedAtUtc.ToEatDateTime()</div>
+                    @if (n.StageChanged) { <div class="small fw-semibold">Moved to @n.Stage.Display()</div> }
+                    <div>@n.Note</div>
+                    @if (n.PromisedPaymentDate is DateOnly pd) { <div class="small"><i class="bi bi-calendar-check me-1"></i>Promised by @pd.ToString("d MMM yyyy")</div> }
+                    @if (n.DocumentId is int docId) { <div class="small"><a asp-controller="Tenants" asp-action="Document" asp-route-id="@docId" target="_blank"><i class="bi bi-paperclip"></i> @n.DocumentName</a></div> }
+                </li>
+            }
+        </ol>
+    }
+</section>
