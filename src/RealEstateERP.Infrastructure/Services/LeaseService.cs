@@ -99,7 +99,11 @@ public sealed class LeaseService(
     public async Task<IReadOnlyList<LettableUnit>> GetLettableUnitsAsync(int? alsoIncludeUnitId, CancellationToken ct = default)
     {
         var units = await db.Units.AsNoTracking()
-            .Where(u => u.Status == UnitStatus.Available || u.Status == UnitStatus.Reserved || u.Id == alsoIncludeUnitId)
+            // Only units in properties to let (or both); the lease's own unit stays listed when editing.
+            .Where(u => u.Id == alsoIncludeUnitId
+                        || ((u.Status == UnitStatus.Available || u.Status == UnitStatus.Reserved)
+                            && (u.Asset.Purpose == PropertyPurpose.Let || u.Asset.Purpose == PropertyPurpose.Both
+                                || (u.Asset.Purpose == null && u.Asset.Type != AssetType.Land))))
             .Select(u => new { u.Id, u.UnitNumber, u.AssetId, AssetName = u.Asset.Name, NodeName = u.StructureNode != null ? u.StructureNode.Name : null, u.MonthlyRent, u.Status })
             .ToListAsync(ct);
 
@@ -307,10 +311,13 @@ public sealed class LeaseService(
 
         if (!await db.Tenants.AnyAsync(t => t.Id == input.TenantId, ct)) return "Choose a tenant.";
 
-        var unit = await db.Units.AsNoTracking().Where(u => u.Id == input.UnitId).Select(u => new { u.Status }).FirstOrDefaultAsync(ct);
+        var unit = await db.Units.AsNoTracking().Where(u => u.Id == input.UnitId)
+            .Select(u => new { u.Status, u.Asset.Name, u.Asset.Purpose, u.Asset.Type }).FirstOrDefaultAsync(ct);
         if (unit is null) return "Choose a unit.";
         if (unit.Status is UnitStatus.Sold or UnitStatus.Inactive)
             return "That unit is sold or inactive and can't be leased.";
+        if (!PropertyRules.IsToLet(PropertyRules.Effective(unit.Purpose, unit.Type)))
+            return $"{unit.Name} is for sale, so its units aren't leased. To let them too, edit the property and set its purpose to 'To let and for sale'.";
 
         // Only one draft at a time per unit avoids two people preparing competing leases.
         if (await db.Leases.AnyAsync(l => l.UnitId == input.UnitId && l.Status == LeaseStatus.Draft && l.Id != (leaseId ?? 0), ct))

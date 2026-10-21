@@ -1,3 +1,4 @@
+using RealEstateERP.Web.Formatting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RealEstateERP.Core.Common;
@@ -20,7 +21,7 @@ public class ReadingsController(
         => View(new ReadingsIndexViewModel
         {
             Readings = await charges.ListReadingsAsync(!all, assetId, ct),
-            Assets = await assets.ListAsync(ct),
+            Assets = (await assets.ListAsync(ct)).ToLet(),
             UtilityCharges = (await charges.ListDefinitionsAsync(false, ct)).Where(c => c.Type == ChargeType.Utility).ToList(),
             UnbilledOnly = !all,
             AssetId = assetId,
@@ -32,7 +33,7 @@ public class ReadingsController(
     {
         var model = new MeterSheetViewModel
         {
-            Assets = await assets.ListAsync(ct),
+            Assets = (await assets.ListAsync(ct)).ToLet(),
             UtilityCharges = (await charges.ListDefinitionsAsync(false, ct)).Where(c => c.Type == ChargeType.Utility).ToList(),
             AssetId = assetId,
             ChargeId = chargeId,

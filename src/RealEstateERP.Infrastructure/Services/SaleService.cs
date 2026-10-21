@@ -136,7 +136,10 @@ public sealed class SaleService(
 
     public async Task<IReadOnlyList<SellableUnit>> GetSellableUnitsAsync(CancellationToken ct = default)
         => (await db.Units.AsNoTracking()
-                .Where(u => u.Status == UnitStatus.Available && !db.Sales.Any(s => s.UnitId == u.Id && s.Status != SaleStatus.Cancelled))
+                .Where(u => u.Status == UnitStatus.Available && !db.Sales.Any(s => s.UnitId == u.Id && s.Status != SaleStatus.Cancelled)
+                            // only units in properties for sale (or both)
+                            && (u.Asset.Purpose == PropertyPurpose.Sell || u.Asset.Purpose == PropertyPurpose.Both
+                                || (u.Asset.Purpose == null && u.Asset.Type == AssetType.Land)))
                 .Select(u => new SellableUnit(u.Id, u.UnitNumber, u.AssetId, u.Asset.Name, u.SalePrice, u.Status))
                 .ToListAsync(ct))
             .OrderBy(u => u.AssetName).ThenBy(u => u.UnitNumber, NaturalComparer.Instance).ToList();

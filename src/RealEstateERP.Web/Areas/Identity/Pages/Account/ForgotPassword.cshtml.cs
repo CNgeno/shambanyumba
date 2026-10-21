@@ -9,7 +9,7 @@ using RealEstateERP.Web.Services;
 namespace RealEstateERP.Web.Areas.Identity.Pages.Account;
 
 [AllowAnonymous]
-public class ForgotPasswordModel(UserManager<ApplicationUser> users, AccountEmails emails) : PageModel
+public class ForgotPasswordModel(UserManager<ApplicationUser> users, AccountEmails emails, ILogger<ForgotPasswordModel> logger) : PageModel
 {
     [BindProperty]
     [Required(ErrorMessage = "Enter your email address."), EmailAddress]
@@ -21,8 +21,12 @@ public class ForgotPasswordModel(UserManager<ApplicationUser> users, AccountEmai
 
         // Same response whether or not the account exists, so this page can't be used to discover accounts.
         var user = await users.FindByEmailAsync(Email.Trim());
+        // A mail failure must not show an error either, or the error itself would reveal that the account exists.
         if (user is not null && await users.IsEmailConfirmedAsync(user))
-            await emails.SendPasswordResetAsync(user);
+        {
+            try { await emails.SendPasswordResetAsync(user); }
+            catch (Exception ex) { logger.LogError(ex, "Password reset email to {Email} failed.", user.Email); }
+        }
 
         return RedirectToPage("./ForgotPasswordConfirmation");
     }
