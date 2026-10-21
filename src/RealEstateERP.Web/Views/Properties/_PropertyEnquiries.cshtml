@@ -1,0 +1,21 @@
+@{
+    var e = ViewData["Enquiries"] as PropertyEnquiries;
+    var awaiting = ViewData["AwaitingEnquiries"] as IReadOnlyList<PendingEnquiry> ?? [];
+}
+@if (e is not null && (e.LiveListings > 0 || e.TotalLeads > 0 || e.AwaitingConfirmation > 0))
+{
+    <section class="panel mb-3 @(e.NewLeads > 0 ? "enquiries-hot" : "")" id="enquiries">
+        <h2 class="panel-title mb-2"><i class="bi bi-megaphone me-1"></i>Enquiries</h2>
+        <dl class="project-figures mb-2">
+            <div><dt>Live listings</dt><dd>@e.LiveListings</dd></div>
+            <div><dt>New leads</dt><dd class="@(e.NewLeads > 0 ? "text-danger fw-semibold" : "")">@e.NewLeads</dd></div>
+            <div><dt>All leads</dt><dd>@e.TotalLeads</dd></div>
+            <div><dt>Awaiting confirmation</dt><dd>@e.AwaitingConfirmation</dd></div>
+        </dl>
+        @foreach (var p in awaiting.Take(3))
+        {
+            <div class="small text-body-secondary"><i class="bi bi-hourglass-split me-1"></i>@p.FirstName, @p.ReceivedAtUtc.ToEatDateTime()</div>
+        }
+        <a asp-controller="Leads" asp-action="Index" class="btn btn-sm @(e.NewLeads > 0 ? "btn-danger" : "btn-outline-primary") w-100 mt-2">@(e.NewLeads > 0 ? $"Call {e.NewLeads} new lead(s)" : "Open leads")</a>
+    </section>
+}

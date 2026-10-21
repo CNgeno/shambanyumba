@@ -1,0 +1,25 @@
+@model IReadOnlyList<RealEstateERP.Core.Common.ScheduleLine>
+@if (ViewData["Error"] is string error)
+{
+    <p class="small text-danger mb-0">@error</p>
+}
+else if (Model.Count == 0)
+{
+    <p class="small text-body-secondary mb-0">Enter the price and plan to see the schedule.</p>
+}
+else
+{
+    <div class="schedule-preview">
+        <table class="table table-sm mb-0">
+            <thead><tr><th>Item</th><th>Due</th><th class="text-end">Amount</th></tr></thead>
+            <tbody>
+            @foreach (var l in Model.Take(13))
+            {
+                <tr><td>@l.Description</td><td class="text-nowrap">@l.DueDate.ToString("d MMM yyyy")</td><td class="text-end">@l.Amount.ToString("N2")</td></tr>
+            }
+            @if (Model.Count > 13) { <tr><td colspan="3" class="text-body-secondary small">and @(Model.Count - 13) more, last on @Model[^1].DueDate.ToString("d MMM yyyy")</td></tr> }
+            </tbody>
+            <tfoot><tr class="invoice-total"><td colspan="2">Total</td><td class="text-end">@Model.Sum(l => l.Amount).ToString("N2")</td></tr></tfoot>
+        </table>
+    </div>
+}

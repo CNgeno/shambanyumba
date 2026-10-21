@@ -1,0 +1,59 @@
+@model OwnerForm
+@{
+    var isNew = Model.Id is null;
+    ViewData["Title"] = isNew ? "Add owner" : $"Edit {Model.FullName}";
+}
+<a asp-action="@(isNew ? "Index" : "Details")" asp-route-id="@Model.Id" class="back-link"><i class="bi bi-arrow-left"></i>@(isNew ? "Owners" : Model.FullName)</a>
+<h1 class="page-title mb-4">@ViewData["Title"]</h1>
+<form method="post" asp-action="Save" class="form-narrow" id="owner-form" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <input type="hidden" asp-for="Id" />
+    <section class="panel mb-3">
+        <div class="btn-group mb-3" role="group" aria-label="Owner type">
+            @foreach (var t in Enum.GetValues<OwnerType>())
+            {
+                <input type="radio" class="btn-check" name="Type" id="ot-@t" value="@t" checked="@(Model.Type == t)" />
+                <label class="btn btn-outline-primary" for="ot-@t">@t</label>
+            }
+        </div>
+        <div class="row g-3">
+            <div class="col-12"><label asp-for="FullName" class="form-label"></label><input asp-for="FullName" class="form-control" autofocus /><span asp-validation-for="FullName" class="invalid-feedback d-block"></span></div>
+            <div class="col-sm-6"><label asp-for="IdNumber" class="form-label"></label><input asp-for="IdNumber" class="form-control" /></div>
+            <div class="col-sm-6"><label asp-for="KraPin" class="form-label"></label><input asp-for="KraPin" class="form-control text-uppercase" /></div>
+            <div class="col-sm-6"><label asp-for="Phone" class="form-label"></label><input asp-for="Phone" class="form-control" type="tel" /></div>
+            <div class="col-sm-6"><label asp-for="Email" class="form-label"></label><input asp-for="Email" class="form-control" type="email" /><span asp-validation-for="Email" class="invalid-feedback d-block"></span></div>
+            <div class="col-12"><label asp-for="PostalAddress" class="form-label"></label><input asp-for="PostalAddress" class="form-control" /></div>
+        </div>
+    </section>
+    <section class="panel mb-3">
+        <h2 class="panel-title mb-3">How the owner is paid</h2>
+        <div class="row g-3">
+            <div class="col-sm-6">
+                <label asp-for="PayoutMethod" class="form-label"></label>
+                <select asp-for="PayoutMethod" class="form-select" id="payout">
+                    @foreach (var m in Enum.GetValues<PayoutMethod>()) { <option value="@m">@m.Display()</option> }
+                </select>
+            </div>
+            <div class="col-12 payout-fields" data-for="Bank">
+                <div class="row g-3">
+                    <div class="col-sm-4"><label asp-for="BankName" class="form-label"></label><input asp-for="BankName" class="form-control" /></div>
+                    <div class="col-sm-4"><label asp-for="BankAccountName" class="form-label"></label><input asp-for="BankAccountName" class="form-control" /></div>
+                    <div class="col-sm-4"><label asp-for="BankAccountNumber" class="form-label"></label><input asp-for="BankAccountNumber" class="form-control" /></div>
+                </div>
+            </div>
+            <div class="col-sm-6 payout-fields" data-for="Mpesa"><label asp-for="MpesaNumber" class="form-label"></label><input asp-for="MpesaNumber" class="form-control" type="tel" /></div>
+        </div>
+    </section>
+    <section class="panel mb-4"><label asp-for="Notes" class="form-label"></label><textarea asp-for="Notes" class="form-control" rows="2"></textarea></section>
+    <button type="submit" class="btn btn-primary">@(isNew ? "Add owner" : "Save changes")</button>
+</form>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var sel = document.getElementById('payout');
+            function sync() { document.querySelectorAll('.payout-fields').forEach(function (el) { el.hidden = el.dataset.for !== sel.value; }); }
+            sel.addEventListener('change', sync); sync();
+        })();
+    </script>
+}

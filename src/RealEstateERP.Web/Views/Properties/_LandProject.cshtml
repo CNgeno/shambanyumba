@@ -1,0 +1,44 @@
+@model LandProjectModel
+@{
+    var c = Model.Card;
+    var sub = Model.Overview.Subdivision;
+    var a = Model.Overview.Asset;
+}
+<section class="stat-strip mb-3" aria-label="Land">
+    <div class="stat"><span class="stat-label">Land</span><span class="stat-value">@(c.Acres is decimal ac ? $"{ac:0.##} acres" : "—")</span>
+        <span class="stat-note">@(sub.TotalAreaSqm is decimal t ? $"{t:N0} sqm" : "Add the land size")</span></div>
+    <div class="stat"><span class="stat-label">Title</span><span class="stat-value small-value">@(a.TitleDeedNumber ?? "—")</span>
+        <span class="stat-note">@(a.SubdivisionReference is null ? "Subdivision not recorded" : $"Subdivision {a.SubdivisionReference}")</span></div>
+    <div class="stat"><span class="stat-label">Plots</span><span class="stat-value">@c.Plots</span>
+        <span class="stat-note">@(sub.SurrenderedSqm is decimal sv && c.Plots > 0 ? $"{sv:N0} sqm to roads ({sub.SurrenderedPercent:0.#}%)" : $"{sub.PlotsWithTitles} with titles")</span></div>
+    <div class="stat"><span class="stat-label">Sold</span><span class="stat-value">@c.Sold <small class="text-body-secondary fw-normal">of @c.Plots</small></span>
+        <span class="stat-note">@c.Reserved reserved, @c.Available available</span></div>
+</section>
+
+<section class="stat-strip mb-3" aria-label="Money">
+    <div class="stat"><span class="stat-label">Expected cost</span><span class="stat-value">@c.ExpectedCost.Kes()</span><span class="stat-note">@c.Spent.Kes() spent</span></div>
+    <div class="stat"><span class="stat-label">Projected revenue</span><span class="stat-value">@c.ProjectedRevenue.Kes()</span><span class="stat-note">agreed sales + unsold at asking price</span></div>
+    <div class="stat"><span class="stat-label">Projected margin</span><span class="stat-value">@(c.HasCosts && c.Plots > 0 && c.MarginPercent is decimal m ? $"{m:0.#}%" : "—")</span>
+        <span class="stat-note">@(c.UnitsToBreakEven switch { 0 => "costs covered by sales", int n => $"sell {n} more to break even", _ => c.Plots == 0 ? "create plots first" : "won't cover cost" })</span></div>
+    <div class="stat"><span class="stat-label">Collected from buyers</span><span class="stat-value">@c.Collected.Kes()</span>
+        <span class="stat-note @(c.Overdue > 0 ? "text-danger" : "")">@(c.Overdue > 0 ? $"{c.Overdue:N0} overdue" : "nothing overdue")</span></div>
+</section>
+
+@if (Model.CanEdit)
+{
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <a asp-controller="Costing" asp-action="Project" asp-route-id="@a.Id" class="btn btn-outline-primary"><i class="bi bi-calculator me-1"></i>Costs and margins</a>
+        <a asp-controller="Costing" asp-action="Costs" asp-route-id="@a.Id" asp-route-add="Actual" class="btn btn-outline-primary"><i class="bi bi-receipt me-1"></i>Record a cost</a>
+        <a asp-controller="Costing" asp-action="Setup" asp-route-id="@a.Id" class="btn btn-outline-primary"><i class="bi bi-grid-3x3-gap me-1"></i>Purchase and plots</a>
+        @if (c.Available > 0)
+        {
+            <a asp-controller="Sales" asp-action="Create" class="btn btn-primary"><i class="bi bi-house-check me-1"></i>New sale</a>
+            <a asp-controller="Listings" asp-action="Create" asp-route-type="Sale" class="btn btn-outline-primary"><i class="bi bi-megaphone me-1"></i>List a plot</a>
+        }
+    </div>
+}
+@if (c.Plots == 0)
+{
+    <div class="sub-banner sub-banner-info"><i class="bi bi-signpost"></i>
+        <span>@(c.HasCosts ? "Next: create the plots under Purchase and plots." : "Start with the purchase price and a budget under Purchase and plots, then create the plots.")</span></div>
+}

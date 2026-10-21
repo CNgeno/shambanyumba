@@ -1,0 +1,2 @@
+@model InstalmentState
+<span class="status-chip @(Model switch { InstalmentState.Paid => "status-ok", InstalmentState.Overdue => "status-bad", InstalmentState.PartlyPaid => "status-warn", _ => "status-neutral" })">@Model.Display()</span>

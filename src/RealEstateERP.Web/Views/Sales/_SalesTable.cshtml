@@ -1,0 +1,24 @@
+@model IReadOnlyList<SaleSummary>
+<div class="table-responsive">
+    <table class="table table-hover align-middle mb-0 table-stack">
+        <thead><tr><th>Sale</th><th>Buyer</th><th>Unit</th><th class="text-end">Price</th><th class="text-end">Paid</th><th class="text-end">Balance</th><th>Status</th></tr></thead>
+        <tbody>
+        @foreach (var s in Model)
+        {
+            var pct = s.Price == 0 ? 0 : Math.Round(s.AmountPaid * 100 / s.Price);
+            <tr>
+                <td><a asp-controller="Sales" asp-action="Details" asp-route-id="@s.Id" class="row-link fw-semibold">@s.SaleNumber</a><div class="small text-body-secondary">@s.SaleDate.ToString("d MMM yyyy")@(s.AgentName is null ? "" : $", {s.AgentName}")</div></td>
+                <td><a asp-controller="Buyers" asp-action="Details" asp-route-id="@s.BuyerId" class="row-link">@s.BuyerName</a></td>
+                <td>@s.UnitNumber<div class="small text-body-secondary">@s.AssetName</div></td>
+                <td class="text-end">@s.Price.Kes()</td>
+                <td class="text-end">@s.AmountPaid.Kes()<div class="small text-body-secondary">@pct%</div></td>
+                <td class="text-end">
+                    @(s.Balance > 0 ? s.Balance.Kes() : "—")
+                    @if (s.OverdueAmount > 0) { <div class="small text-danger fw-semibold">@s.OverdueAmount.Kes() overdue</div> }
+                </td>
+                <td><partial name="_SaleStatusChip" model="s.Status" /></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

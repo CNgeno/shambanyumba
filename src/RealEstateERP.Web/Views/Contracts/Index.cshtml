@@ -1,0 +1,39 @@
+@model ContractsIndexViewModel
+@{ ViewData["Title"] = "Management contracts"; }
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">@(Model.IsAgent ? "My contracts" : "Management contracts")</h1>
+        <p class="page-sub">@(Model.IsAgent ? "The contracts assigned to you" : "Which properties you manage, for whom, and on what commission")</p>
+    </div>
+    @if (Model.CanEdit) { <a asp-action="Create" class="btn btn-primary"><i class="bi bi-file-earmark-plus me-1"></i>New contract</a> }
+</div>
+<section class="panel p-0">
+    <div class="units-toolbar">
+        <nav class="filter-chips" aria-label="Filter by status">
+            <a asp-action="Index" class="filter-chip @(Model.Status is null ? "is-active" : "")">All</a>
+            @foreach (var s in Enum.GetValues<ContractStatus>()) { <a asp-action="Index" asp-route-status="@s" class="filter-chip @(Model.Status == s ? "is-active" : "")">@s</a> }
+        </nav>
+    </div>
+    @if (Model.Contracts.Count == 0) { <p class="text-body-secondary p-4 mb-0">No contracts here.</p> }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr><th>Contract</th><th>Owner</th><th>Properties</th><th>Agent</th><th>Commission</th><th>Status</th></tr></thead>
+                <tbody>
+                @foreach (var c in Model.Contracts)
+                {
+                    <tr>
+                        <td><a asp-action="Details" asp-route-id="@c.Id" class="row-link fw-semibold">@c.ContractNumber</a><div class="small text-body-secondary">from @c.StartDate.ToString("d MMM yyyy")</div></td>
+                        <td><a asp-controller="Owners" asp-action="Details" asp-route-id="@c.OwnerId" class="row-link">@c.OwnerName</a></td>
+                        <td>@(c.PropertyNames ?? "—")</td>
+                        <td>@(c.AgentName ?? "—")</td>
+                        <td class="text-nowrap">@(c.CommissionType == CommissionType.FixedMonthly ? c.FixedMonthlyFee.Kes() + " a month" : $"{c.CommissionPercent:0.##}% of rent")</td>
+                        <td><partial name="_ContractStatusChip" model="c.Status" /></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

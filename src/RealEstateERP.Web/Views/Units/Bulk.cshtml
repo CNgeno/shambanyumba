@@ -1,0 +1,107 @@
+@model BulkUnitsViewModel
+@{
+    ViewData["Title"] = "Add many units";
+}
+<a asp-controller="Properties" asp-action="Details" asp-route-id="@Model.AssetId" class="back-link"><i class="bi bi-arrow-left"></i>@Model.AssetName</a>
+<h1 class="page-title">Add many units</h1>
+<p class="text-body-secondary mb-4">Create a run of numbered units with the same details, for example a whole floor. You can edit any of them afterwards.</p>
+
+<form method="post" asp-action="Bulk" class="form-narrow" id="bulk-form" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <input type="hidden" asp-for="AssetId" />
+
+    <section class="panel mb-3">
+        <h2 class="panel-title mb-3">Numbering</h2>
+        <div class="row g-3">
+            <div class="col-sm-4">
+                <label asp-for="Prefix" class="form-label"></label>
+                <input asp-for="Prefix" class="form-control" id="prefix" />
+            </div>
+            <div class="col-sm-4">
+                <label asp-for="StartNumber" class="form-label"></label>
+                <input asp-for="StartNumber" class="form-control" inputmode="numeric" id="start" />
+                <span asp-validation-for="StartNumber" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-sm-4">
+                <label asp-for="Count" class="form-label"></label>
+                <input asp-for="Count" class="form-control" inputmode="numeric" id="count" />
+                <span asp-validation-for="Count" class="invalid-feedback d-block"></span>
+            </div>
+        </div>
+        <p class="bulk-preview mt-3 mb-0" id="preview" aria-live="polite"></p>
+        @if (Model.Usage is { Remaining: int left })
+        {
+            <p class="small text-body-secondary mt-1 mb-0">Your @Model.Usage.PlanName plan has room for <strong id="room" data-room="@left">@left</strong> more units.</p>
+        }
+    </section>
+
+    <section class="panel mb-3">
+        <h2 class="panel-title mb-3">Location and details (same for all)</h2>
+        <div class="row g-3">
+            <div class="col-sm-8">
+                <label asp-for="StructureNodeId" class="form-label"></label>
+                <select asp-for="StructureNodeId" class="form-select">
+                    <option value="">Directly under @Model.AssetName</option>
+                    @foreach (var n in Model.NodeOptions)
+                    {
+                        <option value="@n.Id" selected="@(Model.StructureNodeId == n.Id)">@n.Label</option>
+                    }
+                </select>
+            </div>
+            <div class="col-sm-4">
+                <label asp-for="FloorNumber" class="form-label"></label>
+                <input asp-for="FloorNumber" class="form-control" inputmode="numeric" />
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="Type" class="form-label"></label>
+                <select asp-for="Type" asp-items="Html.GetEnumSelectList<UnitType>()" class="form-select"></select>
+                <span asp-validation-for="Type" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="SizeSqm" class="form-label"></label>
+                <input asp-for="SizeSqm" class="form-control" inputmode="decimal" />
+            </div>
+            <div class="col-6 col-sm-3">
+                <label asp-for="Bedrooms" class="form-label"></label>
+                <input asp-for="Bedrooms" class="form-control" inputmode="numeric" />
+            </div>
+            <div class="col-6 col-sm-3">
+                <label asp-for="Bathrooms" class="form-label"></label>
+                <input asp-for="Bathrooms" class="form-control" inputmode="numeric" />
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="MonthlyRent" class="form-label"></label>
+                <input asp-for="MonthlyRent" class="form-control" inputmode="decimal" />
+                <span asp-validation-for="MonthlyRent" class="invalid-feedback d-block"></span>
+            </div>
+        </div>
+    </section>
+
+    <button type="submit" class="btn btn-primary" id="bulk-submit">Create units</button>
+    <a asp-controller="Properties" asp-action="Details" asp-route-id="@Model.AssetId" class="btn btn-link">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var prefix = document.getElementById('prefix'), start = document.getElementById('start'),
+                count = document.getElementById('count'), preview = document.getElementById('preview'),
+                submit = document.getElementById('bulk-submit'), room = document.getElementById('room');
+            function update() {
+                var p = prefix.value.trim(), s = parseInt(start.value, 10), c = parseInt(count.value, 10);
+                if (isNaN(s) || isNaN(c) || c < 1) { preview.textContent = ''; return; }
+                c = Math.min(c, 200);
+                var first = p + s, last = p + (s + c - 1);
+                var text = c === 1 ? 'Creates 1 unit: ' + first
+                    : 'Creates ' + c + ' units: ' + first + (c > 2 ? ', ' + p + (s + 1) + ' … ' : ' and ') + last;
+                var over = room && c > parseInt(room.dataset.room, 10);
+                preview.textContent = text + (over ? '. That is more than your plan allows.' : '');
+                preview.classList.toggle('text-danger', !!over);
+                submit.textContent = c === 1 ? 'Create 1 unit' : 'Create ' + c + ' units';
+            }
+            [prefix, start, count].forEach(function (el) { el.addEventListener('input', update); });
+            update();
+        })();
+    </script>
+}

@@ -1,0 +1,57 @@
+@model RemittancePreview
+@{
+    var c = Model.Contract;
+    ViewData["Title"] = $"Statement for {c.Owner.FullName}";
+    var month = Model.PeriodStart.ToString("yyyy-MM");
+}
+<a asp-action="Index" asp-route-month="@month" class="back-link"><i class="bi bi-arrow-left"></i>Remittances</a>
+<h1 class="page-title">@c.Owner.FullName, @Model.PeriodStart.ToString("MMMM yyyy")</h1>
+<p class="text-body-secondary mb-3">Contract @c.ContractNumber. Based on payments received from tenants between @Model.PeriodStart.ToString("d MMM") and @Model.PeriodEnd.ToString("d MMM yyyy").</p>
+
+<form method="get" class="d-flex gap-2 mb-3">
+    <input type="hidden" name="contractId" value="@c.Id" />
+    <input type="month" name="month" value="@month" class="form-control" style="max-width: 200px" aria-label="Month" onchange="this.form.submit()" />
+</form>
+
+@if (Model.AlreadyExists)
+{
+    <div class="sub-banner sub-banner-warning"><i class="bi bi-info-circle"></i><span>A statement for this contract and month already exists. Cancel it first to prepare it again.</span></div>
+}
+
+<section class="panel p-0 mb-3">
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead><tr><th>Property</th><th class="text-end">Received</th><th class="text-end">Deposits held</th><th class="text-end">Counts for owner</th></tr></thead>
+            <tbody>
+            @if (Model.Properties.Count == 0) { <tr><td colspan="4" class="text-body-secondary">No properties covered in this month.</td></tr> }
+            @foreach (var p in Model.Properties)
+            {
+                <tr>
+                    <td class="fw-semibold">@p.AssetName</td>
+                    <td class="text-end">@p.Collected.Kes()</td>
+                    <td class="text-end text-body-secondary">@(p.DepositsExcluded > 0 ? p.DepositsExcluded.Kes() : "—")</td>
+                    <td class="text-end">@p.Income.Kes()</td>
+                </tr>
+            }
+            </tbody>
+            <tfoot>
+                <tr><td colspan="3" class="text-end">Collected for the owner</td><td class="text-end fw-semibold">@Model.Income.Kes()</td></tr>
+                <tr><td colspan="3" class="text-end">Less commission (@(c.CommissionType == CommissionType.FixedMonthly ? "fixed fee" : $"{c.CommissionPercent:0.##}%"))</td><td class="text-end">(@Model.Commission.Kes())</td></tr>
+                <tr class="invoice-total"><td colspan="3" class="text-end">Payable to the owner</td><td class="text-end">@Model.NetPayable.Kes()</td></tr>
+            </tfoot>
+        </table>
+    </div>
+</section>
+@if (Model.DepositsExcluded > 0)
+{
+    <p class="small text-body-secondary">Deposits of @Model.DepositsExcluded.Kes() were paid this month. They're held for the tenants, so they're not paid to the owner or commissioned.</p>
+}
+@if (!Model.AlreadyExists && c.Status != ContractStatus.Draft)
+{
+    <form method="post" asp-action="Create">
+        <input type="hidden" name="contractId" value="@c.Id" />
+        <input type="hidden" name="month" value="@month" />
+        <button type="submit" class="btn btn-primary">Create draft statement</button>
+        <span class="small text-body-secondary ms-2">You can add adjustments (e.g. repairs) before approving.</span>
+    </form>
+}

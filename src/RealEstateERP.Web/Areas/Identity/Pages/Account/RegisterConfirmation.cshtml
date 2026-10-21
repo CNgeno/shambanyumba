@@ -1,0 +1,11 @@
+@page
+@model RegisterConfirmationModel
+@{
+    ViewData["Title"] = "Check your email";
+}
+<div class="auth-icon"><i class="bi bi-envelope-check"></i></div>
+<h1 class="auth-title">Check your email</h1>
+<p class="auth-sub">We sent a confirmation link to <strong>@(Model.Email ?? "your email address")</strong>. Click it to activate your account, then sign in.</p>
+<p class="small text-body-secondary">Nothing after a few minutes? Check your spam folder, or <a asp-page="./ResendEmailConfirmation">send it again</a>.</p>
+<partial name="_DevMailboxHint" />
+<a asp-page="./Login" class="btn btn-outline-primary w-100 mt-2">Go to sign in</a>

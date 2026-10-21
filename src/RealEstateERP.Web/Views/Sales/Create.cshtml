@@ -1,0 +1,121 @@
+@model SaleForm
+@{
+    ViewData["Title"] = "New sale";
+}
+<a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Sales</a>
+<h1 class="page-title mb-4">New sale</h1>
+
+@if (Model.Units.Count == 0)
+{
+    <section class="panel empty-state">
+        <i class="bi bi-house-x" aria-hidden="true"></i>
+        <h2 class="h5">No units available to sell</h2>
+        <p>Only units with the status Available can be sold. Add units with a sale price under Properties.</p>
+        <a asp-controller="Properties" asp-action="Index" class="btn btn-primary">Go to properties</a>
+    </section>
+}
+else
+{
+<div class="property-grid property-grid-reverse">
+    <form method="post" asp-action="Create" id="sale-form" novalidate>
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+        <section class="panel mb-3">
+            <div class="row g-3">
+                <div class="col-sm-6">
+                    <label asp-for="BuyerId" class="form-label"></label>
+                    <select asp-for="BuyerId" class="form-select">
+                        <option value="">Select the buyer...</option>
+                        @foreach (var b in Model.Buyers) { <option value="@b.Id">@b.FullName</option> }
+                    </select>
+                    <span asp-validation-for="BuyerId" class="invalid-feedback d-block"></span>
+                    <div class="form-text"><a asp-controller="Buyers" asp-action="Create" asp-route-returnToSale="true">Add a new buyer</a></div>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="UnitId" class="form-label"></label>
+                    <select asp-for="UnitId" class="form-select" id="unit">
+                        <option value="">Select...</option>
+                        @foreach (var g in Model.Units.GroupBy(u => u.AssetName))
+                        {
+                            <optgroup label="@g.Key">
+                                @foreach (var u in g) { <option value="@u.Id" data-price="@(u.SalePrice?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")">@u.UnitNumber@(u.SalePrice is decimal p ? $" ({p:N0})" : "")</option> }
+                            </optgroup>
+                        }
+                    </select>
+                    <span asp-validation-for="UnitId" class="invalid-feedback d-block"></span>
+                </div>
+                <div class="col-sm-6"><label asp-for="SaleDate" class="form-label"></label><input asp-for="SaleDate" type="date" class="form-control" data-preview /></div>
+                <div class="col-sm-6"><label asp-for="Price" class="form-label"></label><input asp-for="Price" class="form-control" inputmode="decimal" id="price" data-preview /></div>
+                @if (Model.ShowAgent)
+                {
+                    <div class="col-sm-6">
+                        <label asp-for="AgentId" class="form-label"></label>
+                        <select asp-for="AgentId" class="form-select"><option value="">No agent</option>@foreach (var a in Model.Agents) { <option value="@a.Id">@a.FullName</option> }</select>
+                    </div>
+                }
+                <div class="col-sm-6"><label asp-for="CommissionPercent" class="form-label"></label><input asp-for="CommissionPercent" class="form-control" inputmode="decimal" />
+                    <div class="form-text">Earned on money collected. Leave 0 if none.</div></div>
+            </div>
+        </section>
+        <section class="panel mb-3">
+            <h2 class="panel-title mb-3">Payment plan</h2>
+            <div class="mb-3">
+                @foreach (var p in Enum.GetValues<PaymentPlan>())
+                {
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="PaymentPlan" id="pp-@p" value="@p" checked="@(Model.PaymentPlan == p)" data-preview />
+                        <label class="form-check-label" for="pp-@p">@p.Display()</label>
+                    </div>
+                }
+            </div>
+            <div class="row g-3" id="instalment-fields">
+                <div class="col-sm-6"><label asp-for="DepositAmount" class="form-label"></label><input asp-for="DepositAmount" class="form-control" inputmode="decimal" id="deposit" data-preview />
+                    <div class="form-text">Due on the sale date.</div></div>
+                <div class="col-sm-3"><label asp-for="InstalmentCount" class="form-label"></label><input asp-for="InstalmentCount" class="form-control" inputmode="numeric" data-preview /></div>
+                <div class="col-sm-3"><label asp-for="InstalmentFrequency" class="form-label"></label>
+                    <select asp-for="InstalmentFrequency" class="form-select" data-preview>@foreach (var f in Enum.GetValues<InstalmentFrequency>()) { <option value="@f">@(f == InstalmentFrequency.Monthly ? "Month" : "Quarter")</option> }</select></div>
+                <div class="col-sm-6"><label asp-for="FirstInstalmentDate" class="form-label"></label><input asp-for="FirstInstalmentDate" type="date" class="form-control" data-preview /></div>
+            </div>
+            <div class="mt-3"><label asp-for="Notes" class="form-label"></label><textarea asp-for="Notes" class="form-control" rows="2"></textarea></div>
+        </section>
+        <button type="submit" class="btn btn-primary">Record sale and reserve unit</button>
+    </form>
+    <aside>
+        <section class="panel">
+            <h2 class="panel-title mb-2">Payment schedule</h2>
+            <div id="schedule-preview" aria-live="polite"><p class="small text-body-secondary mb-0">Enter the price and plan to see the schedule.</p></div>
+        </section>
+    </aside>
+</div>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var form = document.getElementById('sale-form');
+            if (!form) return;
+            var unit = document.getElementById('unit'), price = document.getElementById('price'), deposit = document.getElementById('deposit');
+            var target = document.getElementById('schedule-preview'), timer;
+
+            function plan() { return form.querySelector('input[name="PaymentPlan"]:checked').value; }
+            function toggle() { document.getElementById('instalment-fields').hidden = plan() !== 'Instalments'; }
+            function refresh() {
+                clearTimeout(timer);
+                timer = setTimeout(function () {
+                    var params = new URLSearchParams(sbFormData(form));
+                    params.delete('__RequestVerificationToken');
+                    fetch('@Url.Action("SchedulePreview")?' + params.toString(), { credentials: 'same-origin' })
+                        .then(function (r) { return r.text(); })
+                        .then(function (html) { target.innerHTML = html; });
+                }, 300);
+            }
+            unit.addEventListener('change', function () {
+                var p = unit.selectedOptions[0] && unit.selectedOptions[0].dataset.price;
+                if (p) { sbSet(price, p); if (!deposit.value || sbNum(deposit) === 0) sbSet(deposit, Math.round(sbNum(p) * 0.2)); }
+                refresh();
+            });
+            form.querySelectorAll('[data-preview]').forEach(function (el) { el.addEventListener('input', refresh); el.addEventListener('change', function () { toggle(); refresh(); }); });
+            toggle(); refresh();
+        })();
+    </script>
+}

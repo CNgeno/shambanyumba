@@ -1,0 +1,82 @@
+@model PaymentReviewViewModel
+@{
+    var p = Model.Payment;
+    ViewData["Title"] = $"Payment {p.Reference}";
+    var isImage = p.ProofFileName is not null && (p.ProofFileName.EndsWith(".png", StringComparison.OrdinalIgnoreCase)
+        || p.ProofFileName.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) || p.ProofFileName.EndsWith(".jpeg", StringComparison.OrdinalIgnoreCase));
+}
+<a asp-action="Index" class="d-inline-block mb-3"><i class="bi bi-arrow-left me-1"></i>Payment approvals</a>
+<div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+    <h1 class="page-title mb-0 me-auto">@p.Business.Name</h1>
+    <partial name="_VerificationBadge" model="p.Status" />
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <section class="panel mb-4">
+            <h2 class="h6 mb-3">Payment</h2>
+            <dl class="summary-grid mb-0">
+                <div><dt>Amount expected</dt><dd>@p.Amount.Kes()</dd></div>
+                <div><dt>Plan</dt><dd>@p.Plan.Name, @p.Months month(s)</dd></div>
+                <div><dt>Method</dt><dd>@(p.Method == SubscriptionPaymentMethod.Mpesa ? "M-PESA" : "Bank transfer")</dd></div>
+                <div><dt>Reference</dt><dd class="font-monospace">@p.Reference</dd></div>
+                <div><dt>Submitted</dt><dd>@p.CreatedAtUtc.ToEatDateTime()</dd></div>
+                <div><dt>Business ID</dt><dd>@p.BusinessId</dd></div>
+            </dl>
+        </section>
+
+        <section class="panel">
+            <h2 class="h6 mb-3">Proof</h2>
+            @if (p.ProofStorageKey is null)
+            {
+                <p class="text-body-secondary mb-0">No file attached. Verify the reference on the M-PESA statement.</p>
+            }
+            else if (isImage)
+            {
+                <a asp-action="Proof" asp-route-id="@p.Id" target="_blank">
+                    <img src="@Url.Action("Proof", new { id = p.Id })" alt="Payment proof uploaded by @p.Business.Name" class="proof-image" />
+                </a>
+            }
+            else
+            {
+                <a asp-action="Proof" asp-route-id="@p.Id" target="_blank" class="btn btn-outline-primary"><i class="bi bi-file-earmark-pdf me-1"></i>Open @p.ProofFileName</a>
+            }
+        </section>
+    </div>
+
+    <div class="col-lg-5">
+        <section class="panel mb-4">
+            <h2 class="h6 mb-3">Business subscription now</h2>
+            <p class="mb-1">@Model.BusinessSnapshot.PlanName <partial name="_SubscriptionStatusBadge" model="Model.BusinessSnapshot.Status" /></p>
+            <p class="text-body-secondary small mb-0">Paid through @Model.BusinessSnapshot.PaidThroughUtc.ToEatDate()</p>
+        </section>
+
+        @if (p.Status == PaymentVerificationStatus.Pending)
+        {
+            <section class="panel mb-3">
+                <h2 class="h6 mb-3">Approve</h2>
+                <form method="post" asp-action="Approve" asp-route-id="@p.Id">
+                    <label for="approve-note" class="form-label">Note (optional)</label>
+                    <input id="approve-note" name="note" class="form-control mb-3" maxlength="500" />
+                    <button type="submit" class="btn btn-primary w-100">Approve and extend subscription</button>
+                </form>
+            </section>
+            <section class="panel">
+                <h2 class="h6 mb-3">Reject</h2>
+                <form method="post" asp-action="Reject" asp-route-id="@p.Id">
+                    <label for="reject-note" class="form-label">Reason, shown to the business</label>
+                    <textarea id="reject-note" name="note" class="form-control mb-3" rows="2" maxlength="500" required></textarea>
+                    <button type="submit" class="btn btn-outline-danger w-100">Reject payment</button>
+                </form>
+            </section>
+        }
+        else
+        {
+            <section class="panel">
+                <h2 class="h6 mb-2">Reviewed</h2>
+                <p class="mb-1">@p.Status on @p.ReviewedAtUtc.ToEatDateTime()</p>
+                @if (p.ReviewNote is not null) { <p class="text-body-secondary mb-0">@p.ReviewNote</p> }
+            </section>
+        }
+    </div>
+</div>

@@ -1,0 +1,38 @@
+@model SalesIndexViewModel
+@{
+    ViewData["Title"] = "Sales";
+    var t = Model.Totals;
+}
+<div class="page-head">
+    <div class="me-auto"><h1 class="page-title">Sales</h1><p class="page-sub">Units and plots sold, with payment plans and transfer progress</p></div>
+    <a asp-action="Reports" class="btn btn-outline-primary"><i class="bi bi-bar-chart me-1"></i>Reports</a>
+    @if (Model.CanEdit) { <a asp-action="Create" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New sale</a> }
+</div>
+
+<section class="stat-strip mb-3">
+    <div class="stat"><span class="stat-label">Sold</span><span class="stat-value">@t.SoldValue.Kes()</span><span class="stat-note">@(t.Active + t.Completed) sale(s), @t.Reserved reserved</span></div>
+    <div class="stat"><span class="stat-label">Collected</span><span class="stat-value">@t.Collected.Kes()</span><span class="stat-note">@t.CollectedThisMonth.Kes() this month</span></div>
+    <div class="stat"><span class="stat-label">Still to collect</span><span class="stat-value">@t.Outstanding.Kes()</span></div>
+    <div class="stat"><span class="stat-label">Overdue</span><span class="stat-value @(t.OverdueAmount > 0 ? "text-danger" : "")">@t.OverdueAmount.Kes()</span><span class="stat-note">@t.OverdueSales sale(s)</span></div>
+</section>
+
+<section class="panel p-0">
+    <div class="units-toolbar">
+        <nav class="filter-chips me-auto" aria-label="Filter sales">
+            @foreach (var v in Enum.GetValues<SalesListView>())
+            {
+                <a asp-action="Index" asp-route-view="@v" asp-route-q="@Model.Search" class="filter-chip @(Model.View == v ? "is-active" : "")">@v</a>
+            }
+        </nav>
+        <form method="get" class="d-flex gap-2" role="search">
+            <input type="hidden" name="view" value="@Model.View" />
+            <input type="search" name="q" value="@Model.Search" class="form-control form-control-sm" placeholder="Sale no., buyer, unit" aria-label="Search sales" />
+        </form>
+    </div>
+    @if (Model.Sales.Count == 0)
+    {
+        <div class="empty-state"><i class="bi bi-house-check" aria-hidden="true"></i><h3 class="h6">No sales here</h3>
+            <p>Record a sale to reserve a unit and build its payment schedule.</p></div>
+    }
+    else { <partial name="_SalesTable" model="Model.Sales" /> }
+</section>

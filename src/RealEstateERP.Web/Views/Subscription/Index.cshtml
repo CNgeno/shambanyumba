@@ -1,0 +1,79 @@
+@model SubscriptionIndexViewModel
+@{
+    ViewData["Title"] = "Subscription";
+    var s = Model.Snapshot;
+}
+<div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+    <h1 class="page-title mb-0 me-auto">Subscription</h1>
+    @if (Model.CanRenew)
+    {
+        <a asp-action="Renew" class="btn btn-primary"><i class="bi bi-arrow-repeat me-1"></i>Renew or change plan</a>
+    }
+</div>
+
+<section class="panel mb-4">
+    <div class="d-flex flex-wrap align-items-start gap-3">
+        <div class="me-auto">
+            <h2 class="h5 mb-1">@s.PlanName</h2>
+            <p class="text-body-secondary mb-0">@s.UnitLimit.UnitLimitText(), @s.CreditsPerMonth credits per month</p>
+        </div>
+        <partial name="_SubscriptionStatusBadge" model="s.Status" />
+    </div>
+    <dl class="summary-grid mt-3 mb-0">
+        <div>
+            <dt>@(s.IsTrial ? "Trial ends" : "Paid through")</dt>
+            <dd>@(s.PaidThroughUtc is null ? "Not subscribed" : s.PaidThroughUtc.ToEatDate())</dd>
+        </div>
+        <div>
+            <dt>Days left</dt>
+            <dd>@s.DaysLeft(Model.NowUtc)</dd>
+        </div>
+        <div>
+            <dt>Access ends if not renewed</dt>
+            <dd>@s.GraceEndsUtc.ToEatDate()</dd>
+        </div>
+    </dl>
+</section>
+
+<section class="panel">
+    <h2 class="h6 mb-3">Payments</h2>
+    @if (Model.Payments.Count == 0)
+    {
+        <p class="text-body-secondary mb-0">No payments yet. Renew before your trial ends to keep access without interruption.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr><th>Submitted</th><th>Plan</th><th>Months</th><th class="text-end">Amount</th><th>Reference</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                @foreach (var p in Model.Payments)
+                {
+                    <tr>
+                        <td>@p.CreatedAtUtc.ToEatDate()</td>
+                        <td>@p.Plan.Name</td>
+                        <td>@p.Months</td>
+                        <td class="text-end">@p.Amount.Kes()</td>
+                        <td>
+                            @p.Reference
+                            @if (p.ProofStorageKey is not null)
+                            {
+                                <a asp-action="Proof" asp-route-id="@p.Id" target="_blank" class="ms-1" title="View proof"><i class="bi bi-paperclip"></i><span class="visually-hidden">View proof</span></a>
+                            }
+                        </td>
+                        <td>
+                            <partial name="_VerificationBadge" model="p.Status" />
+                            @if (p.Status == PaymentVerificationStatus.Rejected && p.ReviewNote is not null)
+                            {
+                                <div class="small text-body-secondary mt-1">@p.ReviewNote</div>
+                            }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

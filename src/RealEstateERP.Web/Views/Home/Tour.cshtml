@@ -1,0 +1,158 @@
+@{
+    ViewData["Title"] = "Take the tour";
+    Layout = "_PublicLayout";
+}
+@* Generated from the same journeys as the downloadable walkthrough (wwwroot/downloads), so both say the same thing. *@
+<section class="tour-hero">
+    <div class="container">
+        <p class="hero-eyebrow"><i class="bi bi-play-circle-fill"></i>3-minute tour</p>
+        <h1>See how ShambaNyumba works</h1>
+        <p class="hero-lead">Pick what you do. Each journey takes you from setup to money in the bank, step by step.</p>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+            <a href="#journeys" class="btn btn-accent btn-lg">Start the tour</a>
+            <form method="post" asp-area="" asp-controller="Demo" asp-action="Start" class="d-inline">
+                <button type="submit" class="btn btn-outline-light btn-lg"><i class="bi bi-play-btn-fill me-1"></i>Try the live demo</button>
+            </form>
+            <a href="/downloads/ShambaNyumba-Walkthrough.pdf" class="btn btn-light btn-lg" download><i class="bi bi-file-earmark-arrow-down me-1"></i>Download the PDF</a>
+        </div>
+    </div>
+</section>
+<div class="container tour-wrap" id="journeys">
+    <div class="tour-tabs" role="tablist" aria-label="Journeys">
+            <button class="tour-tab is-active" type="button" role="tab" id="tab-landlord" aria-controls="panel-landlord" aria-selected="true" data-tour="landlord"><i class="bi bi-house-door"></i>Landlords</button>
+            <button class="tour-tab" type="button" role="tab" id="tab-developer" aria-controls="panel-developer" aria-selected="false" data-tour="developer"><i class="bi bi-grid-3x3-gap"></i>Developers and land sellers</button>
+            <button class="tour-tab" type="button" role="tab" id="tab-agency" aria-controls="panel-agency" aria-selected="false" data-tour="agency"><i class="bi bi-briefcase"></i>Agencies</button>
+    </div>
+        <section class="tour-panel" role="tabpanel" id="panel-landlord" aria-labelledby="tab-landlord">
+            <p class="tour-tagline">From an empty estate to rent in the bank, and the true profit on every property.</p>
+            <ol class="tour-steps">
+                <li class="tour-step">
+                    <span class="tour-num" aria-hidden="true">1</span>
+                    <div class="tour-text"><h3>Create your business</h3><p>Sign up, confirm your email and name your business. You get 14 days free, no card needed.</p></div>
+                    <div class="tour-mock" aria-hidden="true"><div class="tour-mock-bar"><span></span><span></span><span></span></div><div class="tour-mock-row"><span>Plan</span><strong>Free trial, 14 days</strong></div><div class="tour-mock-row"><span>Credits</span><strong>Included each month</strong></div></div>
+                </li>
+                <li class="tour-step">
+                    <span class="tour-num" aria-hidden="true">2</span>
+                    <div class="tour-text"><h3>Add your estate</h3><p>Add the property as To let, then add all the houses at once (H1 to H7) with their rent. Upload photos of the estate and its houses.</p></div>
+                    <div class="tour-mock" aria-hidden="true"><div class="tour-mock-bar"><span></span><span></span><span></span></div><div class="tour-mock-row"><span>Bethlehem Estate</span><strong>7 houses</strong></div><div class="tour-mock-row"><span>Rent roll</span><strong>KES 42,000 a month</strong></div></div>
+                </li>
+                <li class="tour-step">
+                    <span class="tour-num" aria-hidden="true">3</span>
+                    <div class="tour-text"><h3>Set the estate&#x27;s charges</h3><p>Garbage KES 120 a month, water KES 170 per unit. Every new lease gets them automatically. Enter each meter&#x27;s opening reading.</p></div>
+                    <div class="tour-mock" aria-hidden="true"><div class="tour-mock-bar"><span></span><span></span><span></span></div><div class="tour-mock-row"><span>Garbage</span><strong>120 monthly</strong></div><div class="tour-mock-row"><span>Water</span><strong>170 per unit, metered</strong></div></div>
+                </li>
+                <li class="tour-step">
+                    <span class="tour-num" aria-hidden="true">4</span>
+                    <div class="tour-text"><h3>Add tenants and leases</h3><p>Tenant details and ID copies, then a lease with rent, deposit and due day. Activate it and the house shows as let.</p></div>
+                    <div class="tour-mock" aria-hidden="true"><div class="tour-mock-bar"><span></span><span></span><span></span></div><div class="tour-mock-row"><span>H3, Faith Njeri</span><strong>Active</strong></div><div class="tour-mock-row"><span>Rent</span><strong>KES 6,000, due on the 5th</strong></div></div>
+                </li>
+                <li class="tour-step">
+                    <span class="tour-num" aria-hidden="true">5</span>
+                    <div class="tour-text"><h3>Invoice in one click</h3><p>Each month every lease is billed: rent, charges and water from the readings. The preview warns about any missing charge or reading. It can run automatically and email tenants.</p></div>
+                    <div class="tour-mock" aria-hidden="true"><div class="tour-mock-bar"><span></span><span></span><span></span></div><div class="tour-mock-row"><span>7 invoices</span><strong>KES 46,750</strong></div><div class="tour-mock-row"><span>Check</span><strong>All charges included</strong></div></div>
+                </li>
+                <li class="tour-step">
+                    <span class="tour-num" aria-hidden="true">6</span>
+                    <div class="tour-text"><h3>Record payments</h3><p>M-PESA, bank or cash. Money goes to the oldest invoice first and the receipt is emailed. Arrears are grouped by age, with late penalties when you want them.</p></div>
+                    <div class="tour-mock" aria-hidden="true"><div class="tour-mock-bar"><span></span><span></span><span></span></div><div class="tour-mock-row"><span>RCT-00012</span><strong>KES 8,160 received</strong></div><div class="tour-mock-row"><span>Overdue</span><strong>2 tenants, 31-60 days</strong></div></div>
+                </li>
+                <li class="tour-step">
+                    <span class="tour-num" aria-hidden="true">7</span>
+                    <div class="tour-text"><h3>Know your true profit</h3><p>Record running costs (repairs, cleaning, advertising) and see net income per estate. Vacant houses can be listed for you, with their photos.</p></div>
+                    <div class="tour-mock" aria-hidden="true"><div class="tour-mock-bar"><span></span><span></span><span></span></div><div class="tour-mock-row"><span>Collected</span><strong>KES 42,000</strong></div><div class="tour-mock-row"><span>Net income</span><strong>KES 38,500</strong></div></div>
+                </li>
+            </ol>
+            <div class="tour-cta">
+                <a href="/Identity/Account/Register" class="btn btn-accent btn-lg">Start free trial</a>
+                <form method="post" asp-area="" asp-controller="Demo" asp-action="Start" class="d-inline"><button type="submit" class="btn btn-primary btn-lg">Try the live demo</button></form>
+                <a href="/downloads/ShambaNyumba-Walkthrough.pdf" class="btn btn-outline-primary btn-lg" download><i class="bi bi-file-earmark-arrow-down me-1"></i>Download the walkthrough (PDF)</a>
+            </div>
+        </section>
+        <section class="tour-panel" role="tabpanel" id="panel-developer" aria-labelledby="tab-developer" hidden>
+            <p class="tour-tagline">From buying the land to handing over titles, with the margin on every plot.</p>
+            <ol class="tour-steps">
+                <li class="tour-step">
+                    <span class="tour-num" aria-hidden="true">1</span>
+                    <div class="tour-text"><h3>Add the land</h3><p>Add the property as For sale, with its acreage, title and the price you budget to pay.</p></div>
+                    <div class="tour-mock" aria-hidden="true"><div class="tour-mock-bar"><span></span><span></span><span></span></div><div class="tour-mock-row"><span>Kitengela Gardens</span><strong>2 acres</strong></div><div class="tour-mock-row"><span>Title</span><strong>KAJIADO/KITENGELA/9001</strong></div></div>
+                </li>
+                <li class="tour-step">
+                    <span class="tour-num" aria-hidden="true">2</span>
+                    <div class="tour-text"><h3>Budget and record costs</h3><p>Budget every cost, then record what you actually spend: purchase costs, survey, beacons, titles, roads, water and power.</p></div>
+                    <div class="tour-mock" aria-hidden="true"><div class="tour-mock-bar"><span></span><span></span><span></span></div><div class="tour-mock-row"><span>Expected cost</span><strong>KES 13,050,000</strong></div><div class="tour-mock-row"><span>Subdivision</span><strong>+50,000 over budget</strong></div></div>
+                </li>
+                <li class="tour-step">
+                    <span class="tour-num" aria-hidden="true">3</span>
+                    <div class="tour-text"><h3>Subdivide into plots</h3><p>Create the plots with sizes and prices in one go. The land given to roads is worked out, and each plot carries its share of the cost.</p></div>
+                    <div class="tour-mock" aria-hidden="true"><div class="tour-mock-bar"><span></span><span></span><span></span></div><div class="tour-mock-row"><span>16 plots</span><strong>450 sqm each</strong></div><div class="tour-mock-row"><span>Cost per plot</span><strong>KES 815,625</strong></div></div>
+                </li>
+                <li class="tour-step">
+                    <span class="tour-num" aria-hidden="true">4</span>
+                    <div class="tour-text"><h3>Sell with payment plans</h3><p>Reserve a plot for a buyer: full payment, or a deposit with monthly or quarterly instalments. The schedule always adds up to the price.</p></div>
+                    <div class="tour-mock" aria-hidden="true"><div class="tour-mock-bar"><span></span><span></span><span></span></div><div class="tour-mock-row"><span>SL-00002, Plot 2</span><strong>Deposit + 6 x 160,000</strong></div><div class="tour-mock-row"><span>Status</span><strong>Reserved</strong></div></div>
+                </li>
+                <li class="tour-step">
+                    <span class="tour-num" aria-hidden="true">5</span>
+                    <div class="tour-text"><h3>Collect and transfer</h3><p>Payments clear the oldest instalment first, and overdue amounts are grouped by age. Record the agreement, stamp duty, title transfer and handover.</p></div>
+                    <div class="tour-mock" aria-hidden="true"><div class="tour-mock-bar"><span></span><span></span><span></span></div><div class="tour-mock-row"><span>Paid</span><strong>KES 560,000 (47%)</strong></div><div class="tour-mock-row"><span>Next step</span><strong>Title transfer</strong></div></div>
+                </li>
+                <li class="tour-step">
+                    <span class="tour-num" aria-hidden="true">6</span>
+                    <div class="tour-text"><h3>Watch the margin</h3><p>See the margin per plot and per project, and how many plots must sell to break even. List plots on the marketplace and pay only for verified leads.</p></div>
+                    <div class="tour-mock" aria-hidden="true"><div class="tour-mock-bar"><span></span><span></span><span></span></div><div class="tour-mock-row"><span>Projected margin</span><strong>35.7%</strong></div><div class="tour-mock-row"><span>Break-even</span><strong>Sell 8 more plots</strong></div></div>
+                </li>
+            </ol>
+            <div class="tour-cta">
+                <a href="/Identity/Account/Register" class="btn btn-accent btn-lg">Start free trial</a>
+                <form method="post" asp-area="" asp-controller="Demo" asp-action="Start" class="d-inline"><button type="submit" class="btn btn-primary btn-lg">Try the live demo</button></form>
+                <a href="/downloads/ShambaNyumba-Walkthrough.pdf" class="btn btn-outline-primary btn-lg" download><i class="bi bi-file-earmark-arrow-down me-1"></i>Download the walkthrough (PDF)</a>
+            </div>
+        </section>
+        <section class="tour-panel" role="tabpanel" id="panel-agency" aria-labelledby="tab-agency" hidden>
+            <p class="tour-tagline">Collect for many owners, keep your commission, and send each owner a clear statement.</p>
+            <ol class="tour-steps">
+                <li class="tour-step">
+                    <span class="tour-num" aria-hidden="true">1</span>
+                    <div class="tour-text"><h3>Switch on agency features</h3><p>Tick &#x27;We manage properties for other owners&#x27;. It&#x27;s included on the Agent and Enterprise plans, and on every plan during the trial.</p></div>
+                    <div class="tour-mock" aria-hidden="true"><div class="tour-mock-bar"><span></span><span></span><span></span></div><div class="tour-mock-row"><span>Arena Homes</span><strong>Agency</strong></div><div class="tour-mock-row"><span>Plan</span><strong>Agent</strong></div></div>
+                </li>
+                <li class="tour-step">
+                    <span class="tour-num" aria-hidden="true">2</span>
+                    <div class="tour-text"><h3>Owners and contracts</h3><p>Add each owner with their payout details. A management contract sets your commission, a percentage or a fixed monthly fee, and the properties it covers.</p></div>
+                    <div class="tour-mock" aria-hidden="true"><div class="tour-mock-bar"><span></span><span></span><span></span></div><div class="tour-mock-row"><span>Jochrison family</span><strong>5 houses</strong></div><div class="tour-mock-row"><span>Fee</span><strong>KES 3,000 a month</strong></div></div>
+                </li>
+                <li class="tour-step">
+                    <span class="tour-num" aria-hidden="true">3</span>
+                    <div class="tour-text"><h3>Let and collect</h3><p>Use the same letting tools for every owner&#x27;s property: leases, invoices, payments, arrears and readings.</p></div>
+                    <div class="tour-mock" aria-hidden="true"><div class="tour-mock-bar"><span></span><span></span><span></span></div><div class="tour-mock-row"><span>Collected</span><strong>KES 35,260</strong></div><div class="tour-mock-row"><span>Owing</span><strong>1 tenant, KES 4,650</strong></div></div>
+                </li>
+                <li class="tour-step">
+                    <span class="tour-num" aria-hidden="true">4</span>
+                    <div class="tour-text"><h3>Owner statements</h3><p>Each month: rent collected, deposits held back, your commission and any deductions. Approve it, record the payout and send the PDF.</p></div>
+                    <div class="tour-mock" aria-hidden="true"><div class="tour-mock-bar"><span></span><span></span><span></span></div><div class="tour-mock-row"><span>Payable to owner</span><strong>KES 32,260</strong></div><div class="tour-mock-row"><span>Status</span><strong>Paid, ref SJA9X8Y7Z6</strong></div></div>
+                </li>
+                <li class="tour-step">
+                    <span class="tour-num" aria-hidden="true">5</span>
+                    <div class="tour-text"><h3>Agents</h3><p>Give each agent a login that shows only their own contracts and sales, and a commission report for every month.</p></div>
+                    <div class="tour-mock" aria-hidden="true"><div class="tour-mock-bar"><span></span><span></span><span></span></div><div class="tour-mock-row"><span>James Kamau</span><strong>2 contracts</strong></div><div class="tour-mock-row"><span>Commission</span><strong>KES 9,000</strong></div></div>
+                </li>
+            </ol>
+            <div class="tour-cta">
+                <a href="/Identity/Account/Register" class="btn btn-accent btn-lg">Start free trial</a>
+                <form method="post" asp-area="" asp-controller="Demo" asp-action="Start" class="d-inline"><button type="submit" class="btn btn-primary btn-lg">Try the live demo</button></form>
+                <a href="/downloads/ShambaNyumba-Walkthrough.pdf" class="btn btn-outline-primary btn-lg" download><i class="bi bi-file-earmark-arrow-down me-1"></i>Download the walkthrough (PDF)</a>
+            </div>
+        </section>
+</div>
+<script>
+    (function () {
+        var tabs = document.querySelectorAll('.tour-tab');
+        function show(key) {
+            tabs.forEach(function (t) { var on = t.dataset.tour === key; t.classList.toggle('is-active', on); t.setAttribute('aria-selected', on); });
+            document.querySelectorAll('.tour-panel').forEach(function (p) { p.hidden = p.id !== 'panel-' + key; });
+        }
+        tabs.forEach(function (t) { t.addEventListener('click', function () { show(t.dataset.tour); history.replaceState(null, '', '#' + t.dataset.tour); }); });
+        var start = (location.hash || '').replace('#', '');
+        if (document.getElementById('panel-' + start)) show(start);
+    })();
+</script>

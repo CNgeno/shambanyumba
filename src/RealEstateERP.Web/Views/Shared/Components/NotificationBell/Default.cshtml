@@ -1,0 +1,32 @@
+@model RealEstateERP.Web.ViewComponents.NotificationBellModel
+<div class="dropdown notification-bell">
+    <button class="btn btn-link topbar-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Notifications@(Model.Unread > 0 ? $", {Model.Unread} unread" : "")">
+        <i class="bi bi-bell"></i>
+        @if (Model.Unread > 0) { <span class="bell-count">@(Model.Unread > 9 ? "9+" : Model.Unread.ToString())</span> }
+    </button>
+    <div class="dropdown-menu dropdown-menu-end bell-menu">
+        <div class="d-flex align-items-center px-3 py-2 border-bottom">
+            <strong class="me-auto small">Notifications</strong>
+            @if (Model.Unread > 0)
+            {
+                <form method="post" asp-area="" asp-controller="Notifications" asp-action="MarkAllRead" class="m-0">
+                    <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                    <button type="submit" class="btn btn-link btn-sm p-0">Mark all read</button>
+                </form>
+            }
+        </div>
+        @if (Model.Recent.Count == 0)
+        {
+            <p class="small text-body-secondary px-3 py-3 mb-0">Nothing yet.</p>
+        }
+        @foreach (var n in Model.Recent)
+        {
+            <a class="bell-item @(n.IsUnread ? "is-unread" : "")" href="@(n.Url ?? "#")">
+                <span class="fw-semibold small d-block">@n.Title</span>
+                @if (n.Body is not null) { <span class="small text-body-secondary d-block">@n.Body</span> }
+                <span class="bell-time">@n.CreatedAtUtc.ToEatDateTime()</span>
+            </a>
+        }
+        <a class="d-block text-center small py-2 border-top" asp-area="" asp-controller="Notifications" asp-action="Index">See all</a>
+    </div>
+</div>

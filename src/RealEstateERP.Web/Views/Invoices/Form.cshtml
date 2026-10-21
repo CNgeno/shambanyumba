@@ -1,0 +1,174 @@
+@using System.Globalization
+@model InvoiceFormViewModel
+@{
+    var isNew = Model.Id is null;
+    ViewData["Title"] = isNew ? "One-off invoice" : $"Edit draft {Model.InvoiceNumber}";
+}
+<a asp-action="@(isNew ? "Index" : "Details")" asp-route-id="@Model.Id" class="back-link"><i class="bi bi-arrow-left"></i>@(isNew ? "Invoices" : Model.InvoiceNumber)</a>
+<h1 class="page-title mb-4">@ViewData["Title"]</h1>
+
+<form method="post" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@Model.Id" id="invoice-form" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+    <section class="panel mb-3 form-narrow">
+        <div class="row g-3">
+            <div class="col-sm-6">
+                <label asp-for="TenantId" class="form-label"></label>
+                <select asp-for="TenantId" class="form-select" id="tenant">
+                    <option value="">Select a tenant...</option>
+                    @foreach (var t in Model.TenantOptions) { <option value="@t.Id">@t.FullName</option> }
+                </select>
+                <span asp-validation-for="TenantId" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="LeaseId" class="form-label"></label>
+                <select asp-for="LeaseId" class="form-select" id="lease">
+                    <option value="">Not linked to a lease</option>
+                    @foreach (var l in Model.LeaseOptions)
+                    {
+                        <option value="@l.Id" data-tenant="@l.TenantId" selected="@(Model.LeaseId == l.Id)">@l.LeaseNumber, @l.UnitNumber (@l.AssetName)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="InvoiceDate" class="form-label"></label>
+                <input asp-for="InvoiceDate" type="date" class="form-control" />
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="DueDate" class="form-label"></label>
+                <input asp-for="DueDate" type="date" class="form-control" />
+            </div>
+        </div>
+    </section>
+
+    <section class="panel p-0 mb-3">
+        <div class="units-toolbar">
+            <h2 class="panel-title me-auto">Lines</h2>
+            @if (Model.Charges.Count > 0)
+            {
+                <div class="dropdown">
+                    <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Add from charges</button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        @foreach (var c in Model.Charges.Where(c => c.Type != ChargeType.Utility))
+                        {
+                            var type = c.Type switch { ChargeType.Penalty => InvoiceLineType.Penalty, ChargeType.Recurring => InvoiceLineType.RecurringCharge, _ => InvoiceLineType.Other };
+                            <li><button type="button" class="dropdown-item add-charge" data-desc="@c.Name" data-type="@type"
+                                        data-price="@((c.DefaultAmount ?? 0).ToString(CultureInfo.InvariantCulture))" data-tax="@c.TaxPercent.ToString(CultureInfo.InvariantCulture)">@c.Name</button></li>
+                        }
+                    </ul>
+                </div>
+            }
+            <button type="button" class="btn btn-sm btn-outline-primary" id="add-line"><i class="bi bi-plus-lg"></i> Add line</button>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 lines-table">
+                <thead><tr><th style="min-width: 150px">Type</th><th style="min-width: 240px">Description</th><th style="width: 100px">Qty</th><th style="width: 140px">Price</th><th style="width: 90px">Tax %</th><th class="text-end" style="width: 130px">Amount</th><th></th></tr></thead>
+                <tbody id="lines">
+                @for (var i = 0; i < Model.Lines.Count; i++)
+                {
+                    var l = Model.Lines[i];
+                    <tr class="line-row">
+                        <td>
+                            <select name="Lines[@i].LineType" class="form-select form-select-sm" data-field="LineType">
+                                @foreach (var t in Enum.GetValues<InvoiceLineType>()) { <option value="@t" selected="@(l.LineType == t)">@t.Display()</option> }
+                            </select>
+                        </td>
+                        <td><input name="Lines[@i].Description" value="@l.Description" class="form-control form-control-sm" data-field="Description" maxlength="300" aria-label="Description" /></td>
+                        <td><input name="Lines[@i].Quantity" value="@l.Quantity.ToString(CultureInfo.InvariantCulture)" class="form-control form-control-sm calc" data-field="Quantity" inputmode="decimal" aria-label="Quantity" /></td>
+                        <td><input name="Lines[@i].UnitPrice" value="@l.UnitPrice.ToString(CultureInfo.InvariantCulture)" class="form-control form-control-sm calc" data-field="UnitPrice" inputmode="decimal" aria-label="Price" /></td>
+                        <td><input name="Lines[@i].TaxPercent" value="@l.TaxPercent.ToString(CultureInfo.InvariantCulture)" class="form-control form-control-sm calc" data-field="TaxPercent" inputmode="decimal" aria-label="Tax percent" /></td>
+                        <td class="text-end line-amount"></td>
+                        <td><button type="button" class="btn btn-sm btn-link text-body-secondary remove-line" aria-label="Remove line"><i class="bi bi-x-lg"></i></button></td>
+                    </tr>
+                }
+                </tbody>
+                <tfoot>
+                    <tr><td colspan="5" class="text-end fw-semibold">Total</td><td class="text-end fw-semibold" id="invoice-total"></td><td></td></tr>
+                </tfoot>
+            </table>
+        </div>
+    </section>
+
+    <section class="panel mb-4 form-narrow">
+        <label asp-for="Notes" class="form-label"></label>
+        <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
+    </section>
+
+    <div class="d-flex flex-wrap gap-2">
+        <button type="submit" name="submit" value="issue" class="btn btn-primary">Save and issue</button>
+        <button type="submit" name="submit" value="draft" class="btn btn-outline-primary">Save as draft</button>
+        <a asp-action="@(isNew ? "Index" : "Details")" asp-route-id="@Model.Id" class="btn btn-link">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        (function () {
+            var tbody = document.getElementById('lines');
+            var fmt = new Intl.NumberFormat('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            var round2 = function (n) { return Math.round(n * 100) / 100; };
+
+            function renumber() {
+                tbody.querySelectorAll('tr.line-row').forEach(function (row, i) {
+                    row.querySelectorAll('[data-field]').forEach(function (el) { el.name = 'Lines[' + i + '].' + el.dataset.field; });
+                });
+            }
+            function recalc() {
+                var total = 0;
+                tbody.querySelectorAll('tr.line-row').forEach(function (row) {
+                    var q = sbNum(row.querySelector('[data-field="Quantity"]').value) || 0;
+                    var p = sbNum(row.querySelector('[data-field="UnitPrice"]').value) || 0;
+                    var t = sbNum(row.querySelector('[data-field="TaxPercent"]').value) || 0;
+                    var amount = round2(q * p), line = amount + round2(amount * t / 100);   // same rounding as BillingRules.LineMath
+                    row.querySelector('.line-amount').textContent = fmt.format(line);
+                    total += line;
+                });
+                document.getElementById('invoice-total').textContent = 'KES ' + fmt.format(total);
+            }
+            function addLine(values) {
+                var template = tbody.querySelector('tr.line-row');
+                var row = template.cloneNode(true);
+                row.querySelectorAll('input').forEach(function (el) { el.value = ''; });
+                row.querySelector('[data-field="Quantity"]').value = '1';
+                row.querySelector('[data-field="TaxPercent"]').value = '0';
+                row.querySelector('[data-field="LineType"]').value = 'Other';
+                if (values) Object.keys(values).forEach(function (k) { row.querySelector('[data-field="' + k + '"]').value = values[k]; });
+                tbody.appendChild(row);
+                renumber(); recalc();
+                row.querySelector('[data-field="Description"]').focus();
+            }
+
+            document.getElementById('add-line').addEventListener('click', function () { addLine(); });
+            document.querySelectorAll('.add-charge').forEach(function (b) {
+                b.addEventListener('click', function () {
+                    // Reuse the first row if it's still empty.
+                    var first = tbody.querySelector('tr.line-row');
+                    var values = { Description: b.dataset.desc, LineType: b.dataset.type, UnitPrice: b.dataset.price, TaxPercent: b.dataset.tax, Quantity: '1' };
+                    if (tbody.querySelectorAll('tr.line-row').length === 1 && !first.querySelector('[data-field="Description"]').value) {
+                        Object.keys(values).forEach(function (k) { first.querySelector('[data-field="' + k + '"]').value = values[k]; });
+                        recalc();
+                    } else addLine(values);
+                });
+            });
+            tbody.addEventListener('click', function (e) {
+                var btn = e.target.closest('.remove-line');
+                if (!btn) return;
+                if (tbody.querySelectorAll('tr.line-row').length > 1) { btn.closest('tr').remove(); renumber(); recalc(); }
+            });
+            tbody.addEventListener('input', function (e) { if (e.target.classList.contains('calc')) recalc(); });
+
+            // Show only the chosen tenant's leases.
+            var tenant = document.getElementById('tenant'), lease = document.getElementById('lease');
+            function filterLeases() {
+                Array.prototype.forEach.call(lease.options, function (o) {
+                    if (!o.dataset.tenant) return;
+                    o.hidden = o.dataset.tenant !== tenant.value;
+                    if (o.hidden && o.selected) lease.value = '';
+                });
+            }
+            tenant.addEventListener('change', filterLeases);
+            filterLeases();
+            recalc();
+        })();
+    </script>
+}

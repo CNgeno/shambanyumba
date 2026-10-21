@@ -1,0 +1,12 @@
+@model UnitStatus
+@{
+    var css = Model switch
+    {
+        UnitStatus.Available => "status-info",
+        UnitStatus.Reserved => "status-warn",
+        UnitStatus.Occupied => "status-ok",
+        UnitStatus.Sold => "status-neutral",
+        _ => "status-muted"
+    };
+}
+<span class="status-chip @css">@Model</span>

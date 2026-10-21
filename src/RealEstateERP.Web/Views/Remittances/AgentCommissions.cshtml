@@ -1,0 +1,64 @@
+@model AgentCommissionsViewModel
+@{
+    ViewData["Title"] = "Agent commission";
+    var monthDate = DateOnly.ParseExact(Model.Month + "-01", "yyyy-MM-dd");
+}
+<a asp-action="Index" asp-route-month="@Model.Month" class="back-link"><i class="bi bi-arrow-left"></i>Remittances</a>
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">Agent commission</h1>
+        <p class="page-sub">Each agent's share of the commission on owner statements for @monthDate.ToString("MMMM yyyy")</p>
+    </div>
+    <form method="get"><input type="month" name="month" value="@Model.Month" class="form-control" aria-label="Month" onchange="this.form.submit()" /></form>
+</div>
+<section class="panel p-0">
+    @if (Model.Rows.Count == 0) { <p class="text-body-secondary p-4 mb-0">No owner statements for this month yet. Prepare them under Remittances first.</p> }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead><tr><th>Agent</th><th class="text-end">Statements</th><th class="text-end">Agency commission</th><th class="text-end">Share</th><th class="text-end">Agent earns</th></tr></thead>
+                <tbody>
+                @foreach (var a in Model.Rows)
+                {
+                    <tr class="@(a.AgentId is null ? "text-body-secondary" : "")">
+                        <td class="fw-semibold">@a.AgentName</td>
+                        <td class="text-end">@a.Remittances</td>
+                        <td class="text-end">@a.AgencyCommission.Kes()</td>
+                        <td class="text-end">@(a.AgentId is null ? "—" : $"{a.SharePercent:0.##}%")</td>
+                        <td class="text-end fw-semibold">@a.AgentShare.Kes()</td>
+                    </tr>
+                }
+                </tbody>
+                <tfoot><tr class="invoice-total"><td colspan="2" class="text-end">Totals</td><td class="text-end">@Model.Rows.Sum(r => r.AgencyCommission).Kes()</td><td></td><td class="text-end">@Model.Rows.Sum(r => r.AgentShare).Kes()</td></tr></tfoot>
+            </table>
+        </div>
+    }
+</section>
+<p class="small text-body-secondary mt-2">From owner statements for the month (cancelled ones aren't counted).</p>
+
+<h2 class="h6 mt-4">Commission on sales</h2>
+<section class="panel p-0">
+    @if (Model.SalesRows.Count == 0) { <p class="text-body-secondary p-4 mb-0">No sale payments with commission this month.</p> }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead><tr><th>Agent</th><th class="text-end">Collected from buyers</th><th class="text-end">Commission</th><th class="text-end">Share</th><th class="text-end">Agent earns</th></tr></thead>
+                <tbody>
+                @foreach (var a in Model.SalesRows)
+                {
+                    <tr class="@(a.AgentId is null ? "text-body-secondary" : "")">
+                        <td class="fw-semibold">@a.AgentName</td>
+                        <td class="text-end">@a.Collected.Kes()</td>
+                        <td class="text-end">@a.Commission.Kes()</td>
+                        <td class="text-end">@(a.AgentId is null ? "—" : $"{a.SharePercent:0.##}%")</td>
+                        <td class="text-end fw-semibold">@a.AgentShare.Kes()</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+<p class="small text-body-secondary mt-2">Sales commission is earned on money actually received from buyers in the month.</p>

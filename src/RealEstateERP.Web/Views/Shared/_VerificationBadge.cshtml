@@ -1,0 +1,10 @@
+@model PaymentVerificationStatus
+@{
+    var css = Model switch
+    {
+        PaymentVerificationStatus.Approved => "status-ok",
+        PaymentVerificationStatus.Pending => "status-warn",
+        _ => "status-bad"
+    };
+}
+<span class="status-chip @css">@Model</span>

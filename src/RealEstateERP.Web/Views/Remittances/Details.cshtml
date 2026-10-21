@@ -1,0 +1,108 @@
+@model RemittanceDetailsViewModel
+@{
+    var d = Model.Details;
+    var r = d.Remittance;
+    ViewData["Title"] = r.RemittanceNumber;
+    var isDraft = r.Status == RemittanceStatus.Draft;
+}
+<div class="no-print">
+    <a asp-action="Index" asp-route-month="@r.PeriodStart.ToString("yyyy-MM")" class="back-link"><i class="bi bi-arrow-left"></i>Remittances</a>
+    <div class="page-head">
+        <div class="me-auto">
+            <h1 class="page-title">@r.RemittanceNumber <partial name="_RemittanceStatusChip" model="r.Status" /></h1>
+            <p class="page-sub"><a asp-controller="Owners" asp-action="Details" asp-route-id="@r.OwnerId">@r.Owner.FullName</a>, @r.PeriodStart.ToString("MMMM yyyy"), contract <a asp-controller="Contracts" asp-action="Details" asp-route-id="@r.ContractId">@r.Contract.ContractNumber</a></p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            @if (Model.CanAdmin && isDraft)
+            {
+                <form method="post" asp-action="Approve" asp-route-id="@r.Id" class="m-0"><button type="submit" class="btn btn-primary"><i class="bi bi-check2-circle me-1"></i>Approve</button></form>
+            }
+            <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer me-1"></i>Print</button>
+            <a asp-action="Pdf" asp-route-id="@r.Id" class="btn btn-outline-secondary" title="Uses 2 credits"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</a>
+            @if (Model.CanAdmin && r.Status is RemittanceStatus.Draft or RemittanceStatus.Approved)
+            {
+                <button type="button" class="btn btn-outline-danger" data-bs-toggle="collapse" data-bs-target="#cancel-form">Cancel</button>
+            }
+        </div>
+    </div>
+
+    @if (Model.CanAdmin && r.Status is RemittanceStatus.Draft or RemittanceStatus.Approved)
+    {
+        <form method="post" asp-action="Cancel" asp-route-id="@r.Id" class="collapse panel mb-3" id="cancel-form">
+            <label for="cancel-reason" class="form-label fw-semibold">Why cancel this statement?</label>
+            <div class="d-flex flex-wrap gap-2">
+                <input id="cancel-reason" name="reason" class="form-control flex-grow-1" style="max-width: 480px" required maxlength="500" placeholder="e.g. A late payment needs including; preparing again" />
+                <button type="submit" class="btn btn-danger">Cancel statement</button>
+            </div>
+        </form>
+    }
+    @if (r.StatusReason is not null) { <div class="sub-banner sub-banner-warning"><i class="bi bi-info-circle"></i><span>Cancelled: @r.StatusReason</span></div> }
+
+    @if (Model.CanAdmin && r.Status == RemittanceStatus.Approved)
+    {
+        <form method="post" asp-action="MarkPaid" asp-route-id="@r.Id" class="panel mb-3">
+            <h2 class="panel-title mb-2">Record the payment to the owner</h2>
+            <div class="row g-2 align-items-end">
+                <div class="col-sm-3"><label class="form-label small mb-1" for="paid-on">Paid on</label><input id="paid-on" name="paidOn" type="date" value="@DateTime.UtcNow.AddHours(3).ToString("yyyy-MM-dd")" class="form-control form-control-sm" required /></div>
+                <div class="col-sm-3"><label class="form-label small mb-1" for="paid-method">Method</label>
+                    <select id="paid-method" name="method" class="form-select form-select-sm">@foreach (var m in Enum.GetValues<PayoutMethod>()) { <option value="@m" selected="@(r.Owner.PayoutMethod == m)">@m.Display()</option> }</select></div>
+                <div class="col-sm-3"><label class="form-label small mb-1" for="paid-ref">Reference</label><input id="paid-ref" name="reference" class="form-control form-control-sm text-uppercase" /></div>
+                <div class="col-sm-3"><button type="submit" class="btn btn-sm btn-primary w-100">Mark @r.NetPayable.Kes() as paid</button></div>
+            </div>
+        </form>
+    }
+</div>
+
+<article class="invoice-doc panel">
+    <header class="invoice-head">
+        <div>
+            <div class="invoice-biz">Owner statement</div>
+            <div class="small text-body-secondary">@r.Owner.FullName</div>
+        </div>
+        <dl class="invoice-meta">
+            <dt>Statement</dt><dd>@r.RemittanceNumber</dd>
+            <dt>Month</dt><dd>@r.PeriodStart.ToString("MMMM yyyy")</dd>
+            <dt>@(r.Status == RemittanceStatus.Paid ? "Paid" : "Due by")</dt><dd>@(r.PaidOn?.ToString("d MMM yyyy") ?? d.DueBy.ToString("d MMM yyyy"))</dd>
+        </dl>
+    </header>
+    <table class="table invoice-lines mb-0">
+        <thead><tr><th>Details</th><th class="text-end">Amount (KES)</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var l in d.Lines)
+        {
+            <tr>
+                <td>@l.Description@if (l.LineType == RemittanceLineType.Adjustment) { <div class="small text-body-secondary">Adjustment</div> }</td>
+                <td class="text-end">@(l.Amount < 0 ? $"({(-l.Amount):N2})" : l.Amount.ToString("N2"))</td>
+                <td class="text-end no-print" style="width: 40px">
+                    @if (isDraft && Model.CanEdit && l.LineType == RemittanceLineType.Adjustment)
+                    {
+                        <form method="post" asp-action="RemoveAdjustment" asp-route-id="@r.Id" class="m-0"><input type="hidden" name="lineId" value="@l.Id" /><button type="submit" class="btn btn-sm btn-link text-body-secondary" aria-label="Remove adjustment"><i class="bi bi-x-lg"></i></button></form>
+                    }
+                </td>
+            </tr>
+        }
+        </tbody>
+        <tfoot>
+            <tr class="invoice-total"><td class="text-end">Payable to the owner</td><td class="text-end">@r.NetPayable.ToString("N2")</td><td></td></tr>
+        </tfoot>
+    </table>
+    @if (r.DepositsExcluded > 0) { <p class="small text-body-secondary mt-3 mb-0">Deposits of KES @r.DepositsExcluded.ToString("N2") received this month are held by the agency and not included.</p> }
+    @if (r.Status == RemittanceStatus.Paid) { <p class="small fw-semibold mt-2 mb-0">Paid on @r.PaidOn?.ToString("d MMM yyyy") by @r.PaidMethod?.Display()@(r.PaidReference is null ? "" : $", reference {r.PaidReference}").</p> }
+</article>
+
+@if (isDraft && Model.CanEdit)
+{
+    <form method="post" asp-action="AddAdjustment" asp-route-id="@r.Id" class="panel mt-3 no-print invoice-doc">
+        <h2 class="panel-title mb-2">Add an adjustment</h2>
+        <p class="small text-body-secondary">Repairs or expenses paid for the owner (deduct), or money owed to them (add).</p>
+        <div class="row g-2 align-items-end">
+            <div class="col-md-6"><label class="form-label small mb-1" for="adj-desc">Description</label><input id="adj-desc" name="description" class="form-control form-control-sm" required maxlength="300" placeholder="e.g. Plumbing repair, unit A3" /></div>
+            <div class="col-md-2"><label class="form-label small mb-1" for="adj-amount">Amount</label><input id="adj-amount" name="amount" class="form-control form-control-sm" inputmode="decimal" required /></div>
+            <div class="col-md-2">
+                <div class="form-check"><input class="form-check-input" type="radio" name="deduct" id="adj-deduct" value="true" checked /><label class="form-check-label small" for="adj-deduct">Deduct</label></div>
+                <div class="form-check"><input class="form-check-input" type="radio" name="deduct" id="adj-add" value="false" /><label class="form-check-label small" for="adj-add">Add</label></div>
+            </div>
+            <div class="col-md-2"><button type="submit" class="btn btn-sm btn-outline-primary w-100">Add</button></div>
+        </div>
+    </form>
+}

@@ -1,0 +1,28 @@
+@model DocumentListModel
+@if (Model.Documents.Count == 0)
+{
+    <p class="small text-body-secondary mb-0">No documents yet.</p>
+}
+else
+{
+    <ul class="doc-list">
+        @foreach (var doc in Model.Documents)
+        {
+            <li>
+                <i class="bi @(doc.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase) ? "bi-file-earmark-pdf" : "bi-file-earmark-image")" aria-hidden="true"></i>
+                <div class="min-w-0">
+                    <a asp-controller="Tenants" asp-action="Document" asp-route-id="@doc.Id" target="_blank" class="fw-semibold">@(doc.Title ?? doc.DocumentType.Display())</a>
+                    <div class="small text-body-secondary text-truncate">@doc.DocumentType.Display(), @(doc.SizeBytes / 1024) KB, @doc.UploadedAtUtc.ToEatDate()</div>
+                </div>
+                @if (Model.CanEdit)
+                {
+                    <form method="post" asp-controller="Tenants" asp-action="DeleteDocument" asp-route-id="@doc.Id" class="ms-auto" onsubmit="return confirm('Remove this document?');">
+                        <input type="hidden" name="tenantId" value="@doc.TenantId" />
+                        <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
+                        <button type="submit" class="btn btn-sm btn-link text-body-secondary" aria-label="Remove document"><i class="bi bi-x-lg"></i></button>
+                    </form>
+                }
+            </li>
+        }
+    </ul>
+}

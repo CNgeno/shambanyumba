@@ -1,0 +1,44 @@
+@model OwnersIndexViewModel
+@{ ViewData["Title"] = "Owners"; }
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">Property owners</h1>
+        <p class="page-sub">@(Model.IsAgent ? "The landlords on your contracts" : "The landlords whose properties you manage")</p>
+    </div>
+    <form method="get" class="d-flex gap-2" role="search">
+        <input type="search" name="q" value="@Model.Search" class="form-control form-control-sm" placeholder="Name or phone" aria-label="Search owners" />
+        <button type="submit" class="btn btn-sm btn-outline-primary">Search</button>
+    </form>
+    @if (Model.CanEdit) { <a asp-action="Create" class="btn btn-primary"><i class="bi bi-person-plus me-1"></i>Add owner</a> }
+</div>
+@if (Model.Owners.Count == 0)
+{
+    <section class="panel empty-state">
+        <i class="bi bi-person-badge" aria-hidden="true"></i>
+        <h2 class="h5">No owners yet</h2>
+        <p>Add each landlord you manage for, with how you pay them. Then create a management contract for their properties.</p>
+        @if (Model.CanEdit) { <a asp-action="Create" class="btn btn-primary">Add owner</a> }
+    </section>
+}
+else
+{
+    <section class="panel p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr><th>Owner</th><th>Phone</th><th class="text-end">Active contracts</th><th class="text-end">Properties</th></tr></thead>
+                <tbody>
+                @foreach (var o in Model.Owners)
+                {
+                    <tr>
+                        <td><a asp-action="Details" asp-route-id="@o.Id" class="row-link fw-semibold">@o.FullName</a>@if (o.Type == OwnerType.Company) { <span class="small text-body-secondary ms-1">Company</span> }
+                            @if (o.Email is not null) { <div class="small text-body-secondary">@o.Email</div> }</td>
+                        <td class="text-nowrap">@RealEstateERP.Core.Common.KenyanPhone.Display(o.Phone)</td>
+                        <td class="text-end">@o.ActiveContracts</td>
+                        <td class="text-end">@o.Properties</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}

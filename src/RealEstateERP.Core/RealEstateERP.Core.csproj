@@ -1,0 +1,3 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Core has NO package dependencies: entities, enums, contracts only. -->
+</Project>

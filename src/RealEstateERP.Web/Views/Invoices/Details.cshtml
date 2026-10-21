@@ -1,0 +1,147 @@
+@model InvoiceDetailsViewModel
+@{
+    var d = Model.Details;
+    var inv = d.Invoice;
+    ViewData["Title"] = inv.InvoiceNumber;
+    var isDraft = inv.Status == InvoiceStatus.Draft;
+    var isIssued = inv.Status == InvoiceStatus.Pending;
+}
+<div class="no-print">
+    <a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Invoices</a>
+    <div class="page-head">
+        <div class="me-auto">
+            <h1 class="page-title">@inv.InvoiceNumber <partial name="_InvoiceStatusChip" model="d.Status" /></h1>
+            <p class="page-sub">
+                <a asp-controller="Tenants" asp-action="Details" asp-route-id="@inv.TenantId">@inv.Tenant.FullName</a>
+                @if (inv.Lease is not null)
+                {
+                    <span>, lease <a asp-controller="Leases" asp-action="Details" asp-route-id="@inv.LeaseId">@inv.Lease.LeaseNumber</a></span>
+                }
+            </p>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            @if (Model.CanEdit && isDraft)
+            {
+                <form method="post" asp-action="Issue" asp-route-id="@inv.Id" class="m-0"><button type="submit" class="btn btn-primary"><i class="bi bi-send me-1"></i>Issue</button></form>
+                @if (inv.Kind == InvoiceKind.Manual) { <a asp-action="Edit" asp-route-id="@inv.Id" class="btn btn-outline-primary">Edit</a> }
+                <form method="post" asp-action="Delete" asp-route-id="@inv.Id" class="m-0" onsubmit="return confirm('Delete this draft?');"><button type="submit" class="btn btn-outline-danger">Delete</button></form>
+            }
+            @if (Model.CanEdit && isIssued && inv.Balance > 0)
+            {
+                <a asp-controller="Payments" asp-action="Record" asp-route-tenantId="@inv.TenantId" asp-route-invoiceId="@inv.Id" class="btn btn-primary"><i class="bi bi-cash-coin me-1"></i>Record payment</a>
+            }
+            <button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer me-1"></i>Print</button>
+            @if (!isDraft) { <a asp-action="Pdf" asp-route-id="@inv.Id" class="btn btn-outline-secondary" title="Uses 1 credit"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</a> }
+            @if (Model.CanEdit && isIssued && !string.IsNullOrWhiteSpace(inv.Tenant.Email))
+            {
+                <form method="post" asp-action="Email" asp-route-id="@inv.Id" class="m-0">
+                    <button type="submit" class="btn btn-outline-secondary" title="@(inv.EmailedAtUtc is DateTime sent ? $"Last emailed {sent.ToEatDateTime()}" : "Send to " + inv.Tenant.Email)">
+                        <i class="bi bi-envelope me-1"></i>@(inv.EmailedAtUtc is null ? "Email to tenant" : "Email again")
+                    </button>
+                </form>
+            }
+            @if (Model.CanAdmin && isIssued)
+            {
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More actions"><i class="bi bi-three-dots"></i></button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><button type="button" class="dropdown-item" data-bs-toggle="collapse" data-bs-target="#cancel-form">Cancel invoice</button></li>
+                        @if (inv.Balance > 0) { <li><button type="button" class="dropdown-item" data-bs-toggle="collapse" data-bs-target="#writeoff-form">Write off balance</button></li> }
+                    </ul>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (Model.CanAdmin && isIssued)
+    {
+        <form method="post" asp-action="Cancel" asp-route-id="@inv.Id" class="collapse panel mb-3" id="cancel-form">
+            <label for="cancel-reason" class="form-label fw-semibold">Why is this invoice being cancelled?</label>
+            <div class="d-flex flex-wrap gap-2">
+                <input id="cancel-reason" name="reason" class="form-control flex-grow-1" style="max-width: 480px" required maxlength="500" placeholder="e.g. Wrong rent amount; replaced by a corrected invoice" />
+                <button type="submit" class="btn btn-danger">Cancel invoice</button>
+            </div>
+            <div class="form-text">Meter readings on it become billable again. The invoice number is kept, marked cancelled.</div>
+        </form>
+        <form method="post" asp-action="WriteOff" asp-route-id="@inv.Id" class="collapse panel mb-3" id="writeoff-form">
+            <label for="wo-reason" class="form-label fw-semibold">Why is the balance of @inv.Balance.Kes() being written off?</label>
+            <div class="d-flex flex-wrap gap-2">
+                <input id="wo-reason" name="reason" class="form-control flex-grow-1" style="max-width: 480px" required maxlength="500" placeholder="e.g. Tenant absconded; uncollectable" />
+                <button type="submit" class="btn btn-danger">Write off</button>
+            </div>
+        </form>
+    }
+    @if (inv.StatusReason is not null)
+    {
+        <div class="sub-banner sub-banner-warning"><i class="bi bi-info-circle"></i><span>@inv.Status.Display(): @inv.StatusReason</span></div>
+    }
+</div>
+
+<article class="invoice-doc panel">
+    <header class="invoice-head">
+        <div>
+            <div class="invoice-biz">@Model.BusinessName</div>
+            <div class="small text-body-secondary">Invoice</div>
+        </div>
+        <dl class="invoice-meta">
+            <dt>Invoice no.</dt><dd>@inv.InvoiceNumber</dd>
+            <dt>Date</dt><dd>@inv.InvoiceDate.ToString("d MMM yyyy")</dd>
+            <dt>Due</dt><dd>@inv.DueDate.ToString("d MMM yyyy")</dd>
+            @if (inv.PeriodStart is DateOnly ps) { <dt>Period</dt><dd>@ps.ToString("MMMM yyyy")</dd> }
+        </dl>
+    </header>
+
+    <div class="invoice-to">
+        <div class="small text-body-secondary">Billed to</div>
+        <div class="fw-semibold">@inv.Tenant.FullName</div>
+        @if (inv.Lease is not null) { <div>Unit @inv.Lease.Unit.UnitNumber, @inv.Lease.Unit.Asset.Name</div> }
+        @if (inv.Tenant.Phone is not null) { <div>@RealEstateERP.Core.Common.KenyanPhone.Display(inv.Tenant.Phone)</div> }
+    </div>
+
+    <div class="table-responsive">
+        <table class="table invoice-lines mb-0">
+            <thead><tr><th>Description</th><th class="text-end">Qty</th><th class="text-end">Price</th><th class="text-end">Tax</th><th class="text-end">Amount</th></tr></thead>
+            <tbody>
+            @foreach (var l in d.Lines)
+            {
+                <tr>
+                    <td>@l.Description<div class="small text-body-secondary">@l.LineType.Display()</div></td>
+                    <td class="text-end">@l.Quantity.ToString("0.###")</td>
+                    <td class="text-end">@l.UnitPrice.ToString("N2")</td>
+                    <td class="text-end">@(l.TaxAmount != 0 ? $"{l.TaxAmount:N2} ({l.TaxPercent:0.##}%)" : "—")</td>
+                    <td class="text-end">@l.LineTotal.ToString("N2")</td>
+                </tr>
+            }
+            </tbody>
+            <tfoot>
+                <tr><td colspan="4" class="text-end">Subtotal</td><td class="text-end">@inv.SubTotal.ToString("N2")</td></tr>
+                @if (inv.TaxTotal != 0) { <tr><td colspan="4" class="text-end">Tax</td><td class="text-end">@inv.TaxTotal.ToString("N2")</td></tr> }
+                <tr class="invoice-total"><td colspan="4" class="text-end">Total (KES)</td><td class="text-end">@inv.Total.ToString("N2")</td></tr>
+                @if (inv.AmountPaid > 0)
+                {
+                    <tr><td colspan="4" class="text-end">Paid</td><td class="text-end">@inv.AmountPaid.ToString("N2")</td></tr>
+                    <tr class="invoice-total"><td colspan="4" class="text-end">Balance due</td><td class="text-end">@inv.Balance.ToString("N2")</td></tr>
+                }
+            </tfoot>
+        </table>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(inv.Notes)) { <p class="small mt-3 mb-0">@inv.Notes</p> }
+</article>
+
+@if (Model.Payments.Count > 0)
+{
+    <section class="panel p-0 mt-3 no-print invoice-doc">
+        <div class="units-toolbar"><h2 class="panel-title">Payments on this invoice</h2></div>
+        <ul class="attention-list">
+            @foreach (var p in Model.Payments)
+            {
+                <li class="@(p.Status == PaymentStatus.Reversed ? "is-reversed" : "")">
+                    <a asp-controller="Payments" asp-action="Details" asp-route-id="@p.Id" class="row-link fw-semibold">@p.ReceiptNumber</a>
+                    <span class="small text-body-secondary">@p.PaymentDate.ToString("d MMM yyyy"), @p.Method.Display()@(p.Reference is null ? "" : $" {p.Reference}")</span>
+                    @if (p.Status == PaymentStatus.Reversed) { <span class="status-chip status-bad">Reversed</span> }
+                    <span class="ms-auto small">payment of @p.Amount.Kes()</span>
+                </li>
+            }
+        </ul>
+    </section>
+}

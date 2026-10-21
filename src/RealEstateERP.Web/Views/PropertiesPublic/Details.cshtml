@@ -1,0 +1,140 @@
+@model MarketListingViewModel
+@{
+    var d = Model.Details;
+    var c = d.Card;
+    var f = Model.Form;
+    ViewData["Title"] = c.Title;
+    // Link previews (WhatsApp, Facebook, X): this listing's photo, title and price.
+    var site = $"{Context.Request.Scheme}://{Context.Request.Host}";
+    var shareUrl = $"{site}/marketplace/{c.Id}/{RealEstateERP.Core.Common.MarketplaceRules.Slug(c.Title)}";
+    var priceText = $"KES {c.Price:N0}{(c.Type == ListingType.Rent ? " a month" : "")}";
+    ViewData["OgUrl"] = shareUrl;
+    ViewData["OgDescription"] = $"{priceText} · {c.Title}. See the photos and enquire on ShambaNyumba.";
+    if (d.PhotoIds.Count > 0) ViewData["OgImage"] = $"{site}/marketplace/photo/{d.PhotoIds[0]}";
+    var shareText = $"{c.Title}, {priceText}";
+    ViewData["Description"] = d.Description.Length > 155 ? d.Description[..152] + "..." : d.Description;
+}
+<section class="section pt-4">
+    <div class="container">
+        <a href="/marketplace?type=@c.Type" class="small"><i class="bi bi-arrow-left"></i> Back to properties</a>
+        <div class="row g-4 mt-1">
+            <div class="col-lg-8">
+                <div class="gallery">
+                    @if (d.PhotoIds.Count == 0)
+                    {
+                        <div class="gallery-main listing-photo-empty"><i class="bi @(c.UnitType == UnitType.Plot ? "bi-map" : "bi-building")"></i></div>
+                    }
+                    else
+                    {
+                        <img src="/marketplace/photo/@d.PhotoIds[0]" alt="@c.Title" class="gallery-main" id="gallery-main" />
+                        @if (d.PhotoIds.Count > 1)
+                        {
+                            <div class="gallery-thumbs">
+                                @foreach (var p in d.PhotoIds)
+                                {
+                                    <button type="button" class="gallery-thumb" data-src="/marketplace/photo/@p" aria-label="Show photo"><img src="/marketplace/photo/@p" alt="" loading="lazy" /></button>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-3">
+                    <span class="listing-type static @(c.Type == ListingType.Sale ? "is-sale" : "")">@c.Type.Display()</span>
+                    <span class="text-body-secondary small"><i class="bi bi-geo-alt"></i> @c.Location@(c.County is null ? "" : $", {c.County}")</span>
+                </div>
+                <h1 class="detail-title">@c.Title</h1>
+                <div class="detail-price">KES @c.Price.ToString("N0")@if (c.Type == ListingType.Rent) { <small> / month</small> }</div>
+                <div class="listing-facts detail-facts">
+                    <span><i class="bi bi-house"></i>@c.UnitType.Display()</span>
+                    @if (c.SizeSqm is decimal sq) { <span><i class="bi bi-arrows-fullscreen"></i>@sq.ToString("N0") sqm</span> }
+                    @if (c.Bedrooms is int b) { <span><i class="bi bi-door-closed"></i>@(b == 0 ? "Studio" : $"{b} bedrooms")</span> }
+                    @if (c.Bathrooms is int ba && ba > 0) { <span><i class="bi bi-droplet"></i>@ba bathrooms</span> }
+                </div>
+                <div class="detail-description">@foreach (var para in d.Description.Split('\n', StringSplitOptions.RemoveEmptyEntries)) { <p>@para</p> }</div>
+                <p class="small text-body-secondary">Advertised by <strong>@c.BusinessName</strong> at @d.AssetName.</p>
+
+                @if (d.MoreInProject.Count > 0)
+                {
+                    <h2 class="h5 mt-4 mb-3">More at @d.AssetName</h2>
+                    <div class="listing-grid listing-grid-small">@foreach (var m in d.MoreInProject) { <partial name="_ListingCard" model="m" /> }</div>
+                }
+            </div>
+
+            <div class="col-lg-4">
+                <div class="share-card mb-3" aria-label="Share this property">
+                    <div class="small fw-semibold mb-2"><i class="bi bi-share me-1"></i>Share this property</div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-sm btn-success" target="_blank" rel="noopener" href="https://wa.me/?text=@Uri.EscapeDataString(shareText + " " + shareUrl)"><i class="bi bi-whatsapp me-1"></i>WhatsApp</a>
+                        <a class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener" href="https://www.facebook.com/sharer/sharer.php?u=@Uri.EscapeDataString(shareUrl)"><i class="bi bi-facebook me-1"></i>Facebook</a>
+                        <a class="btn btn-sm btn-outline-dark" target="_blank" rel="noopener" href="https://twitter.com/intent/tweet?url=@Uri.EscapeDataString(shareUrl)&text=@Uri.EscapeDataString(shareText)"><i class="bi bi-twitter-x me-1"></i>X</a>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="share-copy" data-url="@shareUrl"><i class="bi bi-link-45deg me-1"></i>Copy link</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary d-none" id="share-native" data-url="@shareUrl" data-title="@c.Title" data-text="@shareText"><i class="bi bi-box-arrow-up me-1"></i>More</button>
+                    </div>
+                </div>
+                <script>
+                    (function () {
+                        var copy = document.getElementById('share-copy'), more = document.getElementById('share-native');
+                        copy.addEventListener('click', function () {
+                            if (navigator.clipboard) navigator.clipboard.writeText(copy.dataset.url);
+                            copy.innerHTML = '<i class="bi bi-check2 me-1"></i>Copied';
+                        });
+                        // Phones: the system share menu (Instagram, Telegram, SMS, email...).
+                        if (navigator.share) {
+                            more.classList.remove('d-none');
+                            more.addEventListener('click', function () {
+                                navigator.share({ title: more.dataset.title, text: more.dataset.text, url: more.dataset.url }).catch(function () { });
+                            });
+                        }
+                    })();
+                </script>
+                <aside class="enquiry-card" id="enquire">
+                    @if (Model.Delivered)
+                    {
+                        <div class="text-center py-2">
+                            <i class="bi bi-check2-circle enquiry-icon"></i>
+                            <h2 class="h5">Sent!</h2>
+                            <p class="small mb-0"><strong>@c.BusinessName</strong> now has your details and will contact you. No need to confirm again: your email was confirmed recently.</p>
+                        </div>
+                    }
+                    else if (Model.Sent)
+                    {
+                        <div class="text-center py-2">
+                            <i class="bi bi-envelope-check enquiry-icon"></i>
+                            <h2 class="h5">Check your email</h2>
+                            <p class="small mb-0">We've sent you a link. Confirm your enquiry and <strong>@c.BusinessName</strong> will get your details and contact you.</p>
+                            <partial name="_DevMailboxHint" />
+                        </div>
+                    }
+                    else
+                    {
+                        <h2 class="h5 mb-1">Interested?</h2>
+                        <p class="small text-body-secondary">Send your details to the @(c.Type == ListingType.Sale ? "seller" : "landlord or agent").</p>
+                        <form method="post" action="/marketplace/@c.Id/enquire" novalidate>
+                            @Html.AntiForgeryToken()
+                            <div asp-validation-summary="All" class="alert alert-danger small py-2" role="alert"></div>
+                            <div class="hp-field" aria-hidden="true"><label for="website">Website</label><input id="website" name="Website" tabindex="-1" autocomplete="off" value="@f.Website" /></div>
+                            <div class="mb-2"><label class="form-label small mb-1" for="e-name">Your name</label><input id="e-name" name="Name" value="@f.Name" class="form-control" required maxlength="150" autocomplete="name" /></div>
+                            <div class="mb-2"><label class="form-label small mb-1" for="e-phone">Phone</label><input id="e-phone" name="Phone" value="@f.Phone" class="form-control" type="tel" required placeholder="0712 345 678" autocomplete="tel" /></div>
+                            <div class="mb-2"><label class="form-label small mb-1" for="e-email">Email</label><input id="e-email" name="Email" value="@f.Email" class="form-control" type="email" required autocomplete="email" /></div>
+                            <div class="mb-2"><label class="form-label small mb-1" for="e-msg">Message (optional)</label><textarea id="e-msg" name="Message" class="form-control" rows="3" maxlength="1000" placeholder="e.g. When can I view it?">@f.Message</textarea></div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="Consent" value="true" id="e-consent" checked="@f.Consent" />
+                                <label class="form-check-label small" for="e-consent">I agree to my name, phone, email and message being shared with the advertiser so they can contact me (<a asp-controller="Home" asp-action="Privacy" target="_blank">privacy policy</a>).</label>
+                            </div>
+                            <button type="submit" class="btn btn-accent w-100">Send enquiry</button>
+                            <p class="small text-body-secondary mt-2 mb-0">We'll email you a link to confirm it's you. Your details are only shared once you confirm.</p>
+                        </form>
+                    }
+                </aside>
+            </div>
+        </div>
+    </div>
+</section>
+@section Scripts {
+    <script>
+        document.querySelectorAll('.gallery-thumb').forEach(function (t) {
+            t.addEventListener('click', function () { var main = document.getElementById('gallery-main'); if (main) main.src = t.dataset.src; });
+        });
+    </script>
+}

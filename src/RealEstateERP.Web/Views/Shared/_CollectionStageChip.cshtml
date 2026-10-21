@@ -1,0 +1,11 @@
+@model CollectionStage
+@{
+    var css = Model switch
+    {
+        CollectionStage.Normal => "status-neutral",
+        CollectionStage.InArrears => "status-warn",
+        CollectionStage.WrittenOff => "status-muted",
+        _ => "status-bad"
+    };
+}
+<span class="status-chip @css">@Model.Display()</span>

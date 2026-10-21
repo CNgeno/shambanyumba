@@ -1,0 +1,101 @@
+@model MeterSheetViewModel
+@{
+    ViewData["Title"] = "Enter meter readings";
+    var dateText = Model.ReadingDate.ToString("yyyy-MM-dd");
+}
+<a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Meter readings</a>
+<h1 class="page-title">Enter meter readings</h1>
+<p class="text-body-secondary mb-3">Choose the property, utility and date, then type each meter's current reading. Leave a row blank to skip it.</p>
+
+<form method="get" class="panel mb-3 d-flex flex-wrap align-items-end gap-3">
+    <div>
+        <label class="form-label small" for="sheet-asset">Property</label>
+        <select id="sheet-asset" name="assetId" class="form-select">
+            @foreach (var a in Model.Assets) { <option value="@a.Id" selected="@(Model.AssetId == a.Id)">@a.Name</option> }
+        </select>
+    </div>
+    <div>
+        <label class="form-label small" for="sheet-charge">Utility</label>
+        <select id="sheet-charge" name="chargeId" class="form-select">
+            @foreach (var c in Model.UtilityCharges) { <option value="@c.Id" selected="@(Model.ChargeId == c.Id)">@c.Name</option> }
+        </select>
+    </div>
+    <div>
+        <label class="form-label small" for="sheet-date">Reading date</label>
+        <input id="sheet-date" name="date" type="date" value="@dateText" class="form-control" />
+    </div>
+    <button type="submit" class="btn btn-outline-primary">Load meters</button>
+</form>
+
+@if (Model.Rows.Count == 0)
+{
+    <section class="panel"><p class="mb-0 text-body-secondary">No units found for this property.</p></section>
+}
+else
+{
+    <form method="post" asp-action="Sheet" id="sheet-form">
+        <input type="hidden" name="AssetId" value="@Model.AssetId" />
+        <input type="hidden" name="ChargeId" value="@Model.ChargeId" />
+        <input type="hidden" name="ReadingDate" value="@dateText" />
+        <section class="panel p-0 mb-3">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0 sheet-table">
+                    <thead><tr><th>Unit</th><th>Tenant</th><th class="text-end">Last reading</th><th style="width: 170px">Reading (@Model.UnitOfMeasure)</th><th class="text-end">Used</th><th class="text-end">Amount</th></tr></thead>
+                    <tbody>
+                    @for (var i = 0; i < Model.Rows.Count; i++)
+                    {
+                        var r = Model.Rows[i];
+                        <tr data-prev="@(r.PreviousReading?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "")" data-rate="@r.Rate.ToString(System.Globalization.CultureInfo.InvariantCulture)">
+                            <td class="fw-semibold">@r.UnitNumber @if (r.NodePath is not null) { <div class="small text-body-secondary fw-normal">@r.NodePath</div> }</td>
+                            <td>@(r.TenantName ?? "Vacant")</td>
+                            <td class="text-end">
+                                @if (r.PreviousReading is decimal p) { <span>@p.ToString("0.###")</span><div class="small text-body-secondary">@r.PreviousDate?.ToString("d MMM")</div> }
+                                else { <span class="small text-body-secondary">No reading yet</span> }
+                            </td>
+                            <td>
+                                <input type="hidden" name="Rows[@i].UnitId" value="@r.UnitId" />
+                                @if (r.AlreadyRecorded)
+                                {
+                                    <span class="small">Recorded: @r.EnteredReading?.ToString("0.###")</span>
+                                }
+                                else
+                                {
+                                    <input name="Rows[@i].Reading" class="form-control form-control-sm reading-input" inputmode="decimal" aria-label="Reading for @r.UnitNumber" />
+                                    @if (r.PreviousReading is null)
+                                    {
+                                        <input type="hidden" name="Rows[@i].IsOpening" value="true" />
+                                        <div class="form-text">Opening reading</div>
+                                    }
+                                }
+                            </td>
+                            <td class="text-end used-cell"></td>
+                            <td class="text-end amount-cell"></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <button type="submit" class="btn btn-primary">Save readings</button>
+    </form>
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            var fmt = new Intl.NumberFormat('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.querySelectorAll('.reading-input').forEach(function (input) {
+                input.addEventListener('input', function () {
+                    var row = input.closest('tr'), prev = sbNum(row.dataset.prev), rate = sbNum(row.dataset.rate);
+                    var cur = sbNum(input.value), used = row.querySelector('.used-cell'), amount = row.querySelector('.amount-cell');
+                    input.classList.remove('is-invalid');
+                    if (isNaN(cur) || isNaN(prev)) { used.textContent = ''; amount.textContent = ''; return; }
+                    var u = Math.round((cur - prev) * 1000) / 1000;
+                    if (u < 0) { input.classList.add('is-invalid'); used.textContent = 'Lower than last'; amount.textContent = ''; return; }
+                    used.textContent = u;
+                    amount.textContent = 'KES ' + fmt.format(Math.round(u * rate * 100) / 100);
+                });
+            });
+        })();
+    </script>
+}

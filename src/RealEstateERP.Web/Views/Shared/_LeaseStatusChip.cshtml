@@ -1,0 +1,15 @@
+@model LeaseChip
+@{
+    var (css, text) = (Model.Status, Model.Expiry) switch
+    {
+        (LeaseStatus.Active, LeaseExpiry.Ended) => ("status-bad", "Past end date"),
+        (LeaseStatus.Active, LeaseExpiry.Within30) => ("status-warn", "Ends within 30 days"),
+        (LeaseStatus.Active, LeaseExpiry.Within60 or LeaseExpiry.Within90) => ("status-warn", "Ending soon"),
+        (LeaseStatus.Active, _) => ("status-ok", "Active"),
+        (LeaseStatus.Draft, _) => ("status-info", "Draft"),
+        (LeaseStatus.Renewed, _) => ("status-neutral", "Renewed"),
+        (LeaseStatus.Terminated, _) => ("status-muted", "Terminated"),
+        _ => ("status-muted", "Expired")
+    };
+}
+<span class="status-chip @css">@text</span>

@@ -1,0 +1,33 @@
+@model UnitPhotosModel
+@{ ViewData["Title"] = $"{Model.UnitNumber}: interior photos"; }
+<nav class="crumbs mb-2"><a asp-controller="Properties" asp-action="Details" asp-route-id="@Model.AssetId">@Model.AssetName</a> <i class="bi bi-chevron-right"></i> @Model.UnitNumber</nav>
+<div class="page-head"><div class="me-auto"><h1 class="page-title">@Model.UnitNumber: interior photos</h1>
+    <p class="page-sub">Optional. Listings for this unit show these first, then the estate's photos.</p></div></div>
+<section class="panel">
+    @if (Model.Photos.Count == 0) { <p class="small text-body-secondary">No interior photos yet.</p> }
+    else
+    {
+        <div class="estate-gallery mb-3">
+            @foreach (var p in Model.Photos)
+            {
+                <figure class="m-0">
+                    <img src="@Url.Action("Photo", "Estate", new { kind = "unit", id = p.Id })" alt="@p.FileName" loading="lazy" />
+                    @if (Model.CanEdit)
+                    {
+                        <form method="post" asp-action="RemoveUnitPhoto" asp-route-unitId="@Model.UnitId" asp-route-photoId="@p.Id" class="gallery-remove" onsubmit="return confirm('Remove this photo?');">
+                            <button type="submit" class="btn btn-sm btn-light" aria-label="Remove photo"><i class="bi bi-trash"></i></button>
+                        </form>
+                    }
+                </figure>
+            }
+        </div>
+    }
+    @if (Model.CanEdit)
+    {
+        <form method="post" asp-action="UnitPhotos" asp-route-unitId="@Model.UnitId" enctype="multipart/form-data" class="d-flex flex-wrap gap-2 align-items-center">
+            <input type="file" name="files" accept=".jpg,.jpeg,.png" multiple class="form-control form-control-sm" style="max-width: 360px" required />
+            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-camera me-1"></i>Upload</button>
+            <span class="form-text">Living room, bedroom, kitchen, bathroom. JPG or PNG, up to 12.</span>
+        </form>
+    }
+</section>

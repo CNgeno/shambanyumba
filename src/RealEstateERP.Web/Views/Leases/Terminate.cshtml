@@ -1,0 +1,94 @@
+@using System.Globalization
+@model LeaseTerminateViewModel
+@{
+    var c = Model.Current!;
+    ViewData["Title"] = $"End {c.LeaseNumber} early";
+}
+<a asp-action="Details" asp-route-id="@Model.LeaseId" class="back-link"><i class="bi bi-arrow-left"></i>@c.LeaseNumber</a>
+<h1 class="page-title">End lease early</h1>
+<p class="text-body-secondary mb-4">@c.TenantName, @c.UnitNumber at @c.AssetName. Deposit held: @Model.DepositHeld.Kes(). Notice period: @Model.NoticePeriodDays days.</p>
+
+<form method="post" asp-action="Terminate" asp-route-id="@Model.LeaseId" class="form-narrow" id="term-form" novalidate
+      data-rent="@c.MonthlyRent.ToString(CultureInfo.InvariantCulture)" data-notice="@Model.NoticePeriodDays" data-deposit="@Model.DepositHeld.ToString(CultureInfo.InvariantCulture)">
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+    <section class="panel mb-3">
+        <h2 class="panel-title mb-3">When and why</h2>
+        <div class="row g-3">
+            <div class="col-sm-6">
+                <label asp-for="EndDate" class="form-label"></label>
+                <input asp-for="EndDate" type="date" class="form-control" id="end" />
+                <span asp-validation-for="EndDate" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="NoticeGivenOn" class="form-label"></label>
+                <input asp-for="NoticeGivenOn" type="date" class="form-control" id="notice" />
+                <div class="form-text">Leave blank if no notice was given.</div>
+            </div>
+            <div class="col-12">
+                <label asp-for="Reason" class="form-label"></label>
+                <input asp-for="Reason" class="form-control" placeholder="e.g. Relocated for work" />
+                <span asp-validation-for="Reason" class="invalid-feedback d-block"></span>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel mb-3">
+        <h2 class="panel-title mb-3">Money</h2>
+        <div class="row g-3">
+            <div class="col-sm-6">
+                <label asp-for="Penalty" class="form-label"></label>
+                <input asp-for="Penalty" class="form-control" inputmode="decimal" id="penalty" />
+                <div class="form-text" id="penalty-hint"></div>
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="DepositDeductions" class="form-label"></label>
+                <input asp-for="DepositDeductions" class="form-control" inputmode="decimal" id="deductions" />
+                <div class="form-text" id="refund-hint"></div>
+            </div>
+            <div class="col-12">
+                <label asp-for="DepositNote" class="form-label"></label>
+                <input asp-for="DepositNote" class="form-control" placeholder="e.g. Repainting, broken window" />
+            </div>
+            <div class="col-12">
+                <div class="form-check">
+                    <input asp-for="MakeUnitInactive" class="form-check-input" />
+                    <label asp-for="MakeUnitInactive" class="form-check-label"></label>
+                </div>
+            </div>
+        </div>
+        <p class="small text-body-secondary mt-3 mb-0">The penalty will be billed and the deposit refund paid out once invoicing and payments are available.</p>
+    </section>
+
+    <button type="submit" class="btn btn-danger">End lease</button>
+    <a asp-action="Details" asp-route-id="@Model.LeaseId" class="btn btn-link">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var f = document.getElementById('term-form');
+            var rent = sbNum(f.dataset.rent), noticeDays = parseInt(f.dataset.notice, 10), deposit = sbNum(f.dataset.deposit);
+            var end = document.getElementById('end'), notice = document.getElementById('notice'),
+                penalty = document.getElementById('penalty'), deductions = document.getElementById('deductions');
+            var fmt = new Intl.NumberFormat('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            function days(a, b) { return Math.round((new Date(a) - new Date(b)) / 86400000); }
+            function update() {
+                // Same rule as LeaseRules.NoticeShortfallPenalty on the server.
+                if (end.value) {
+                    var given = notice.value ? Math.max(0, days(end.value, notice.value)) : 0;
+                    var shortfall = Math.max(0, noticeDays - given);
+                    var suggested = Math.round(rent * shortfall / 30 * 100) / 100;
+                    document.getElementById('penalty-hint').textContent = shortfall === 0
+                        ? 'Full notice was given: no penalty suggested.'
+                        : 'Suggested: KES ' + fmt.format(suggested) + ' (' + shortfall + ' days of notice not given).';
+                }
+                var d = sbNum(deductions.value) || 0;
+                document.getElementById('refund-hint').textContent = 'Deposit to refund: KES ' + fmt.format(Math.max(0, deposit - d));
+            }
+            [end, notice, deductions].forEach(function (el) { el.addEventListener('input', update); });
+            update();
+        })();
+    </script>
+}

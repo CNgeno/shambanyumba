@@ -1,0 +1,111 @@
+@model GenerateInvoicesViewModel
+@{
+    ViewData["Title"] = "Generate monthly invoices";
+    var toCreate = Model.Preview.Where(p => !p.AlreadyInvoiced && p.LineCount > 0).ToList();
+    var already = Model.Preview.Count(p => p.AlreadyInvoiced);
+    var warned = Model.Preview.Where(p => !p.AlreadyInvoiced && p.Warnings is { Count: > 0 }).ToList();
+    var missingByEstate = warned.SelectMany(p => p.Warnings!).Where(w => w.IsMissingCharge).Select(w => w.AssetId).Distinct().ToList();
+    var readingFixes = warned.SelectMany(p => p.Warnings!).Where(w => !w.IsMissingCharge).Select(w => (w.AssetId, w.ChargeDefinitionId)).Distinct().ToList();
+}
+<a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Invoices</a>
+<h1 class="page-title">Generate monthly invoices</h1>
+<p class="text-body-secondary mb-3">One invoice per active lease: rent, monthly charges, unbilled meter readings, and the deposit for new leases. Running a month again only adds what's missing.</p>
+
+<form method="get" class="panel mb-3 d-flex flex-wrap align-items-end gap-3">
+    <div>
+        <label asp-for="Month" class="form-label small"></label>
+        <input asp-for="Month" type="month" class="form-control" />
+    </div>
+    <div>
+        <label asp-for="AssetId" class="form-label small"></label>
+        <select asp-for="AssetId" class="form-select">
+            <option value="">All properties</option>
+            @foreach (var a in Model.Assets) { <option value="@a.Id">@a.Name</option> }
+        </select>
+    </div>
+    <button type="submit" class="btn btn-outline-primary">Preview</button>
+</form>
+
+@if (Model.UnbilledReadings == 0)
+{
+    <div class="sub-banner sub-banner-info"><i class="bi bi-info-circle"></i><span>No unbilled meter readings. If you bill water or electricity, <a asp-controller="Readings" asp-action="Sheet">enter this month's readings</a> first.</span></div>
+}
+else
+{
+    <div class="sub-banner sub-banner-info"><i class="bi bi-droplet-half"></i><span>@Model.UnbilledReadings meter reading(s) will be included.</span></div>
+}
+
+<section class="panel p-0 mb-3">
+    <div class="units-toolbar">
+        <h2 class="panel-title me-auto">Preview</h2>
+        <span class="small text-body-secondary">@toCreate.Count to create, totalling @toCreate.Sum(p => p.EstimatedTotal).Kes()@(already > 0 ? $"; {already} already invoiced" : "")</span>
+        @if (warned.Count > 0)
+        {
+            <div class="sub-banner sub-banner-warning mt-2 w-100">
+                <i class="bi bi-exclamation-triangle"></i>
+                <span class="me-auto">@warned.Count lease(s) would be billed without something the estate charges. Fix it before generating, or go ahead if it's deliberate.</span>
+                @foreach (var assetId in missingByEstate)
+                {
+                    <form method="post" asp-controller="Estate" asp-action="ApplyCharges" asp-route-assetId="@assetId" class="m-0">
+                        <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+                        <button type="submit" class="btn btn-sm btn-warning">Add missing estate charges@(missingByEstate.Count > 1 ? $" ({warned.First(p => p.Warnings!.Any(w => w.AssetId == assetId)).AssetName})" : "")</button>
+                    </form>
+                }
+                @foreach (var (assetId, chargeId) in readingFixes)
+                {
+                    <a asp-controller="Readings" asp-action="Sheet" asp-route-assetId="@assetId" asp-route-chargeId="@chargeId" class="btn btn-sm btn-outline-secondary">Enter readings</a>
+                }
+            </div>
+        }
+    </div>
+    @if (Model.Preview.Count == 0)
+    {
+        <p class="text-body-secondary p-4 mb-0">No active leases for this month.</p>
+    }
+    else
+    {
+        <div class="table-responsive preview-scroll">
+            <table class="table align-middle mb-0">
+                <thead><tr><th>Lease</th><th>Tenant</th><th>Unit</th><th class="text-end">Lines</th><th class="text-end">Total</th><th>Check</th></tr></thead>
+                <tbody>
+                @foreach (var p in Model.Preview)
+                {
+                    <tr class="@(p.AlreadyInvoiced ? "text-body-secondary" : "")">
+                        <td>@p.LeaseNumber</td>
+                        <td>@p.TenantName</td>
+                        <td>@p.UnitNumber<div class="small text-body-secondary">@p.AssetName</div></td>
+                        <td class="text-end">@p.LineCount</td>
+                        <td class="text-end">@p.EstimatedTotal.Kes()</td>
+                        <td>
+                            @if (p.AlreadyInvoiced) { <span class="status-chip status-neutral">Already invoiced</span> }
+                            else if (p.Warnings is { Count: > 0 } ws)
+                            {
+                                @foreach (var w in ws) { <div class="small text-danger"><i class="bi bi-exclamation-triangle me-1"></i>@w.Message</div> }
+                            }
+                            else { <span class="small text-success"><i class="bi bi-check2"></i> All charges</span> }
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@if (toCreate.Count > 0)
+{
+    <form method="post" asp-action="Generate" class="panel">
+        <input type="hidden" asp-for="Month" />
+        <input type="hidden" asp-for="AssetId" />
+        <div class="form-check mb-2">
+            <input asp-for="IncludeDeposits" class="form-check-input" />
+            <label asp-for="IncludeDeposits" class="form-check-label"></label>
+        </div>
+        <div class="form-check mb-3">
+            <input asp-for="IssueImmediately" class="form-check-input" />
+            <label asp-for="IssueImmediately" class="form-check-label"></label>
+        </div>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-lightning-charge me-1"></i>Create @toCreate.Count invoice(s)</button>
+        <p class="form-text mb-0 mt-2">Without "issue straight away", invoices are created as drafts so you can check them first.</p>
+    </form>
+}

@@ -1,0 +1,171 @@
+@using System.Globalization
+@model RecordPaymentViewModel
+@{
+    ViewData["Title"] = "Record payment";
+    var hasTenant = Model.TenantId is not null;
+}
+<a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Payments</a>
+<h1 class="page-title mb-4">Record payment</h1>
+
+<form method="get" class="panel mb-3 form-narrow">
+    <label for="tenant-pick" class="form-label">Who paid?</label>
+    <select id="tenant-pick" name="tenantId" class="form-select" onchange="this.form.submit()">
+        <option value="">Select a tenant...</option>
+        @foreach (var t in Model.TenantOptions) { <option value="@t.Id" selected="@(Model.TenantId == t.Id)">@t.FullName</option> }
+    </select>
+    <noscript><button type="submit" class="btn btn-outline-primary mt-2">Continue</button></noscript>
+</form>
+
+@if (hasTenant)
+{
+    var b = Model.Balance!;
+    <section class="stat-strip mb-3 stat-strip-3" aria-label="@Model.TenantName balance">
+        <div class="stat"><span class="stat-label">Owes</span><span class="stat-value @(b.Outstanding > 0 ? "text-danger" : "")">@b.Outstanding.Kes()</span><span class="stat-note">@b.OpenInvoiceCount unpaid invoice(s)</span></div>
+        <div class="stat"><span class="stat-label">Credit held</span><span class="stat-value">@b.Credit.Kes()</span></div>
+        <div class="stat"><span class="stat-label">Last payment</span><span class="stat-value">@(b.LastPaymentDate?.ToString("d MMM yyyy") ?? "None")</span></div>
+    </section>
+
+    <form method="post" asp-action="Record" id="pay-form" novalidate>
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+        <input type="hidden" asp-for="TenantId" />
+
+        <section class="panel mb-3 form-narrow">
+            <h2 class="panel-title mb-3">The payment</h2>
+            <div class="row g-3">
+                <div class="col-sm-6">
+                    <label asp-for="Amount" class="form-label"></label>
+                    <input asp-for="Amount" class="form-control form-control-lg" inputmode="decimal" id="amount" autofocus />
+                    <span asp-validation-for="Amount" class="invalid-feedback d-block"></span>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="PaymentDate" class="form-label"></label>
+                    <input asp-for="PaymentDate" type="date" class="form-control form-control-lg" />
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Method</label>
+                    <div class="btn-group flex-wrap" role="group" aria-label="Payment method">
+                        @foreach (var m in Enum.GetValues<PaymentMethod>())
+                        {
+                            <input type="radio" class="btn-check" name="Method" id="m-@m" value="@m" checked="@(Model.Method == m)" />
+                            <label class="btn btn-outline-primary" for="m-@m">@m.Display()</label>
+                        }
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="Reference" class="form-label" id="ref-label">M-PESA code</label>
+                    <input asp-for="Reference" class="form-control text-uppercase font-monospace" id="reference" autocomplete="off" />
+                    <div class="form-text" id="ref-help">10 characters, from the confirmation SMS.</div>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="LeaseId" class="form-label"></label>
+                    <select asp-for="LeaseId" class="form-select">
+                        <option value="">Not specified</option>
+                        @foreach (var l in Model.LeaseOptions) { <option value="@l.Id">@l.LeaseNumber, @l.UnitNumber (@l.AssetName)</option> }
+                    </select>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="PayerName" class="form-label"></label>
+                    <input asp-for="PayerName" class="form-control" />
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="Notes" class="form-label"></label>
+                    <input asp-for="Notes" class="form-control" />
+                </div>
+            </div>
+        </section>
+
+        <section class="panel p-0 mb-3">
+            <div class="units-toolbar">
+                <h2 class="panel-title me-auto">Apply it to</h2>
+                <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="How to apply the payment">
+                    @foreach (var mode in Enum.GetValues<AllocationMode>())
+                    {
+                        <input type="radio" class="btn-check" name="Mode" id="mode-@mode" value="@mode" checked="@(Model.Mode == mode)" />
+                        <label class="btn btn-outline-primary" for="mode-@mode">@mode.Display()</label>
+                    }
+                </div>
+            </div>
+            @if (Model.OpenInvoices.Count == 0)
+            {
+                <p class="small text-body-secondary px-4 py-3 mb-0">No unpaid invoices. The whole payment will be kept as credit for future invoices.</p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0" id="alloc-table">
+                        <thead><tr><th>Invoice</th><th>Due</th><th class="text-end">Balance</th><th class="text-end" style="width: 180px">Apply</th></tr></thead>
+                        <tbody>
+                        @foreach (var i in Model.OpenInvoices)
+                        {
+                            Model.Allocations.TryGetValue(i.Id, out var preset);
+                            <tr data-balance="@i.Balance.ToString(CultureInfo.InvariantCulture)">
+                                <td class="fw-semibold">@i.InvoiceNumber<div class="small text-body-secondary fw-normal">@(i.PeriodStart?.ToString("MMMM yyyy") ?? i.InvoiceDate.ToString("d MMM yyyy"))@(i.UnitNumber is null ? "" : $", {i.UnitNumber}")</div></td>
+                                <td class="text-nowrap @(i.DueDate < DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3)) ? "text-danger" : "")">@i.DueDate.ToString("d MMM yyyy")</td>
+                                <td class="text-end">@i.Balance.Kes()</td>
+                                <td class="text-end">
+                                    <span class="auto-amount"></span>
+                                    <input name="Allocations[@i.Id]" value="@(preset?.ToString(CultureInfo.InvariantCulture))" class="form-control form-control-sm text-end manual-amount" inputmode="decimal" aria-label="Amount for @i.InvoiceNumber" />
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            <p class="alloc-summary px-4 py-3 mb-0" id="alloc-summary" aria-live="polite"></p>
+        </section>
+
+        <button type="submit" class="btn btn-primary btn-lg">Record payment and issue receipt</button>
+        <a asp-action="Index" class="btn btn-link">Cancel</a>
+        <p class="form-text mt-2">Payments can't be edited afterwards. If something is wrong, an admin can reverse it and you record it again.</p>
+    </form>
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            var form = document.getElementById('pay-form');
+            if (!form) return;
+            var amount = document.getElementById('amount'), summary = document.getElementById('alloc-summary');
+            var rows = Array.prototype.slice.call(document.querySelectorAll('#alloc-table tbody tr'));
+            var fmt = new Intl.NumberFormat('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            var refHelp = {
+                Mpesa: ['M-PESA code', '10 characters, from the confirmation SMS.'],
+                BankTransfer: ['Bank reference', 'From the bank slip or statement.'],
+                Cheque: ['Cheque number', ''],
+                Cash: ['Reference (optional)', 'Cash needs no reference.']
+            };
+            function val(name) { var el = form.querySelector('input[name="' + name + '"]:checked'); return el ? el.value : ''; }
+
+            function update() {
+                var h = refHelp[val('Method')] || refHelp.Mpesa;
+                document.getElementById('ref-label').textContent = h[0];
+                document.getElementById('ref-help').textContent = h[1];
+
+                var mode = val('Mode'), total = sbNum(amount.value) || 0, left = total, applied = 0;
+                rows.forEach(function (row) {
+                    var bal = sbNum(row.dataset.balance), auto = row.querySelector('.auto-amount'), manual = row.querySelector('.manual-amount');
+                    manual.hidden = mode !== 'Manual';
+                    auto.hidden = mode === 'Manual';
+                    if (mode === 'OldestFirst') {
+                        // Same rule as AllocationEngine.OldestFirst: rows are already oldest first.
+                        var take = Math.min(left, bal); left -= take; applied += take;
+                        auto.textContent = take > 0 ? 'KES ' + fmt.format(take) : '—';
+                    } else if (mode === 'Manual') {
+                        applied += sbNum(manual.value) || 0;
+                    } else {
+                        auto.textContent = '—';
+                    }
+                });
+                var credit = Math.round((total - applied) * 100) / 100;
+                summary.classList.toggle('text-danger', credit < 0);
+                summary.textContent = total <= 0 ? '' : credit < 0
+                    ? 'The amounts applied are KES ' + fmt.format(-credit) + ' more than the payment.'
+                    : 'KES ' + fmt.format(applied) + ' applied to invoices' + (credit > 0 ? ', KES ' + fmt.format(credit) + ' kept as credit.' : '.');
+            }
+            form.addEventListener('input', update);
+            form.addEventListener('change', update);
+            update();
+        })();
+    </script>
+}

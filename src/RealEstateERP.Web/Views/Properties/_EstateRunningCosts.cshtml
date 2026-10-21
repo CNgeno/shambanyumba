@@ -1,0 +1,24 @@
+@model EstatePanelModel
+@{
+    var m = Model.Money;
+}
+<section class="panel mb-3" id="running-costs">
+    <h2 class="panel-title mb-1">Running costs and net income</h2>
+    <p class="small text-body-secondary">Your own costs of this estate (repairs, renovation, cleaning, advertising, utilities you pay, rates, security, agent fees). Never billed to tenants.</p>
+    <table class="table table-sm small mb-2">
+        <thead><tr><th></th><th class="text-end">This month</th><th class="text-end">Last 12 months</th></tr></thead>
+        <tbody>
+            <tr><td>Rent collected</td><td class="text-end">@((m?.CollectedThisMonth ?? 0).ToString("N0"))</td><td class="text-end">@((m?.Collected12Months ?? 0).ToString("N0"))</td></tr>
+            <tr><td>Running costs</td><td class="text-end">@((m?.ExpensesThisMonth ?? 0).ToString("N0"))</td><td class="text-end">@((m?.Expenses12Months ?? 0).ToString("N0"))</td></tr>
+            <tr class="fw-semibold">
+                <td>Net income</td>
+                <td class="text-end @((m?.NetThisMonth ?? 0) < 0 ? "text-danger" : "")">@((m?.NetThisMonth ?? 0).ToString("N0"))</td>
+                <td class="text-end @((m?.Net12Months ?? 0) < 0 ? "text-danger" : "")">@((m?.Net12Months ?? 0).ToString("N0"))</td>
+            </tr>
+        </tbody>
+    </table>
+    <div class="d-flex gap-2">
+        @if (Model.CanEdit) { <a asp-controller="Costing" asp-action="Costs" asp-route-id="@Model.AssetId" asp-route-add="Actual" class="btn btn-sm btn-primary flex-fill">Record an expense</a> }
+        <a asp-controller="Costing" asp-action="Costs" asp-route-id="@Model.AssetId" class="btn btn-sm btn-outline-primary flex-fill">All costs</a>
+    </div>
+</section>

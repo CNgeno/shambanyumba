@@ -1,0 +1,106 @@
+@model UnitFormViewModel
+@{
+    var isNew = Model.Id is null;
+    ViewData["Title"] = isNew ? "Add unit" : $"Edit unit {Model.UnitNumber}";
+}
+<a asp-controller="Properties" asp-action="Details" asp-route-id="@Model.AssetId" class="back-link"><i class="bi bi-arrow-left"></i>@Model.AssetName</a>
+<h1 class="page-title mb-4">@ViewData["Title"]</h1>
+
+<form method="post" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@Model.Id" class="form-narrow" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <input type="hidden" asp-for="AssetId" />
+
+    <section class="panel mb-3">
+        <h2 class="panel-title mb-3">Where it is</h2>
+        <div class="row g-3">
+            <div class="col-sm-4">
+                <label asp-for="UnitNumber" class="form-label"></label>
+                <input asp-for="UnitNumber" class="form-control" autofocus />
+                <span asp-validation-for="UnitNumber" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-sm-5">
+                <label asp-for="StructureNodeId" class="form-label"></label>
+                <select asp-for="StructureNodeId" class="form-select">
+                    <option value="">Directly under @Model.AssetName</option>
+                    @foreach (var n in Model.NodeOptions)
+                    {
+                        <option value="@n.Id" selected="@(Model.StructureNodeId == n.Id)">@n.Label</option>
+                    }
+                </select>
+            </div>
+            <div class="col-sm-3">
+                <label asp-for="FloorNumber" class="form-label"></label>
+                <input asp-for="FloorNumber" class="form-control" inputmode="numeric" />
+                <div class="form-text">0 = ground</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel mb-3">
+        <h2 class="panel-title mb-3">What it is</h2>
+        <div class="row g-3">
+            <div class="col-sm-6">
+                <label asp-for="Type" class="form-label"></label>
+                <select asp-for="Type" asp-items="Html.GetEnumSelectList<UnitType>()" class="form-select">
+                    <option value="">Select...</option>
+                </select>
+                <span asp-validation-for="Type" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="SizeSqm" class="form-label"></label>
+                <input asp-for="SizeSqm" class="form-control" inputmode="decimal" />
+            </div>
+            <div class="col-6">
+                <label asp-for="Bedrooms" class="form-label"></label>
+                <input asp-for="Bedrooms" class="form-control" inputmode="numeric" />
+            </div>
+            <div class="col-6">
+                <label asp-for="Bathrooms" class="form-label"></label>
+                <input asp-for="Bathrooms" class="form-control" inputmode="numeric" />
+            </div>
+        </div>
+    </section>
+
+    <section class="panel mb-3">
+        <h2 class="panel-title mb-3">Money</h2>
+        <div class="row g-3">
+            <div class="col-sm-6">
+                <label asp-for="MonthlyRent" class="form-label"></label>
+                <input asp-for="MonthlyRent" class="form-control" inputmode="decimal" />
+                <span asp-validation-for="MonthlyRent" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="SalePrice" class="form-label"></label>
+                <input asp-for="SalePrice" class="form-control" inputmode="decimal" />
+                <div class="form-text">Only if the unit is for sale.</div>
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="GracePeriodDays" class="form-label"></label>
+                <input asp-for="GracePeriodDays" class="form-control" inputmode="numeric" />
+                <div class="form-text">Days after the due date before a penalty. Blank uses your business default.</div>
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="LatePenaltyAmount" class="form-label"></label>
+                <input asp-for="LatePenaltyAmount" class="form-control" inputmode="decimal" />
+                <div class="form-text">Blank uses your business default.</div>
+            </div>
+            <div class="col-12">
+                <label asp-for="Notes" class="form-label"></label>
+                <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
+            </div>
+        </div>
+    </section>
+
+    <div class="d-flex flex-wrap gap-2">
+        <button type="submit" class="btn btn-primary">@(isNew ? "Add unit" : "Save changes")</button>
+        @if (isNew)
+        {
+            <button type="submit" name="next" value="another" class="btn btn-outline-primary">Add and create another</button>
+        }
+        <a asp-controller="Properties" asp-action="Details" asp-route-id="@Model.AssetId" class="btn btn-link">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

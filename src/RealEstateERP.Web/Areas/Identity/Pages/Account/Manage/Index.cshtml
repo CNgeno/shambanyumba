@@ -1,0 +1,36 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Profile";
+}
+<h2 class="panel-title mb-3">Profile</h2>
+@if (Model.StatusMessage is not null)
+{
+    <div class="alert alert-success alert-dismissible fade show small" role="status">
+        @Model.StatusMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+<form method="post" class="form-narrow" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger small" role="alert"></div>
+    <div class="mb-3">
+        <label asp-for="Input.FullName" class="form-label"></label>
+        <input asp-for="Input.FullName" class="form-control" autocomplete="name" />
+        <span asp-validation-for="Input.FullName" class="invalid-feedback d-block"></span>
+    </div>
+    <div class="mb-3">
+        <label class="form-label" for="email-ro">Email</label>
+        <input id="email-ro" value="@Model.Email" class="form-control" disabled />
+        <div class="form-text">Your sign-in email. <a asp-page="./Email">Change it</a></div>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Input.PhoneNumber" class="form-label"></label>
+        <input asp-for="Input.PhoneNumber" class="form-control" type="tel" autocomplete="tel" />
+        <span asp-validation-for="Input.PhoneNumber" class="invalid-feedback d-block"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">Save profile</button>
+    <p class="small text-body-secondary mt-3 mb-0">Member since @Model.MemberSince.ToEatDate()</p>
+</form>
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,96 @@
+@model EstatePanelModel
+@{
+    var used = Model.Charges.Select(c => c.ChargeDefinitionId).ToHashSet();
+    var options = Model.AvailableCharges.Where(c => c.Type != ChargeType.OneTime && !used.Contains(c.Id)).ToList();
+    var missing = Model.Charges.Sum(c => c.IsMetered ? 0 : c.LeasesMissing);
+}
+<section class="panel mb-3" id="estate-charges">
+    <h2 class="panel-title mb-1">Estate charges</h2>
+    <p class="small text-body-secondary">Billed with rent on every lease here. New leases get them automatically.</p>
+    @if (Model.Charges.Count == 0)
+    {
+        <p class="small mb-2">None yet. Add garbage, security, water and so on.</p>
+    }
+    else
+    {
+        <ul class="list-unstyled mb-2">
+            @foreach (var c in Model.Charges)
+            {
+                <li class="d-flex align-items-start gap-2 py-1 border-bottom">
+                    <span class="me-auto">
+                        <span class="fw-semibold">@c.Name</span>
+                        <span class="small text-body-secondary d-block">
+                            @(c.IsMetered ? $"{c.UnitRate:N2} per {c.UnitOfMeasure ?? "unit"} (metered)" : $"{c.Amount:N0} {RealEstateERP.Core.Common.BillingRules.FrequencyLabel(c.Frequency)}")
+                        </span>
+                        @if (!c.IsMetered && c.LeasesMissing > 0) { <span class="small text-danger d-block">Missing on @c.LeasesMissing current lease(s)</span> }
+                    </span>
+                    @if (Model.CanEdit)
+                    {
+                        <form method="post" asp-controller="Estate" asp-action="RemoveCharge" asp-route-assetId="@Model.AssetId" asp-route-id="@c.Id" class="m-0"
+                              onsubmit="return confirm('Remove @c.Name from this estate? Leases keep it until removed from each lease.');">
+                            <button type="submit" class="btn btn-sm btn-link text-body-secondary p-0" aria-label="Remove @c.Name"><i class="bi bi-x-lg"></i></button>
+                        </form>
+                    }
+                </li>
+            }
+        </ul>
+        @if (Model.CanEdit && missing > 0)
+        {
+            <form method="post" asp-controller="Estate" asp-action="ApplyCharges" asp-route-assetId="@Model.AssetId" class="mb-2">
+                <button type="submit" class="btn btn-sm btn-warning w-100"><i class="bi bi-arrow-down-circle me-1"></i>Add to current leases (@missing missing)</button>
+            </form>
+        }
+        @if (Model.Charges.FirstOrDefault(c => c.IsMetered) is { } meter)
+        {
+            <a asp-controller="Readings" asp-action="Sheet" asp-route-assetId="@Model.AssetId" asp-route-chargeId="@meter.ChargeDefinitionId" class="btn btn-sm btn-outline-primary w-100 mb-2">
+                <i class="bi bi-speedometer2 me-1"></i>Enter @meter.Name.ToLowerInvariant() readings
+            </a>
+        }
+    }
+    @if (Model.CanEdit)
+    {
+        @if (options.Count == 0)
+        {
+            <p class="small mb-0">Every charge in your list is already here. <a asp-controller="Charges" asp-action="Create">Create a new charge</a></p>
+        }
+        else
+        {
+            <details @(Model.Charges.Count == 0 ? "open" : "")>
+                <summary class="small fw-semibold">Add a charge</summary>
+                <form method="post" asp-controller="Estate" asp-action="AddCharge" asp-route-assetId="@Model.AssetId" class="mt-2" id="estate-charge-form">
+                    <select name="chargeDefinitionId" class="form-select form-select-sm mb-2" id="estate-charge-pick" required>
+                        @foreach (var c in options)
+                        {
+                            <option value="@c.Id" data-metered="@(c.Type == ChargeType.Utility ? "1" : "0")" data-amount="@c.DefaultAmount" data-rate="@c.UnitRate">@c.Name (@(c.Type == ChargeType.Utility ? "metered" : RealEstateERP.Core.Common.BillingRules.FrequencyLabel(c.Frequency)))</option>
+                        }
+                    </select>
+                    <div class="input-group input-group-sm mb-2" data-for="fixed">
+                        <span class="input-group-text">Amount</span>
+                        <input name="amount" class="form-control" inputmode="decimal" id="estate-charge-amount" />
+                    </div>
+                    <div class="input-group input-group-sm mb-2" data-for="metered" hidden>
+                        <span class="input-group-text">Price per unit</span>
+                        <input name="unitRate" class="form-control" inputmode="decimal" id="estate-charge-rate" />
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary w-100">Add to this estate</button>
+                    <div class="form-text">Not in the list? <a asp-controller="Charges" asp-action="Create">Create the charge</a> first.</div>
+                </form>
+            </details>
+            <script>
+                (function () {
+                    var pick = document.getElementById('estate-charge-pick');
+                    if (!pick) return;
+                    function sync() {
+                        var o = pick.options[pick.selectedIndex], metered = o.dataset.metered === '1';
+                        document.querySelector('#estate-charge-form [data-for="fixed"]').hidden = metered;
+                        document.querySelector('#estate-charge-form [data-for="metered"]').hidden = !metered;
+                        sbSet(document.getElementById('estate-charge-amount'), o.dataset.amount || '');
+                        sbSet(document.getElementById('estate-charge-rate'), o.dataset.rate || '');
+                    }
+                    pick.addEventListener('change', sync);
+                    document.addEventListener('DOMContentLoaded', sync);   // after site.js (sbSet) has loaded
+                })();
+            </script>
+        }
+    }
+</section>

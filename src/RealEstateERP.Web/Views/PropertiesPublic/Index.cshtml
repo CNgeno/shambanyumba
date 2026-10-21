@@ -1,0 +1,71 @@
+@model MarketSearchViewModel
+@{
+    var s = Model.Search;
+    var r = Model.Result;
+    ViewData["Title"] = s.Type switch { ListingType.Rent => "Houses and apartments to let", ListingType.Sale => "Plots and homes for sale", _ => "Properties to let and for sale" };
+    ViewData["Description"] = "Find apartments, houses and plots in Kenya, advertised directly by landlords, agencies and developers.";
+    string Url(int page) => $"?type={s.Type}&county={Uri.EscapeDataString(s.County ?? "")}&q={Uri.EscapeDataString(s.Text ?? "")}&minPrice={s.MinPrice}&maxPrice={s.MaxPrice}&beds={s.Bedrooms}&unitType={s.UnitType}&page={page}";
+}
+<section class="page-head page-head-compact">
+    <div class="container">
+        <h1>@ViewData["Title"]</h1>
+        <p class="section-intro">Advertised directly by landlords, agencies and developers.</p>
+        <form method="get" class="market-search" role="search">
+            <div class="market-tabs" role="radiogroup" aria-label="Rent or buy">
+                <input type="radio" class="btn-check" name="type" id="t-all" value="" checked="@(s.Type is null)" /><label for="t-all">All</label>
+                <input type="radio" class="btn-check" name="type" id="t-rent" value="Rent" checked="@(s.Type == ListingType.Rent)" /><label for="t-rent">Rent</label>
+                <input type="radio" class="btn-check" name="type" id="t-sale" value="Sale" checked="@(s.Type == ListingType.Sale)" /><label for="t-sale">Buy</label>
+            </div>
+            <div class="market-fields">
+                <input name="q" value="@s.Text" class="form-control" placeholder="Area, estate or keyword" aria-label="Area, estate or keyword" />
+                <select name="county" class="form-select" aria-label="County">
+                    <option value="">Any county</option>
+                    @foreach (var c in r.Counties) { <option value="@c" selected="@(s.County == c)">@c</option> }
+                </select>
+                <select name="unitType" class="form-select" aria-label="Type">
+                    <option value="">Any type</option>
+                    @foreach (var t in new[] { UnitType.Apartment, UnitType.Bedsitter, UnitType.Plot, UnitType.Shop, UnitType.Office, UnitType.Warehouse })
+                    { <option value="@t" selected="@(s.UnitType == t)">@t.Display()</option> }
+                </select>
+                <select name="beds" class="form-select" aria-label="Bedrooms">
+                    <option value="">Any beds</option>
+                    @for (var b = 1; b <= 4; b++) { <option value="@b" selected="@(s.Bedrooms == b)">@b+ bed</option> }
+                </select>
+                <input name="maxPrice" value="@s.MaxPrice?.ToString("0")" class="form-control" inputmode="numeric" placeholder="Max price (KES)" aria-label="Maximum price" />
+                <button type="submit" class="btn btn-accent">Search</button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<section class="section pt-4">
+    <div class="container">
+        <p class="text-body-secondary small mb-3">@r.Total propert@(r.Total == 1 ? "y" : "ies") found</p>
+        @if (r.Items.Count == 0)
+        {
+            <div class="market-empty"><i class="bi bi-search"></i><h2 class="h5">Nothing matches yet</h2><p>Try a wider area or a higher price. New properties are added every week.</p></div>
+        }
+        else
+        {
+            <div class="listing-grid">
+                @foreach (var item in r.Items) { <partial name="_ListingCard" model="item" /> }
+            </div>
+            @if (r.Pages > 1)
+            {
+                <nav class="d-flex justify-content-center gap-2 mt-4" aria-label="Pages">
+                    @if (r.Page > 1) { <a href="@Url(r.Page - 1)" class="btn btn-outline-primary">Previous</a> }
+                    <span class="align-self-center small text-body-secondary">Page @r.Page of @r.Pages</span>
+                    @if (r.Page < r.Pages) { <a href="@Url(r.Page + 1)" class="btn btn-outline-primary">Next</a> }
+                </nav>
+            }
+        }
+    </div>
+</section>
+<section class="section pt-0">
+    <div class="container">
+        <div class="cta-band">
+            <div><h2>Advertise your property here</h2><p>Landlords, agencies and developers list for free and pay only for verified enquiries.</p></div>
+            <a asp-area="Identity" asp-page="/Account/Register" class="btn btn-accent btn-lg">Start free trial</a>
+        </div>
+    </div>
+</section>

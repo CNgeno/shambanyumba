@@ -1,0 +1,5 @@
+@model TenantStatus
+@{
+    var css = Model switch { TenantStatus.Active => "status-ok", TenantStatus.Former => "status-muted", _ => "status-info" };
+}
+<span class="status-chip @css">@Model</span>

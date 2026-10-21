@@ -1,0 +1,103 @@
+@model AssetFormViewModel
+@{
+    var isNew = Model.Id is null;
+    ViewData["Title"] = isNew ? "Add property" : $"Edit {Model.Name}";
+}
+@if (isNew)
+{
+    <a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Properties</a>
+}
+else
+{
+    <a asp-action="Details" asp-route-id="@Model.Id" class="back-link"><i class="bi bi-arrow-left"></i>@Model.Name</a>
+}
+<h1 class="page-title mb-4">@ViewData["Title"]</h1>
+
+<form method="post" asp-action="@(isNew ? "Create" : "Edit")" asp-route-id="@Model.Id" class="form-narrow" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+    <section class="panel mb-3">
+        <h2 class="panel-title mb-3">The property</h2>
+        <div class="row g-3">
+            <div class="col-12">
+                <label asp-for="Name" class="form-label"></label>
+                <input asp-for="Name" class="form-control" autofocus />
+                <span asp-validation-for="Name" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="Type" class="form-label"></label>
+                <select asp-for="Type" asp-items="Html.GetEnumSelectList<AssetType>()" class="form-select">
+                    <option value="">Select...</option>
+                </select>
+                <span asp-validation-for="Type" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="Purpose" class="form-label"></label>
+                <select asp-for="Purpose" class="form-select" id="purpose">
+                    @foreach (var p in Enum.GetValues<PropertyPurpose>()) { <option value="@p">@p.Display()</option> }
+                </select>
+                <div class="form-text">To let: tenants, leases and rent. For sale: plots or houses sold to buyers, with costs and margins.</div>
+            </div>
+            <script>
+                (function () {
+                    var type = document.getElementById('Type'), purpose = document.getElementById('purpose');
+                    if (!type || !purpose) return;
+                    var touched = @(Model.Purpose is null ? "false" : "true");
+                    purpose.addEventListener('change', function () { touched = true; });
+                    type.addEventListener('change', function () { if (!touched) purpose.value = type.value === 'Land' ? 'Sell' : 'Let'; });
+                    if (!touched) purpose.value = type.value === 'Land' ? 'Sell' : 'Let';
+                })();
+            </script>
+            <div class="col-sm-6">
+                <label asp-for="LifecycleState" class="form-label"></label>
+                <select asp-for="LifecycleState" asp-items="Html.GetEnumSelectList<AssetLifecycle>()" class="form-select"></select>
+            </div>
+            <div class="col-sm-7">
+                <label asp-for="Location" class="form-label"></label>
+                <input asp-for="Location" class="form-control" />
+            </div>
+            <div class="col-sm-5">
+                <label asp-for="County" class="form-label"></label>
+                <select asp-for="County" asp-items="AssetFormViewModel.CountyOptions" class="form-select">
+                    <option value="">Select...</option>
+                </select>
+            </div>
+            <div class="col-12">
+                <label asp-for="Description" class="form-label"></label>
+                <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel mb-4">
+        <h2 class="panel-title mb-1">Ownership and land</h2>
+        <p class="small text-body-secondary mb-3">Optional. Useful for valuation and reports later.</p>
+        <div class="row g-3">
+            <div class="col-sm-6">
+                <label asp-for="TitleDeedNumber" class="form-label"></label>
+                <input asp-for="TitleDeedNumber" class="form-control" />
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="LandSizeAcres" class="form-label"></label>
+                <input asp-for="LandSizeAcres" class="form-control" inputmode="decimal" />
+                <span asp-validation-for="LandSizeAcres" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="AcquisitionCost" class="form-label"></label>
+                <input asp-for="AcquisitionCost" class="form-control" inputmode="decimal" />
+                <span asp-validation-for="AcquisitionCost" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-sm-6">
+                <label asp-for="AcquisitionDate" class="form-label"></label>
+                <input asp-for="AcquisitionDate" type="date" class="form-control" />
+            </div>
+        </div>
+    </section>
+
+    <button type="submit" class="btn btn-primary">@(isNew ? "Add property" : "Save changes")</button>
+    <a asp-action="@(isNew ? "Index" : "Details")" asp-route-id="@Model.Id" class="btn btn-link">Cancel</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

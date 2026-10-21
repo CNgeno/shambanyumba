@@ -1,0 +1,225 @@
+@using System.Security.Claims
+@using RealEstateERP.Core.Constants
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+    ViewData["HideSubscriptionBanner"] = true;   // the subscription card below covers it
+    var firstName = User.FirstName();
+    var s = Model.Snapshot;
+    var days = s.DaysLeft(Model.NowUtc);
+    var nextStepIndex = Model.Steps.ToList().FindIndex(x => !x.Done);
+}
+<div class="page-head">
+    <div>
+        <h1 class="page-title">@UserDisplay.Greeting(Model.NowUtc)@(string.IsNullOrEmpty(firstName) ? "" : $", {firstName}")</h1>
+        <p class="page-sub">@User.FindFirstValue(AppClaimTypes.BusinessName)</p>
+    </div>
+</div>
+
+@if (Model.NewLeads > 0)
+{
+    <a asp-controller="Leads" asp-action="Index" class="lead-banner mb-3">
+        <i class="bi bi-megaphone-fill"></i>
+        <span class="me-auto"><strong>@Model.NewLeads new lead@(Model.NewLeads == 1 ? "" : "s")</strong> waiting. Call them now: the first to call usually wins the tenant or buyer.</span>
+        <span class="btn btn-sm btn-light">Open leads</span>
+    </a>
+}
+else if (Model.AwaitingConfirmation > 0)
+{
+    <a asp-controller="Leads" asp-action="Index" class="sub-banner sub-banner-info mb-3 text-decoration-none">
+        <i class="bi bi-hourglass-split"></i><span>@Model.AwaitingConfirmation enquir@(Model.AwaitingConfirmation == 1 ? "y is" : "ies are") waiting for the person to confirm their email.</span>
+    </a>
+}
+
+@if (Model.PropertyCards.Count > 0)
+{
+    <section class="mb-3" aria-label="Your properties">
+        <div class="project-cards">
+            @foreach (var card in Model.PropertyCards)
+            {
+                if (card.Project is not null) { <partial name="_ProjectCard" model="card.Project" /> }
+                else if (card.Rental is not null) { <partial name="_RentalCard" model="card.Rental" /> }
+            }
+        </div>
+    </section>
+    @if (Model.ShowRentalSummary && (Model.RentalStats ?? Model.Totals.Stats).Total > 0)
+    {
+        <h2 class="h6 text-body-secondary mb-2">All properties to let</h2>
+    }
+}
+
+@if (Model.ShowRentalSummary && (Model.RentalStats ?? Model.Totals.Stats).Total > 0)
+{
+    var t = Model.RentalStats ?? Model.Totals.Stats;
+    <section class="stat-strip mb-3" aria-label="Portfolio summary">
+        <div class="stat"><span class="stat-label">Properties</span><span class="stat-value">@(Model.ToLetCount ?? Model.Totals.AssetCount)</span></div>
+        <div class="stat"><span class="stat-label">Units</span><span class="stat-value">@t.Total</span><span class="stat-note">@t.Available vacant</span></div>
+        <div class="stat"><span class="stat-label">Occupancy</span><span class="stat-value">@t.OccupancyPercent.ToString("0.#")%</span><span class="stat-note">@t.Occupied of @t.Lettable lettable</span></div>
+        <div class="stat"><span class="stat-label">Monthly rent roll</span><span class="stat-value">@t.LettableRent.Kes()</span><span class="stat-note">if fully let</span></div>
+    </section>
+}
+
+@if (Model.Sales is { } st)
+{
+    <section class="panel p-0 mb-3" aria-labelledby="sales-title">
+        <div class="units-toolbar">
+            <h2 class="panel-title me-auto" id="sales-title">Sales</h2>
+            <a asp-controller="Sales" asp-action="Reports" class="small">Sales reports</a>
+        </div>
+        <div class="stat-strip stat-strip-flush">
+            <div class="stat"><span class="stat-label">Collected this month</span><span class="stat-value">@st.CollectedThisMonth.Kes()</span></div>
+            <div class="stat"><span class="stat-label">Still to collect</span><span class="stat-value">@st.Outstanding.Kes()</span><span class="stat-note">@(st.Active + st.Reserved) open sale(s)</span></div>
+            <div class="stat"><span class="stat-label">Overdue instalments</span><span class="stat-value @(st.OverdueAmount > 0 ? "text-danger" : "")">@st.OverdueAmount.Kes()</span>
+                <a asp-controller="Sales" asp-action="Reports" class="stat-note">@st.OverdueSales buyer(s) behind</a></div>
+            <div class="stat"><span class="stat-label">Reserved</span><span class="stat-value">@st.Reserved</span><span class="stat-note">waiting for an agreement</span></div>
+        </div>
+    </section>
+}
+
+@if (Model.Agency is { } ag)
+{
+    var monthName = ag.LastMonth.ToString("MMMM");
+    <section class="panel p-0 mb-3" aria-labelledby="agency-title">
+        <div class="units-toolbar">
+            <h2 class="panel-title me-auto" id="agency-title">@(ag.IsAgent ? "Your portfolio" : "Agency, " + monthName)</h2>
+            <a asp-controller="Remittances" asp-action="Index" class="small">Owner remittances</a>
+        </div>
+        <div class="stat-strip stat-strip-flush">
+            <div class="stat"><span class="stat-label">@(ag.IsAgent ? "Your contracts" : "Active contracts")</span><span class="stat-value">@ag.ActiveContracts</span><span class="stat-note">@ag.Properties propert@(ag.Properties == 1 ? "y" : "ies")</span></div>
+            <div class="stat"><span class="stat-label">Collected for owners</span><span class="stat-value">@ag.CollectedForOwners.Kes()</span><span class="stat-note">@monthName, on prepared statements</span></div>
+            <div class="stat"><span class="stat-label">@(ag.IsAgent ? "Your commission" : "Agency commission")</span><span class="stat-value">@ag.Commission.Kes()</span><span class="stat-note">@monthName</span></div>
+            <div class="stat"><span class="stat-label">Owners to pay</span><span class="stat-value">@ag.AwaitingPayment</span><span class="stat-note">approved, not yet paid</span></div>
+        </div>
+        @if (ag.ToPrepare.Count > 0)
+        {
+            <ul class="attention-list">
+                @foreach (var c in ag.ToPrepare.Take(6))
+                {
+                    <li>
+                        <span class="fw-semibold">@c.OwnerName</span>
+                        <span class="small text-body-secondary">@monthName statement not prepared, @(c.PropertyNames ?? c.ContractNumber)</span>
+                        <a asp-controller="Remittances" asp-action="Prepare" asp-route-contractId="@c.Id" asp-route-month="@ag.LastMonth.ToString("yyyy-MM")" class="btn btn-sm btn-outline-primary ms-auto">Prepare</a>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+}
+
+@if (Model.Billing.IssuedCount > 0 || Model.Billing.DraftCount > 0)
+{
+    var b = Model.Billing;
+    <section class="stat-strip mb-3" aria-label="Billing summary">
+        <div class="stat"><span class="stat-label">Invoiced this month</span><span class="stat-value">@b.InvoicedThisMonth.Kes()</span></div>
+        <div class="stat"><span class="stat-label">Outstanding</span><span class="stat-value">@b.Outstanding.Kes()</span></div>
+        <div class="stat"><span class="stat-label">Overdue</span><span class="stat-value @(b.OverdueCount > 0 ? "text-danger" : "")">@b.OverdueAmount.Kes()</span>
+            <a asp-controller="Arrears" asp-action="Index" class="stat-note">@b.OverdueCount invoice(s), see arrears</a></div>
+        <div class="stat"><span class="stat-label">Collected this month</span><span class="stat-value">@Model.Collections.CollectedThisMonth.Kes()</span>
+            <a asp-controller="Payments" asp-action="Index" class="stat-note">@Model.Collections.PaymentsThisMonth payment(s)</a></div>
+    </section>
+}
+
+<div class="dash-grid">
+    <div>
+    @if (Model.NeedingAttention.Count > 0 || Model.LeaseCounts.EndingWithin90 > 0)
+    {
+        <section class="panel p-0 mb-3" aria-labelledby="attention-title">
+            <div class="units-toolbar">
+                <h2 class="panel-title me-auto" id="attention-title">Leases needing attention</h2>
+                <a asp-controller="Leases" asp-action="Index" asp-route-view="EndingSoon" class="small">All ending within 90 days (@(Model.LeaseCounts.EndingWithin90 + Model.LeaseCounts.Ended))</a>
+            </div>
+            @if (Model.NeedingAttention.Count == 0)
+            {
+                <p class="small text-body-secondary px-4 py-3 mb-0">Nothing ends in the next 30 days.</p>
+            }
+            else
+            {
+                <ul class="attention-list">
+                    @foreach (var l in Model.NeedingAttention.Take(6))
+                    {
+                        var endIn = l.EndDate!.Value.DayNumber - Model.Today.DayNumber;
+                        <li>
+                            <a asp-controller="Leases" asp-action="Details" asp-route-id="@l.Id" class="row-link fw-semibold">@l.TenantName</a>
+                            <span class="text-body-secondary small">@l.UnitNumber, @l.AssetName</span>
+                            <span class="ms-auto small @(endIn < 0 ? "text-danger fw-semibold" : "")">
+                                @(endIn < 0 ? $"Ended {-endIn} day{(endIn == -1 ? "" : "s")} ago" : endIn == 0 ? "Ends today" : $"Ends in {endIn} day{(endIn == 1 ? "" : "s")}")
+                            </span>
+                        </li>
+                    }
+                </ul>
+            }
+        </section>
+    }
+
+    @if (!Model.SetupComplete)
+    {
+    <section class="panel setup-panel" aria-labelledby="setup-title">
+        <div class="d-flex flex-wrap align-items-baseline gap-2 mb-1">
+            <h2 class="panel-title me-auto" id="setup-title">@Model.SetupTitle</h2>
+            <span class="small text-body-secondary">@Model.DoneCount of @Model.Steps.Count done</span>
+        </div>
+        <div class="progress setup-progress mb-3" role="progressbar" aria-label="Setup progress"
+             aria-valuenow="@Model.ProgressPercent" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar" style="width: @(Model.ProgressPercent)%"></div>
+        </div>
+
+        <ol class="checklist">
+            @for (var i = 0; i < Model.Steps.Count; i++)
+            {
+                var step = Model.Steps[i];
+                var isNext = i == nextStepIndex;
+                <li class="checklist-item @(step.Done ? "is-done" : "") @(isNext ? "is-next" : "")">
+                    <span class="check-icon" aria-hidden="true">
+                        @if (step.Done) { <i class="bi bi-check-lg"></i> } else { @(i + 1) }
+                    </span>
+                    <div class="check-body">
+                        <span class="check-title">@step.Title</span>
+                        <span class="check-desc">@step.Description</span>
+                    </div>
+                    @if (step.Done)
+                    {
+                        <span class="visually-hidden">Done</span>
+                    }
+                    else if (isNext && step.ActionUrl is not null && Model.CanEdit)
+                    {
+                        <a href="@step.ActionUrl" class="btn btn-primary btn-sm ms-auto">@step.ActionText</a>
+                    }
+                    else if (isNext)
+                    {
+                        <span class="small text-body-secondary ms-auto">Coming soon</span>
+                    }
+                </li>
+            }
+        </ol>
+    </section>
+    }
+    </div>
+
+    <section class="panel sub-card" aria-labelledby="sub-title">
+        <div class="d-flex align-items-center gap-2 mb-3">
+            <h2 class="panel-title me-auto" id="sub-title">Subscription</h2>
+            <partial name="_SubscriptionStatusBadge" model="s.Status" />
+        </div>
+
+        <p class="sub-plan">@s.PlanName</p>
+        @if (s.PaidThroughUtc is not null)
+        {
+            <p class="sub-days"><span class="sub-days-num">@days</span> @(days == 1 ? "day" : "days") left</p>
+            <p class="small text-body-secondary mb-3">
+                @(s.IsTrial ? "Free trial ends" : "Paid through") @s.PaidThroughUtc.ToEatDate()
+            </p>
+        }
+        <ul class="sub-facts">
+            <li><i class="bi bi-house-door" aria-hidden="true"></i>@s.UnitLimit.UnitLimitText()</li>
+            <li><i class="bi bi-coin" aria-hidden="true"></i>@s.CreditsPerMonth credits per month</li>
+        </ul>
+
+        @if (Model.CanManageSubscription)
+        {
+            <a asp-controller="Subscription" asp-action="Renew" class="btn @(s.Status is SubscriptionStatus.Trial or SubscriptionStatus.Grace || days <= 5 ? "btn-primary" : "btn-outline-primary") w-100">
+                @(s.IsTrial ? "Choose a plan" : "Renew or change plan")
+            </a>
+        }
+        <a asp-controller="Subscription" asp-action="Index" class="d-block text-center small mt-2">View billing history</a>
+    </section>
+</div>

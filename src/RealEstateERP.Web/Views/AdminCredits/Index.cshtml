@@ -1,0 +1,54 @@
+@model AdminCreditsViewModel
+@{
+    ViewData["Title"] = "Credit purchases";
+}
+<h1 class="page-title">Credit purchases</h1>
+<p class="text-body-secondary mb-4">Check each payment against the M-PESA statement or bank account before approving.</p>
+
+<section class="panel p-0 mb-4">
+    <div class="units-toolbar"><h2 class="panel-title">Waiting for verification (@Model.Pending.Count)</h2></div>
+    @if (Model.Pending.Count == 0)
+    {
+        <p class="text-body-secondary p-4 mb-0">Nothing waiting.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead><tr><th>Submitted</th><th>Business</th><th class="text-end">Credits</th><th class="text-end">Amount</th><th>Reference</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var p in Model.Pending)
+                {
+                    <tr>
+                        <td class="text-nowrap">@p.CreatedAtUtc.ToEatDateTime()</td>
+                        <td>@p.Business.Name <span class="small text-body-secondary">#@p.BusinessId</span></td>
+                        <td class="text-end">@p.Credits</td>
+                        <td class="text-end">@p.Amount.Kes()</td>
+                        <td class="font-monospace">@(p.Method == SubscriptionPaymentMethod.Mpesa ? "M-PESA" : "Bank") @p.Reference</td>
+                        <td class="text-end">
+                            <div class="d-flex flex-wrap justify-content-end gap-1">
+                                <form method="post" asp-action="Approve" asp-route-id="@p.Id"><button type="submit" class="btn btn-sm btn-primary">Approve</button></form>
+                                <form method="post" asp-action="Reject" asp-route-id="@p.Id" class="d-flex gap-1">
+                                    <input name="reason" class="form-control form-control-sm" placeholder="Reason" required aria-label="Rejection reason" />
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Reject</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+<section class="panel form-narrow">
+    <h2 class="panel-title mb-2">Adjust a business's credits</h2>
+    <p class="small text-body-secondary">For goodwill credits or corrections. Use a negative number to remove credits. Every adjustment is recorded in the business's history.</p>
+    <form method="post" asp-action="Adjust" class="row g-2 align-items-end">
+        <div class="col-sm-3"><label class="form-label small mb-1" for="adj-biz">Business #</label><input id="adj-biz" name="businessId" type="number" class="form-control form-control-sm" required /></div>
+        <div class="col-sm-3"><label class="form-label small mb-1" for="adj-credits">Credits</label><input id="adj-credits" name="credits" type="number" class="form-control form-control-sm" required /></div>
+        <div class="col-sm-6"><label class="form-label small mb-1" for="adj-reason">Reason</label><input id="adj-reason" name="reason" class="form-control form-control-sm" required maxlength="200" /></div>
+        <div class="col-12"><button type="submit" class="btn btn-sm btn-outline-primary">Apply adjustment</button></div>
+    </form>
+</section>

@@ -1,0 +1,145 @@
+@model TenantDetailsViewModel
+@{
+    var t = Model.Details.Tenant;
+    ViewData["Title"] = t.FullName;
+    var returnUrl = Context.Request.Path.ToString();
+    string Value(string? v) => string.IsNullOrWhiteSpace(v) ? "Not recorded" : v;
+}
+<a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Tenants</a>
+
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">@t.FullName <partial name="_TenantStatusChip" model="Model.Details.Status" />
+            @if (t.CollectionStage != CollectionStage.Normal) { <partial name="_CollectionStageChip" model="t.CollectionStage" /> }</h1>
+        <p class="page-sub">
+            @(t.Type == TenantType.Company ? "Company" : "Individual")
+            @if (t.Phone is not null) { <span>, <a href="tel:@t.Phone">@RealEstateERP.Core.Common.KenyanPhone.Display(t.Phone)</a></span> }
+            @if (t.Email is not null) { <span>, <a href="mailto:@t.Email">@t.Email</a></span> }
+        </p>
+    </div>
+    @if (Model.CanEdit)
+    {
+        <div class="d-flex flex-wrap gap-2">
+            <a asp-controller="Payments" asp-action="Record" asp-route-tenantId="@t.Id" class="btn btn-primary"><i class="bi bi-cash-coin me-1"></i>Record payment</a>
+            <a asp-action="Statement" asp-route-id="@t.Id" class="btn btn-outline-primary"><i class="bi bi-journal-text me-1"></i>Statement</a>
+            <a asp-controller="Leases" asp-action="Create" asp-route-tenantId="@t.Id" class="btn btn-outline-primary"><i class="bi bi-file-earmark-plus me-1"></i>New lease</a>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Tenant actions"><i class="bi bi-three-dots"></i></button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" asp-action="Edit" asp-route-id="@t.Id"><i class="bi bi-pencil me-2"></i>Edit details</a></li>
+                    <li><hr class="dropdown-divider" /></li>
+                    <li>
+                        <form method="post" asp-action="Delete" asp-route-id="@t.Id" class="m-0" onsubmit="return confirm('Delete this tenant? Only possible if they have never had a lease.');">
+                            <button type="submit" class="dropdown-item text-danger"><i class="bi bi-trash me-2"></i>Delete tenant</button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    }
+</div>
+
+@{ var b = Model.Balance; }
+<section class="stat-strip mb-3" aria-label="Account">
+    <div class="stat"><span class="stat-label">Owes</span><span class="stat-value @(b.Outstanding > 0 ? "text-danger" : "")">@b.Outstanding.Kes()</span><span class="stat-note">@b.OpenInvoiceCount unpaid invoice(s)</span></div>
+    <div class="stat"><span class="stat-label">Credit held</span><span class="stat-value">@b.Credit.Kes()</span>
+        @if (b.Credit > 0 && b.Outstanding > 0 && Model.CanEdit)
+        {
+            <form method="post" asp-controller="Payments" asp-action="ApplyCredit" class="mt-1">
+                <input type="hidden" name="tenantId" value="@t.Id" />
+                <button type="submit" class="btn btn-sm btn-primary">Apply to invoices</button>
+            </form>
+        }
+    </div>
+    <div class="stat"><span class="stat-label">Net balance</span><span class="stat-value">@(b.Net > 0 ? b.Net.Kes() : b.Net < 0 ? $"{(-b.Net).Kes()} CR" : "Nil")</span></div>
+    <div class="stat"><span class="stat-label">Last payment</span><span class="stat-value">@(b.LastPaymentDate?.ToString("d MMM yyyy") ?? "None")</span></div>
+</section>
+
+<div class="property-grid property-grid-reverse">
+    <section class="panel p-0">
+        <div class="units-toolbar"><h2 class="panel-title">Leases</h2></div>
+        @if (Model.Details.Leases.Count == 0)
+        {
+            <div class="empty-state">
+                <i class="bi bi-file-earmark-text" aria-hidden="true"></i>
+                <h3 class="h6">No leases yet</h3>
+                <p>Create a lease to link @t.FullName to a unit.</p>
+                @if (Model.CanEdit) { <a asp-controller="Leases" asp-action="Create" asp-route-tenantId="@t.Id" class="btn btn-primary">New lease</a> }
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead><tr><th>Lease</th><th>Unit</th><th>Period</th><th class="text-end">Rent</th><th>Status</th></tr></thead>
+                    <tbody>
+                    @foreach (var l in Model.Details.Leases)
+                    {
+                        <tr>
+                            <td><a asp-controller="Leases" asp-action="Details" asp-route-id="@l.Id" class="row-link fw-semibold">@l.LeaseNumber</a></td>
+                            <td>@l.UnitNumber<div class="small text-body-secondary">@l.AssetName</div></td>
+                            <td class="text-nowrap small">@l.StartDate.ToString("d MMM yyyy") to @(l.EndDate?.ToString("d MMM yyyy") ?? "open")</td>
+                            <td class="text-end">@l.MonthlyRent.Kes()</td>
+                            <td><partial name="_LeaseStatusChip" model="new LeaseChip(l.Status, l.Expiry)" /></td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    <aside>
+        @if (Model.Balance.Outstanding > 0 || Model.Collections.Stage != CollectionStage.Normal || Model.Collections.Notes.Count > 0)
+        {
+            <partial name="_Collections" model="Model.Collections" />
+        }
+        @if (Model.RecentPayments.Count > 0)
+        {
+            <section class="panel p-0 mb-3">
+                <div class="units-toolbar"><h2 class="panel-title me-auto">Recent payments</h2><a asp-action="Statement" asp-route-id="@t.Id" class="small">Full statement</a></div>
+                <ul class="attention-list">
+                    @foreach (var p in Model.RecentPayments)
+                    {
+                        <li class="@(p.Status == PaymentStatus.Reversed ? "is-reversed" : "")">
+                            <a asp-controller="Payments" asp-action="Details" asp-route-id="@p.Id" class="row-link fw-semibold">@p.ReceiptNumber</a>
+                            <span class="small text-body-secondary">@p.PaymentDate.ToString("d MMM yyyy"), @p.Method.Display()</span>
+                            <span class="ms-auto">@p.Amount.Kes()</span>
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+        <section class="panel facts mb-3">
+            <h2 class="panel-title mb-2">Details</h2>
+            <dl class="mb-0">
+                <dt>@(t.IdType?.Display() ?? "ID")</dt><dd>@Value(t.IdNumber)</dd>
+                <dt>KRA PIN</dt><dd>@Value(t.KraPin)</dd>
+                <dt>Alt. phone</dt><dd>@Value(RealEstateERP.Core.Common.KenyanPhone.Display(t.AltPhone))</dd>
+                <dt>Employer</dt><dd>@Value(t.Employer)</dd>
+                <dt>Address</dt><dd>@Value(t.PostalAddress)</dd>
+                <dt>Emergency</dt>
+                <dd>
+                    @if (t.EmergencyContactName is null) { <span>Not recorded</span> }
+                    else
+                    {
+                        <span>@t.EmergencyContactName</span>
+                        @if (t.EmergencyContactRelationship is not null) { <span class="text-body-secondary">(@t.EmergencyContactRelationship)</span> }
+                        @if (t.EmergencyContactPhone is not null) { <div><a href="tel:@t.EmergencyContactPhone">@RealEstateERP.Core.Common.KenyanPhone.Display(t.EmergencyContactPhone)</a></div> }
+                    }
+                </dd>
+                @if (!string.IsNullOrWhiteSpace(t.Notes)) { <dt>Notes</dt><dd>@t.Notes</dd> }
+            </dl>
+        </section>
+
+        <section class="panel">
+            <h2 class="panel-title mb-2">Documents</h2>
+            <partial name="_DocumentList" model="new DocumentListModel(Model.Details.Documents, Model.CanEdit, returnUrl)" />
+            @if (Model.CanEdit)
+            {
+                <hr />
+                <partial name="_DocumentUpload" model="new DocumentUploadModel(t.Id, null, Model.MaxUploadMb, returnUrl, TenantDocumentType.NationalId)" />
+            }
+        </section>
+    </aside>
+</div>

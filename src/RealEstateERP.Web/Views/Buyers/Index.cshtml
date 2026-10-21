@@ -1,0 +1,38 @@
+@model IReadOnlyList<BuyerSummary>
+@{
+    ViewData["Title"] = "Buyers";
+    var canEdit = ViewData["CanEdit"] is true;
+}
+<div class="page-head">
+    <div class="me-auto"><h1 class="page-title">Buyers</h1><p class="page-sub">People and companies buying units or plots</p></div>
+    <form method="get" class="d-flex gap-2" role="search">
+        <input type="search" name="q" value="@ViewData["Search"]" class="form-control form-control-sm" placeholder="Name or phone" aria-label="Search buyers" />
+        <button type="submit" class="btn btn-sm btn-outline-primary">Search</button>
+    </form>
+    @if (canEdit) { <a asp-action="Create" class="btn btn-primary"><i class="bi bi-person-plus me-1"></i>Add buyer</a> }
+</div>
+@if (Model.Count == 0)
+{
+    <section class="panel empty-state"><i class="bi bi-person-check" aria-hidden="true"></i><h2 class="h5">No buyers yet</h2><p>Add a buyer, then record their sale.</p></section>
+}
+else
+{
+    <section class="panel p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr><th>Buyer</th><th>Phone</th><th class="text-end">Sales</th><th class="text-end">Balance</th></tr></thead>
+                <tbody>
+                @foreach (var b in Model)
+                {
+                    <tr>
+                        <td><a asp-action="Details" asp-route-id="@b.Id" class="row-link fw-semibold">@b.FullName</a>@if (b.Type == OwnerType.Company) { <span class="small text-body-secondary ms-1">Company</span> }</td>
+                        <td class="text-nowrap">@RealEstateERP.Core.Common.KenyanPhone.Display(b.Phone)</td>
+                        <td class="text-end">@b.Sales</td>
+                        <td class="text-end @(b.Balance > 0 ? "fw-semibold" : "text-body-secondary")">@(b.Balance > 0 ? b.Balance.Kes() : "—")</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}

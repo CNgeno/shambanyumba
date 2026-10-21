@@ -1,0 +1,98 @@
+@model ListingEditViewModel
+@{
+    var d = Model.Details;
+    var l = d.Listing;
+    var f = Model.Form;
+    ViewData["Title"] = l.Title;
+    var closed = l.Status == ListingStatus.Closed;
+    var unitFree = l.Unit.Status == UnitStatus.Available;
+}
+<a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Listings</a>
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">@l.Title</h1>
+        <p class="page-sub">@l.Type.Display(), @l.Unit.Asset.Name @l.Unit.UnitNumber. @l.ViewCount views, @d.Leads verified lead(s).
+            @if (l.Status == ListingStatus.Published && unitFree) { <a href="/marketplace/@l.Id/@RealEstateERP.Core.Common.MarketplaceRules.Slug(l.Title)" target="_blank">View public page <i class="bi bi-box-arrow-up-right"></i></a> }</p>
+        @if (l.Status == ListingStatus.Published && unitFree)
+        {
+            var publicUrl = $"{Context.Request.Scheme}://{Context.Request.Host}/marketplace/{l.Id}/{RealEstateERP.Core.Common.MarketplaceRules.Slug(l.Title)}";
+            var waText = Uri.EscapeDataString($"{l.Title}, KES {l.Price:N0}{(l.Type == ListingType.Rent ? " a month" : "")} {publicUrl}");
+            <div class="d-flex flex-wrap gap-2 mt-2">
+                <a class="btn btn-sm btn-success" target="_blank" rel="noopener" href="https://wa.me/?text=@waText"><i class="bi bi-whatsapp me-1"></i>Share on WhatsApp</a>
+                <a class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener" href="https://www.facebook.com/sharer/sharer.php?u=@Uri.EscapeDataString(publicUrl)"><i class="bi bi-facebook me-1"></i>Facebook</a>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="navigator.clipboard && navigator.clipboard.writeText('@publicUrl'); this.textContent='Copied';"><i class="bi bi-link-45deg me-1"></i>Copy link</button>
+            </div>
+        }
+    </div>
+    @if (Model.CanEdit && !closed)
+    {
+        <div class="d-flex flex-wrap gap-2">
+            @if (l.Status != ListingStatus.Published)
+            {
+                <form method="post" asp-action="SetStatus" asp-route-id="@l.Id" class="m-0"><input type="hidden" name="status" value="Published" /><button type="submit" class="btn btn-primary"><i class="bi bi-broadcast me-1"></i>Publish</button></form>
+            }
+            else
+            {
+                <form method="post" asp-action="SetStatus" asp-route-id="@l.Id" class="m-0"><input type="hidden" name="status" value="Paused" /><button type="submit" class="btn btn-outline-secondary">Pause</button></form>
+            }
+            <form method="post" asp-action="SetStatus" asp-route-id="@l.Id" class="m-0" onsubmit="return confirm('Close this listing? To advertise again you\'ll create a new one.');"><input type="hidden" name="status" value="Closed" /><button type="submit" class="btn btn-outline-danger">Close</button></form>
+        </div>
+    }
+</div>
+
+@if (l.Status == ListingStatus.Published && !unitFree)
+{
+    <div class="sub-banner sub-banner-warning"><i class="bi bi-eye-slash"></i><span>Hidden from the public: the unit is @l.Unit.Status.ToString().ToLowerInvariant(). It reappears automatically if the unit becomes available. Close the listing if you're done with it.</span></div>
+}
+@if (d.Photos.Count == 0 && !closed)
+{
+    <div class="sub-banner sub-banner-info"><i class="bi bi-camera"></i><span>Listings with photos get far more enquiries. Add a few below.</span></div>
+}
+
+<div class="property-grid property-grid-reverse">
+    <section class="panel">
+        <h2 class="panel-title mb-3">Photos (@d.Photos.Count of @RealEstateERP.Core.Common.MarketplaceRules.MaxPhotos)</h2>
+        @if (d.Photos.Count > 0)
+        {
+            <div class="photo-grid mb-3">
+                @foreach (var p in d.Photos)
+                {
+                    <figure class="photo-tile @(p == d.Photos[0] ? "is-cover" : "")">
+                        <img src="@Url.Action("Photo", new { photoId = p.Id })" alt="@p.FileName" loading="lazy" />
+                        @if (p == d.Photos[0]) { <span class="photo-cover-tag">Cover</span> }
+                        @if (Model.CanEdit && !closed)
+                        {
+                            <figcaption>
+                                @if (p != d.Photos[0])
+                                {
+                                    <form method="post" asp-action="MakeCover" asp-route-id="@l.Id" class="d-inline"><input type="hidden" name="photoId" value="@p.Id" /><button type="submit" class="btn btn-sm btn-light">Make cover</button></form>
+                                }
+                                <form method="post" asp-action="RemovePhoto" asp-route-id="@l.Id" class="d-inline"><input type="hidden" name="photoId" value="@p.Id" /><button type="submit" class="btn btn-sm btn-light text-danger" aria-label="Remove photo"><i class="bi bi-trash"></i></button></form>
+                            </figcaption>
+                        }
+                    </figure>
+                }
+            </div>
+        }
+        @if (Model.CanEdit && !closed && d.Photos.Count < RealEstateERP.Core.Common.MarketplaceRules.MaxPhotos)
+        {
+            <form method="post" asp-action="Photos" asp-route-id="@l.Id" enctype="multipart/form-data" class="d-flex flex-wrap gap-2 align-items-center">
+                <input type="file" name="files" accept=".jpg,.jpeg,.png" multiple class="form-control" style="max-width: 360px" aria-label="Photos" />
+                <button type="submit" class="btn btn-outline-primary">Upload</button>
+                <span class="form-text">JPG or PNG. Landscape photos in daylight look best.</span>
+            </form>
+        }
+    </section>
+
+    <aside>
+        <form method="post" asp-action="Edit" asp-route-id="@l.Id" class="panel">
+            <h2 class="panel-title mb-2">Details</h2>
+            <input type="hidden" name="UnitId" value="@f.UnitId" />
+            <input type="hidden" name="Type" value="@f.Type" />
+            <div class="mb-2"><label class="form-label small mb-1" for="l-title">Title</label><input id="l-title" name="Title" value="@f.Title" class="form-control form-control-sm" maxlength="120" disabled="@(closed || !Model.CanEdit)" /></div>
+            <div class="mb-2"><label class="form-label small mb-1" for="l-price">@(l.Type == ListingType.Sale ? "Asking price" : "Rent per month") (KES)</label><input id="l-price" name="Price" value="@f.Price.ToString("0.##")" class="form-control form-control-sm" inputmode="decimal" disabled="@(closed || !Model.CanEdit)" /></div>
+            <div class="mb-2"><label class="form-label small mb-1" for="l-desc">Description</label><textarea id="l-desc" name="Description" class="form-control form-control-sm" rows="8" maxlength="4000" disabled="@(closed || !Model.CanEdit)">@f.Description</textarea></div>
+            @if (Model.CanEdit && !closed) { <button type="submit" class="btn btn-sm btn-primary w-100">Save details</button> }
+        </form>
+    </aside>
+</div>

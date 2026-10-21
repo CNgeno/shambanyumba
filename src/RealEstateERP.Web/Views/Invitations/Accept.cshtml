@@ -1,0 +1,53 @@
+@model InvitationPageViewModel
+@{
+    ViewData["Title"] = "Invitation";
+    Layout = "_LayoutAuth";
+    var info = Model.Info;
+    var here = Url.Action("Accept", new { token = Model.Token });
+}
+@if (TempData["Error"] is string error) { <div class="alert alert-danger small">@error</div> }
+
+@if (info is null)
+{
+    <div class="auth-icon"><i class="bi bi-link-45deg"></i></div>
+    <h1 class="auth-title">This link isn't valid</h1>
+    <p class="auth-sub">It may have been mistyped, or replaced by a newer invitation. Ask the person who invited you to send it again.</p>
+    <a href="/" class="btn btn-outline-primary w-100">Go to the home page</a>
+}
+else if (!info.IsOpen)
+{
+    <div class="auth-icon"><i class="bi bi-hourglass-bottom"></i></div>
+    <h1 class="auth-title">This invitation has expired</h1>
+    <p class="auth-sub">Invitations to @info.BusinessName last 7 days. Ask for a new one.</p>
+}
+else
+{
+    <div class="auth-icon"><i class="bi bi-people"></i></div>
+    <h1 class="auth-title">Join @info.BusinessName</h1>
+    <p class="auth-sub">You've been invited as <strong>@info.Role</strong>. The invitation is for <strong>@info.Email</strong>.</p>
+
+    @if (Model.SignedIn)
+    {
+        @if (!string.Equals(Model.SignedInEmail, info.Email, StringComparison.OrdinalIgnoreCase))
+        {
+            <div class="alert alert-warning small">You're signed in as @Model.SignedInEmail. Sign out and sign in as @info.Email to accept.</div>
+            <form method="post" asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@here">
+                <button type="submit" class="btn btn-outline-primary w-100">Sign out and switch account</button>
+            </form>
+        }
+        else
+        {
+            <form method="post" asp-action="Accept">
+                <input type="hidden" name="token" value="@Model.Token" />
+                <input type="hidden" name="confirm" value="true" />
+                <button type="submit" class="btn btn-primary w-100">Accept and open @info.BusinessName</button>
+            </form>
+        }
+    }
+    else
+    {
+        <a asp-area="Identity" asp-page="/Account/Login" asp-route-returnUrl="@here" class="btn btn-primary w-100 mb-2">I have an account: sign in</a>
+        <a asp-area="Identity" asp-page="/Account/Register" asp-route-returnUrl="@here" asp-route-email="@info.Email" class="btn btn-outline-primary w-100">I'm new: create an account</a>
+        <p class="small text-body-secondary mt-3 mb-0">New accounts confirm their email first. After signing in, the invitation also appears on the business selection page.</p>
+    }
+}

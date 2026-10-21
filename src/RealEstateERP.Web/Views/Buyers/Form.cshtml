@@ -1,0 +1,30 @@
+@model BuyerForm
+@{
+    var isNew = Model.Id is null;
+    ViewData["Title"] = isNew ? "Add buyer" : $"Edit {Model.FullName}";
+}
+<a asp-action="Index" class="back-link"><i class="bi bi-arrow-left"></i>Buyers</a>
+<h1 class="page-title mb-4">@ViewData["Title"]</h1>
+<form method="post" asp-action="Save" class="form-narrow panel" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="ReturnToSale" />
+    <div class="btn-group mb-3" role="group" aria-label="Buyer type">
+        @foreach (var t in Enum.GetValues<OwnerType>())
+        {
+            <input type="radio" class="btn-check" name="Type" id="bt-@t" value="@t" checked="@(Model.Type == t)" />
+            <label class="btn btn-outline-primary" for="bt-@t">@t</label>
+        }
+    </div>
+    <div class="row g-3">
+        <div class="col-12"><label asp-for="FullName" class="form-label"></label><input asp-for="FullName" class="form-control" autofocus /><span asp-validation-for="FullName" class="invalid-feedback d-block"></span></div>
+        <div class="col-sm-6"><label asp-for="IdNumber" class="form-label"></label><input asp-for="IdNumber" class="form-control" /></div>
+        <div class="col-sm-6"><label asp-for="KraPin" class="form-label"></label><input asp-for="KraPin" class="form-control text-uppercase" /></div>
+        <div class="col-sm-6"><label asp-for="Phone" class="form-label"></label><input asp-for="Phone" class="form-control" type="tel" /></div>
+        <div class="col-sm-6"><label asp-for="Email" class="form-label"></label><input asp-for="Email" class="form-control" type="email" /><span asp-validation-for="Email" class="invalid-feedback d-block"></span></div>
+        <div class="col-12"><label asp-for="PostalAddress" class="form-label"></label><input asp-for="PostalAddress" class="form-control" /></div>
+        <div class="col-12"><label asp-for="Notes" class="form-label"></label><textarea asp-for="Notes" class="form-control" rows="2"></textarea></div>
+    </div>
+    <button type="submit" class="btn btn-primary mt-3">@(Model.ReturnToSale ? "Save and continue to the sale" : isNew ? "Add buyer" : "Save changes")</button>
+</form>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

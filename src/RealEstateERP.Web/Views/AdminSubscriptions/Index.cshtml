@@ -1,0 +1,64 @@
+@model AdminSubscriptionsIndexViewModel
+@{
+    ViewData["Title"] = "Payment approvals";
+}
+<h1 class="page-title">Payment approvals</h1>
+<p class="text-body-secondary mb-4">Check each payment against the M-PESA statement or bank account before approving.</p>
+
+<section class="panel mb-4">
+    <h2 class="h6 mb-3">Waiting for verification (@Model.Pending.Count)</h2>
+    @if (Model.Pending.Count == 0)
+    {
+        <p class="text-body-secondary mb-0">Nothing waiting. New payments appear here when businesses submit them.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead><tr><th>Submitted</th><th>Business</th><th>Plan</th><th class="text-end">Amount</th><th>Method</th><th>Reference</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var p in Model.Pending)
+                {
+                    <tr>
+                        <td>@p.CreatedAtUtc.ToEatDateTime()</td>
+                        <td>@p.Business.Name <span class="text-body-secondary small">#@p.BusinessId</span></td>
+                        <td>@p.Plan.Name x @p.Months</td>
+                        <td class="text-end">@p.Amount.Kes()</td>
+                        <td>@(p.Method == SubscriptionPaymentMethod.Mpesa ? "M-PESA" : "Bank")</td>
+                        <td>@p.Reference</td>
+                        <td class="text-end"><a asp-action="Review" asp-route-id="@p.Id" class="btn btn-sm btn-primary">Review</a></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+<section class="panel">
+    <h2 class="h6 mb-3">Recently reviewed</h2>
+    @if (Model.RecentlyReviewed.Count == 0)
+    {
+        <p class="text-body-secondary mb-0">No reviewed payments yet.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead><tr><th>Reviewed</th><th>Business</th><th class="text-end">Amount</th><th>Reference</th><th>Result</th></tr></thead>
+                <tbody>
+                @foreach (var p in Model.RecentlyReviewed)
+                {
+                    <tr>
+                        <td>@p.ReviewedAtUtc.ToEatDateTime()</td>
+                        <td>@p.Business.Name</td>
+                        <td class="text-end">@p.Amount.Kes()</td>
+                        <td><a asp-action="Review" asp-route-id="@p.Id">@p.Reference</a></td>
+                        <td><partial name="_VerificationBadge" model="p.Status" /></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

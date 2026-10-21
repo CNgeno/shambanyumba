@@ -1,0 +1,80 @@
+@model ReadingsIndexViewModel
+@{
+    ViewData["Title"] = "Meter readings";
+}
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">Meter readings</h1>
+        <p class="page-sub">@(Model.UnbilledOnly ? $"{Model.Readings.Count} reading(s) waiting to be billed" : "Recent readings")</p>
+    </div>
+    @if (Model.CanEdit && Model.UtilityCharges.Count > 0)
+    {
+        <a asp-action="Sheet" class="btn btn-primary"><i class="bi bi-speedometer me-1"></i>Enter readings</a>
+    }
+</div>
+
+@if (Model.UtilityCharges.Count == 0)
+{
+    <section class="panel empty-state">
+        <i class="bi bi-droplet-half" aria-hidden="true"></i>
+        <h2 class="h5">Set up a metered utility first</h2>
+        <p>Add water or electricity as a utility charge with its price per unit. Then enter readings here each month.</p>
+        <a asp-controller="Charges" asp-action="Create" asp-route-type="Utility" class="btn btn-primary">Add a utility</a>
+    </section>
+}
+else
+{
+    <section class="panel p-0">
+        <div class="units-toolbar">
+            <nav class="filter-chips me-auto" aria-label="Which readings">
+                <a asp-action="Index" asp-route-assetId="@Model.AssetId" class="filter-chip @(Model.UnbilledOnly ? "is-active" : "")">Not billed yet</a>
+                <a asp-action="Index" asp-route-all="true" asp-route-assetId="@Model.AssetId" class="filter-chip @(!Model.UnbilledOnly ? "is-active" : "")">All recent</a>
+            </nav>
+            <form method="get" class="d-flex gap-2">
+                <input type="hidden" name="all" value="@(!Model.UnbilledOnly)" />
+                <select name="assetId" class="form-select form-select-sm" aria-label="Property" onchange="this.form.submit()">
+                    <option value="">All properties</option>
+                    @foreach (var a in Model.Assets) { <option value="@a.Id" selected="@(Model.AssetId == a.Id)">@a.Name</option> }
+                </select>
+            </form>
+        </div>
+        @if (Model.Readings.Count == 0)
+        {
+            <p class="text-body-secondary p-4 mb-0">@(Model.UnbilledOnly ? "Everything has been billed." : "No readings yet.")</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead><tr><th>Unit</th><th>Utility</th><th>Read on</th><th class="text-end">Previous</th><th class="text-end">Current</th><th class="text-end">Used</th><th class="text-end">Amount</th><th>Billed</th><th></th></tr></thead>
+                    <tbody>
+                    @foreach (var r in Model.Readings)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@r.UnitNumber<div class="small text-body-secondary fw-normal">@r.AssetName</div></td>
+                            <td>@r.ChargeName</td>
+                            <td class="text-nowrap">@r.ReadingDate.ToString("d MMM yyyy")</td>
+                            <td class="text-end">@r.PreviousReading.ToString("0.###")</td>
+                            <td class="text-end">@r.CurrentReading.ToString("0.###")</td>
+                            <td class="text-end">@(r.IsOpening ? "Opening" : $"{r.Consumption:0.###} {r.UnitOfMeasure}")</td>
+                            <td class="text-end">@(r.IsOpening ? "—" : r.Amount.Kes())</td>
+                            <td>
+                                @if (r.BilledInvoiceId is int inv) { <a asp-controller="Invoices" asp-action="Details" asp-route-id="@inv">@r.BilledInvoiceNumber</a> }
+                                else if (!r.IsOpening) { <span class="status-chip status-warn">Not yet</span> }
+                            </td>
+                            <td class="text-end">
+                                @if (Model.CanEdit && r.BilledInvoiceId is null)
+                                {
+                                    <form method="post" asp-action="Delete" asp-route-id="@r.Id" onsubmit="return confirm('Delete this reading?');">
+                                        <button type="submit" class="btn btn-sm btn-link text-body-secondary" aria-label="Delete reading"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+}

@@ -1,0 +1,11 @@
+@model SubscriptionStatus
+@{
+    var css = Model switch
+    {
+        SubscriptionStatus.Active => "status-ok",
+        SubscriptionStatus.Trial => "status-info",
+        SubscriptionStatus.Grace => "status-warn",
+        _ => "status-bad"
+    };
+}
+<span class="status-chip @css">@Model</span>

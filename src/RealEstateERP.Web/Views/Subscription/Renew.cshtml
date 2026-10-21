@@ -1,0 +1,149 @@
+@using System.Globalization
+@model RenewPageViewModel
+@{
+    ViewData["Title"] = "Renew subscription";
+    var i = Model.Instructions;
+    var selectedMethod = Model.Input.Method ?? SubscriptionPaymentMethod.Mpesa;
+}
+<h1 class="page-title">Renew subscription</h1>
+<p class="text-body-secondary mb-4">
+    Current plan: <strong>@Model.Snapshot.PlanName</strong>
+    @if (Model.Snapshot.PaidThroughUtc is not null)
+    {
+        <span>(@(Model.Snapshot.IsTrial ? "trial ends" : "paid through") @Model.Snapshot.PaidThroughUtc.ToEatDate())</span>
+    }
+</p>
+
+@if (Model.PendingPayment is { } pending)
+{
+    <section class="panel">
+        <h2 class="h6"><i class="bi bi-hourglass-split me-1"></i>Payment being verified</h2>
+        <p class="mb-0">
+            We received your payment of <strong>@pending.Amount.Kes()</strong> (reference @pending.Reference) for
+            @pending.Months month(s) of @pending.Plan.Name on @pending.CreatedAtUtc.ToEatDateTime().
+            Your subscription will be extended as soon as it's verified.
+        </p>
+    </section>
+}
+else if (!Model.CanRenew)
+{
+    <section class="panel">
+        <p class="mb-0">Only the business Owner or an Admin can renew the subscription. Ask them to renew from this page.</p>
+    </section>
+}
+else
+{
+    <form method="post" asp-action="Renew" enctype="multipart/form-data" id="renew-form" novalidate>
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+        <section class="panel mb-3">
+            <h2 class="h6 mb-3">Plan</h2>
+            <div class="plan-grid" role="radiogroup" aria-label="Plan">
+                @foreach (var p in Model.Plans)
+                {
+                    var isChecked = Model.Input.PlanId == p.Id || (Model.Input.PlanId is null && p.Code == Model.Snapshot.PlanCode);
+                    <label class="plan-option">
+                        <input type="radio" class="form-check-input" name="Input.PlanId" value="@p.Id"
+                               data-fee="@p.MonthlyFee.ToString(CultureInfo.InvariantCulture)" checked="@isChecked" />
+                        <span class="plan-name">@p.Name</span>
+                        <span class="plan-price">@p.MonthlyFee.Kes() <small>per month</small></span>
+                        <span class="plan-meta">@p.UnitLimit.UnitLimitText()</span>
+                        <span class="plan-meta">@p.CreditsPerMonth credits per month</span>
+                    </label>
+                }
+            </div>
+            <span asp-validation-for="Input.PlanId" class="invalid-feedback d-block"></span>
+
+            <div class="row g-3 align-items-end mt-1">
+                <div class="col-sm-4">
+                    <label asp-for="Input.Months" class="form-label">Pay for</label>
+                    <select asp-for="Input.Months" class="form-select" id="months">
+                        <option value="1">1 month</option>
+                        <option value="3">3 months</option>
+                        <option value="6">6 months</option>
+                        <option value="12">12 months</option>
+                    </select>
+                </div>
+                <div class="col-sm-8">
+                    <p class="renew-total mb-1">Amount to pay: <strong id="renew-total">KES 0.00</strong></p>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel mb-3">
+            <h2 class="h6 mb-3">Payment</h2>
+            <div class="btn-group mb-3" role="group" aria-label="Payment method">
+                <input type="radio" class="btn-check" name="Input.Method" id="method-mpesa" value="@SubscriptionPaymentMethod.Mpesa" checked="@(selectedMethod == SubscriptionPaymentMethod.Mpesa)" />
+                <label class="btn btn-outline-primary" for="method-mpesa">M-PESA</label>
+                <input type="radio" class="btn-check" name="Input.Method" id="method-bank" value="@SubscriptionPaymentMethod.BankTransfer" checked="@(selectedMethod == SubscriptionPaymentMethod.BankTransfer)" />
+                <label class="btn btn-outline-primary" for="method-bank">Bank transfer</label>
+            </div>
+            <span asp-validation-for="Input.Method" class="invalid-feedback d-block"></span>
+
+            <div class="pay-instructions" data-method="@SubscriptionPaymentMethod.Mpesa">
+                <dl class="summary-grid mb-0">
+                    <div><dt>Paybill</dt><dd>@i.MpesaPaybill</dd></div>
+                    <div><dt>Account number</dt><dd>@i.MpesaAccount</dd></div>
+                </dl>
+                <p class="form-text mb-0">Use the account number exactly as shown so we can match your payment. Then enter the M-PESA confirmation code below.</p>
+            </div>
+            <div class="pay-instructions" data-method="@SubscriptionPaymentMethod.BankTransfer">
+                <dl class="summary-grid mb-0">
+                    <div><dt>Bank</dt><dd>@i.BankName</dd></div>
+                    <div><dt>Account name</dt><dd>@i.BankAccountName</dd></div>
+                    <div><dt>Account number</dt><dd>@i.BankAccountNumber</dd></div>
+                    <div><dt>Branch</dt><dd>@i.BankBranch</dd></div>
+                    @if (!string.IsNullOrWhiteSpace(i.BankSwiftCode))
+                    {
+                        <div><dt>SWIFT</dt><dd>@i.BankSwiftCode</dd></div>
+                    }
+                </dl>
+                <p class="form-text mb-0">Use @i.MpesaAccount as the payment reference/narration. Attach the deposit slip or transfer confirmation.</p>
+            </div>
+
+            <div class="row g-3 mt-1">
+                <div class="col-md-6">
+                    <label asp-for="Input.Reference" class="form-label"></label>
+                    <input asp-for="Input.Reference" class="form-control text-uppercase" placeholder="e.g. SJK4H7QX2P" autocomplete="off" />
+                    <span asp-validation-for="Input.Reference" class="invalid-feedback d-block"></span>
+                </div>
+                <div class="col-md-6">
+                    <label asp-for="Input.Proof" class="form-label"></label>
+                    <input asp-for="Input.Proof" type="file" class="form-control" accept=".jpg,.jpeg,.png,.pdf" />
+                    <div class="form-text">JPG, PNG or PDF, up to @Model.MaxProofSizeMb MB. Required for bank transfers.</div>
+                </div>
+            </div>
+        </section>
+
+        <button type="submit" class="btn btn-primary">Submit payment for verification</button>
+        <a asp-action="Index" class="btn btn-link">Cancel</a>
+    </form>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var form = document.getElementById('renew-form');
+            if (!form) return;
+            var total = document.getElementById('renew-total');
+            var months = document.getElementById('months');
+            var fmt = new Intl.NumberFormat('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            function updateTotal() {
+                var plan = form.querySelector('input[name="Input.PlanId"]:checked');
+                var fee = plan ? sbNum(plan.dataset.fee) : 0;
+                total.textContent = 'KES ' + fmt.format(fee * parseInt(months.value, 10));
+            }
+            function updateMethod() {
+                var method = form.querySelector('input[name="Input.Method"]:checked');
+                form.querySelectorAll('.pay-instructions').forEach(function (el) {
+                    el.hidden = !method || el.dataset.method !== method.value;
+                });
+            }
+            form.addEventListener('change', function () { updateTotal(); updateMethod(); });
+            updateTotal();
+            updateMethod();
+        })();
+    </script>
+}

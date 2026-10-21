@@ -1,0 +1,2 @@
+@model RemittanceStatus
+<span class="status-chip @(Model switch { RemittanceStatus.Paid => "status-ok", RemittanceStatus.Approved => "status-warn", RemittanceStatus.Draft => "status-info", _ => "status-muted" })">@(Model == RemittanceStatus.Approved ? "Approved, not paid" : Model.ToString())</span>

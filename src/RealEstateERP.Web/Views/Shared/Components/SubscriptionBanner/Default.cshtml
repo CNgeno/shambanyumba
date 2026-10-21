@@ -1,0 +1,9 @@
+@model RealEstateERP.Web.ViewComponents.SubscriptionBannerModel
+<div class="sub-banner sub-banner-@Model.Tone" role="status">
+    <i class="bi @(Model.Tone == "info" ? "bi-info-circle" : "bi-exclamation-triangle")" aria-hidden="true"></i>
+    <span>@Model.Message</span>
+    @if (Model.ShowRenewLink)
+    {
+        <a asp-area="" asp-controller="Subscription" asp-action="Renew" class="ms-auto fw-semibold">Renew now</a>
+    }
+</div>

@@ -1,0 +1,105 @@
+@model CreditsViewModel
+@{
+    ViewData["Title"] = "Credits";
+    var o = Model.Overview;
+    var i = Model.Instructions;
+}
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">Credits</h1>
+        <p class="page-sub">Used for PDFs, bulk invoice runs and (soon) SMS. Your plan adds credits every month you pay for.</p>
+    </div>
+</div>
+
+<section class="stat-strip mb-3" aria-label="Credits">
+    <div class="stat"><span class="stat-label">Balance</span><span class="stat-value @(o.Balance < 20 ? "text-danger" : "")">@o.Balance.ToString("N0")</span><span class="stat-note">credits</span></div>
+    <div class="stat"><span class="stat-label">Invoice or receipt PDF</span><span class="stat-value">@RealEstateERP.Core.Constants.CreditCosts.InvoicePdf</span><span class="stat-note">credit each</span></div>
+    <div class="stat"><span class="stat-label">Statement PDF</span><span class="stat-value">@RealEstateERP.Core.Constants.CreditCosts.StatementPdf</span><span class="stat-note">credits</span></div>
+    <div class="stat"><span class="stat-label">Invoice run (11+ invoices)</span><span class="stat-value">@RealEstateERP.Core.Constants.CreditCosts.BulkInvoiceRun</span><span class="stat-note">credits per run</span></div>
+</section>
+
+<div class="property-grid property-grid-reverse">
+    <section class="panel p-0">
+        <div class="units-toolbar"><h2 class="panel-title">History</h2></div>
+        @if (o.History.Count == 0)
+        {
+            <p class="small text-body-secondary px-4 py-3 mb-0">No credit activity yet.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead><tr><th>Date</th><th>What</th><th class="text-end">Credits</th><th class="text-end">Balance</th></tr></thead>
+                    <tbody>
+                    @foreach (var t in o.History)
+                    {
+                        <tr>
+                            <td class="text-nowrap small">@t.CreatedAtUtc.ToEatDateTime()</td>
+                            <td>@t.Description<div class="small text-body-secondary">@t.Type.Display()@(t.Reference is null ? "" : $", {t.Reference}")</div></td>
+                            <td class="text-end fw-semibold @(t.Credits < 0 ? "" : "text-success")">@t.Credits.ToString("+#;-#;0")</td>
+                            <td class="text-end">@t.BalanceAfter</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+
+    <aside>
+        <section class="panel mb-3">
+            <h2 class="panel-title mb-2">Buy credits</h2>
+            @if (!Model.CanBuy)
+            {
+                <p class="small mb-0">Ask the business Owner or an Admin to buy credits.</p>
+            }
+            else
+            {
+                <p class="small text-body-secondary">KES @o.PricePerCredit.ToString("N2") per credit. Pay first, then enter the reference.</p>
+                <dl class="summary-grid small mb-3">
+                    <div><dt>M-PESA paybill</dt><dd>@i.MpesaPaybill</dd></div>
+                    <div><dt>Account</dt><dd>@i.MpesaAccount</dd></div>
+                    <div><dt>Bank</dt><dd>@i.BankName, @i.BankAccountNumber</dd></div>
+                </dl>
+                <form method="post" asp-action="Buy">
+                    <div class="mb-2">
+                        <label class="form-label small mb-1" for="bundle">Bundle</label>
+                        <select id="bundle" name="Credits" class="form-select form-select-sm">
+                            @foreach (var b in o.Bundles) { <option value="@b">@b credits, KES @((b * o.PricePerCredit).ToString("N0"))</option> }
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small mb-1" for="buy-method">Paid by</label>
+                        <select id="buy-method" name="Method" class="form-select form-select-sm">
+                            <option value="Mpesa">M-PESA</option>
+                            <option value="BankTransfer">Bank transfer</option>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small mb-1" for="buy-ref">Transaction reference</label>
+                        <input id="buy-ref" name="Reference" class="form-control form-control-sm text-uppercase" required minlength="6" maxlength="50" />
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-primary">Submit for verification</button>
+                </form>
+            }
+        </section>
+
+        @if (o.Purchases.Count > 0)
+        {
+            <section class="panel">
+                <h2 class="panel-title mb-2">Purchases</h2>
+                <ul class="attention-list mx-n4">
+                    @foreach (var p in o.Purchases)
+                    {
+                        <li>
+                            <span class="fw-semibold">@p.Credits credits</span>
+                            <span class="small text-body-secondary">@p.CreatedAtUtc.ToEatDate(), @p.Reference</span>
+                            <span class="ms-auto"><partial name="_VerificationBadge" model="p.Status" /></span>
+                            @if (p.ReviewNote is not null) { <div class="small text-body-secondary w-100">@p.ReviewNote</div> }
+                        </li>
+                    }
+                </ul>
+            </section>
+        }
+    </aside>
+</div>

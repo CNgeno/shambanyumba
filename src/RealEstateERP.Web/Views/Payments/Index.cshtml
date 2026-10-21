@@ -1,0 +1,111 @@
+@model PaymentsIndexViewModel
+@{
+    ViewData["Title"] = "Payments";
+    var s = Model.Summary;
+}
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">Payments</h1>
+        <p class="page-sub">Money received from tenants, and refunds paid out</p>
+    </div>
+    @if (Model.CanEdit)
+    {
+        <a asp-action="Record" class="btn btn-primary"><i class="bi bi-cash-coin me-1"></i>Record payment</a>
+    }
+</div>
+
+<section class="stat-strip mb-3" aria-label="Collections summary">
+    <div class="stat"><span class="stat-label">Collected this month</span><span class="stat-value">@s.CollectedThisMonth.Kes()</span><span class="stat-note">@s.PaymentsThisMonth payment(s)</span></div>
+    <div class="stat"><span class="stat-label">Unallocated credit</span><span class="stat-value">@s.UnallocatedCredit.Kes()</span><span class="stat-note">overpayments held for tenants</span></div>
+    <div class="stat"><span class="stat-label">Refunded this month</span><span class="stat-value">@s.RefundedThisMonth.Kes()</span></div>
+    <div class="stat"><span class="stat-label">Unpaid invoices</span><a asp-controller="Invoices" asp-action="Index" asp-route-view="Unpaid" class="stat-value text-decoration-none">View</a></div>
+</section>
+
+<section class="panel p-0">
+    <div class="units-toolbar">
+        <nav class="filter-chips me-auto" aria-label="Payments or refunds">
+            <a asp-action="Index" asp-route-month="@Model.Month" class="filter-chip @(!Model.ShowRefunds ? "is-active" : "")">Payments received</a>
+            <a asp-action="Index" asp-route-month="@Model.Month" asp-route-refunds="true" class="filter-chip @(Model.ShowRefunds ? "is-active" : "")">Refunds paid</a>
+        </nav>
+        <form method="get" class="d-flex flex-wrap gap-2 align-items-center" role="search">
+            <input type="hidden" name="refunds" value="@Model.ShowRefunds" />
+            <input type="month" name="month" value="@Model.Month" class="form-control form-control-sm" aria-label="Month" onchange="this.form.submit()" />
+            @if (!Model.ShowRefunds)
+            {
+                <select name="method" class="form-select form-select-sm" aria-label="Method" onchange="this.form.submit()">
+                    <option value="">All methods</option>
+                    @foreach (var m in Enum.GetValues<PaymentMethod>()) { <option value="@m" selected="@(Model.Method == m)">@m.Display()</option> }
+                </select>
+                <input type="search" name="q" value="@Model.Search" class="form-control form-control-sm" placeholder="Receipt, tenant, code" aria-label="Search payments" />
+                <div class="form-check mb-0 small">
+                    <input class="form-check-input" type="checkbox" name="reversed" value="true" id="show-reversed" checked="@Model.IncludeReversed" onchange="this.form.submit()" />
+                    <label class="form-check-label" for="show-reversed">Show reversed</label>
+                </div>
+                <button type="submit" class="btn btn-sm btn-outline-primary">Search</button>
+            }
+        </form>
+    </div>
+
+    @if (Model.ShowRefunds)
+    {
+        @if (Model.Refunds.Count == 0)
+        {
+            <p class="text-body-secondary p-4 mb-0">No refunds recorded.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead><tr><th>Refund</th><th>Tenant</th><th>For</th><th>Date</th><th>Method</th><th class="text-end">Amount</th></tr></thead>
+                    <tbody>
+                    @foreach (var r in Model.Refunds)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@r.RefundNumber<div class="small text-body-secondary fw-normal">@r.Kind.Display()</div></td>
+                            <td><a asp-controller="Tenants" asp-action="Details" asp-route-id="@r.TenantId" class="row-link">@r.TenantName</a></td>
+                            <td>
+                                @if (r.LeaseId is int lid && r.Kind == RefundKind.Deposit) { <a asp-controller="Leases" asp-action="Details" asp-route-id="@lid">@r.LeaseNumber</a> }
+                                else if (r.PaymentId is int pid) { <a asp-action="Details" asp-route-id="@pid">@r.ReceiptNumber</a> }
+                            </td>
+                            <td class="text-nowrap">@r.RefundDate.ToString("d MMM yyyy")</td>
+                            <td>@r.Method.Display()@if (r.Reference is not null) { <div class="small text-body-secondary">@r.Reference</div> }</td>
+                            <td class="text-end">@r.Amount.Kes()</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    }
+    else if (Model.Payments.Count == 0)
+    {
+        <div class="empty-state">
+            <i class="bi bi-cash-coin" aria-hidden="true"></i>
+            <h2 class="h6">No payments here</h2>
+            <p>Record payments as they come in. Each one is split across the tenant's unpaid invoices and gets a numbered receipt.</p>
+            @if (Model.CanEdit) { <a asp-action="Record" class="btn btn-primary">Record payment</a> }
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 table-stack">
+                <thead><tr><th>Receipt</th><th>Tenant</th><th>Date</th><th>Method</th><th class="text-end">Amount</th><th class="text-end">Unallocated</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var p in Model.Payments)
+                {
+                    <tr class="@(p.Status == PaymentStatus.Reversed ? "is-reversed" : "")">
+                        <td><a asp-action="Details" asp-route-id="@p.Id" class="row-link fw-semibold">@p.ReceiptNumber</a></td>
+                        <td>@p.TenantName</td>
+                        <td class="text-nowrap">@p.PaymentDate.ToString("d MMM yyyy")</td>
+                        <td>@p.Method.Display()@if (p.Reference is not null) { <div class="small text-body-secondary font-monospace">@p.Reference</div> }</td>
+                        <td class="text-end">@p.Amount.Kes()</td>
+                        <td class="text-end">@(p.Unallocated > 0 ? p.Unallocated.Kes() : "—")</td>
+                        <td>@if (p.Status == PaymentStatus.Reversed) { <span class="status-chip status-bad">Reversed</span> }</td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

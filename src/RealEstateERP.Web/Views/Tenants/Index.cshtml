@@ -1,0 +1,81 @@
+@model TenantsIndexViewModel
+@{
+    ViewData["Title"] = "Tenants";
+    string Url2(TenantStatus? s) => Url.Action("Index", new { status = s, assetId = Model.AssetId, q = Model.Search })!;
+    TenantBalance? BalanceOf(int id) => Model.Balances.TryGetValue(id, out var b) ? b : null;
+}
+<div class="page-head">
+    <div class="me-auto">
+        <h1 class="page-title">Tenants</h1>
+        <p class="page-sub">@Model.Tenants.Count shown</p>
+    </div>
+    @if (Model.CanEdit)
+    {
+        <a asp-action="Create" class="btn btn-primary"><i class="bi bi-person-plus me-1"></i>Add tenant</a>
+    }
+</div>
+
+<section class="panel p-0">
+    <div class="units-toolbar">
+        <nav class="filter-chips me-auto" aria-label="Filter by status">
+            <a href="@Url2(null)" class="filter-chip @(Model.Status is null && !Model.Owing ? "is-active" : "")">All</a>
+            <a href="@Url.Action("Index", new { owing = true, assetId = Model.AssetId, q = Model.Search })" class="filter-chip @(Model.Owing ? "is-active" : "")">Owing money</a>
+            @foreach (var s in Enum.GetValues<TenantStatus>())
+            {
+                <a href="@Url2(s)" class="filter-chip @(Model.Status == s ? "is-active" : "")">@s</a>
+            }
+        </nav>
+        <form method="get" class="d-flex flex-wrap gap-2" role="search">
+            <input type="hidden" name="status" value="@Model.Status" />
+            <select name="assetId" class="form-select form-select-sm" aria-label="Property" onchange="this.form.submit()">
+                <option value="">All properties</option>
+                @foreach (var a in Model.Assets)
+                {
+                    <option value="@a.Id" selected="@(Model.AssetId == a.Id)">@a.Name</option>
+                }
+            </select>
+            <input type="search" name="q" value="@Model.Search" class="form-control form-control-sm" placeholder="Name, phone or ID" aria-label="Search tenants" />
+            <button type="submit" class="btn btn-sm btn-outline-primary">Search</button>
+        </form>
+    </div>
+
+    @if (Model.Tenants.Count == 0)
+    {
+        <div class="empty-state">
+            <i class="bi bi-people" aria-hidden="true"></i>
+            <h2 class="h6">@(string.IsNullOrEmpty(Model.Search) && Model.Status is null ? "No tenants yet" : "No tenants match")</h2>
+            <p>Add a tenant, then create a lease to link them to a unit.</p>
+            @if (Model.CanEdit) { <a asp-action="Create" class="btn btn-primary">Add tenant</a> }
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 table-stack">
+                <thead><tr><th>Tenant</th><th>Phone</th><th>Renting</th><th>Lease ends</th><th class="text-end">Owes</th><th>Status</th></tr></thead>
+                <tbody>
+                @foreach (var t in Model.Tenants)
+                {
+                    <tr>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@t.Id" class="row-link fw-semibold">@t.FullName</a>
+                            @if (t.Type == TenantType.Company) { <span class="small text-body-secondary ms-1">Company</span> }
+                            @if (t.IdNumber is not null) { <div class="small text-body-secondary">ID @t.IdNumber</div> }
+                        </td>
+                        <td class="text-nowrap">@RealEstateERP.Core.Common.KenyanPhone.Display(t.Phone)</td>
+                        <td>@(t.CurrentUnits ?? "—")</td>
+                        <td class="text-nowrap">@(t.NextLeaseEnd?.ToString("d MMM yyyy") ?? "—")</td>
+                        <td class="text-end text-nowrap">
+                            @{ var bal = BalanceOf(t.Id); }
+                            @if (bal is { Outstanding: > 0 }) { <span class="text-danger fw-semibold">@bal.Outstanding.Kes()</span> }
+                            else if (bal is { Credit: > 0 }) { <span class="small text-body-secondary">@bal.Credit.Kes() credit</span> }
+                            else { <span class="text-body-secondary">—</span> }
+                        </td>
+                        <td><partial name="_TenantStatusChip" model="t.Status" /></td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

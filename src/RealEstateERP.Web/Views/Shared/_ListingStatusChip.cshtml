@@ -1,0 +1,9 @@
+@model ListingSummary
+@if (Model.Status == ListingStatus.Published && !Model.IsLive)
+{
+    <span class="status-chip status-warn" title="Hidden from the public because the unit is @Model.UnitStatus.ToString().ToLowerInvariant()">Unit not available</span>
+}
+else
+{
+    <span class="status-chip @(Model.Status switch { ListingStatus.Published => "status-ok", ListingStatus.Draft => "status-info", ListingStatus.Paused => "status-warn", _ => "status-muted" })">@(Model.Status == ListingStatus.Published ? "Live" : Model.Status.ToString())</span>
+}
