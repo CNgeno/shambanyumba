@@ -68,7 +68,8 @@ public sealed class ReferralService(ApplicationDbContext db, TimeProvider clock)
     public async Task<Result<int>> CreatePartnerAsync(PartnerInput input, CancellationToken ct = default)
     {
         if (Validate(input) is string error) return Result<int>.Fail(error);
-        var code = string.IsNullOrWhiteSpace(input.Code) ? await NewCodeAsync(input.Name, ct) : Clean(input.Code);
+        var code = string.IsNullOrWhiteSpace(input.Code) ? await NewCodeAsync(ct) : Clean(input.Code);
+        if (code.Length == 4 && code.All(char.IsDigit)) code = "SN" + code;   // same form people type: 4827 -> SN4827
         if (await db.Partners.AnyAsync(p => p.Code == code, ct)) return Result<int>.Fail($"The code {code} is already used.");
         var partner = new Partner { Code = code };
         Apply(partner, input);
@@ -104,6 +105,7 @@ public sealed class ReferralService(ApplicationDbContext db, TimeProvider clock)
     {
         if (string.IsNullOrWhiteSpace(code)) return false;
         var clean = Clean(code);
+        if (clean.Length == 4 && clean.All(char.IsDigit)) clean = "SN" + clean;   // "4827" means SN4827
         var partner = await db.Partners.AsNoTracking().FirstOrDefaultAsync(p => p.Code == clean && p.IsActive, ct);
         if (partner is null || partner.ReferrerBusinessId == businessId) return false;   // no self-referral
         var business = await db.Businesses.FirstOrDefaultAsync(b => b.Id == businessId, ct);
@@ -119,7 +121,7 @@ public sealed class ReferralService(ApplicationDbContext db, TimeProvider clock)
         if (partner is null)
         {
             var name = await db.Businesses.Where(b => b.Id == businessId).Select(b => b.Name).FirstAsync(ct);
-            partner = new Partner { Name = name, Kind = PartnerKind.Customer, Code = await NewCodeAsync(name, ct), ReferrerBusinessId = businessId };
+            partner = new Partner { Name = name, Kind = PartnerKind.Customer, Code = await NewCodeAsync(ct), ReferrerBusinessId = businessId };
             db.Partners.Add(partner);
             await db.SaveChangesAsync(ct);
         }
@@ -166,16 +168,17 @@ public sealed class ReferralService(ApplicationDbContext db, TimeProvider clock)
 
     private static string Clean(string code) => new string(code.Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
 
-    /// <summary>A short, readable code from the name: up to 6 letters plus 2 digits (e.g. JALANG27), unique.</summary>
-    private async Task<string> NewCodeAsync(string name, CancellationToken ct)
+    /// <summary>
+    /// A new code: "SN" plus 4 random digits (e.g. SN4827). Short and easy to say, branded, and not sequential, so codes
+    /// can't be guessed in order and don't reveal how many partners there are. Unique; people may also type just the digits.
+    /// </summary>
+    private async Task<string> NewCodeAsync(CancellationToken ct)
     {
-        var stem = new string(name.Where(char.IsLetter).Take(6).ToArray()).ToUpperInvariant();
-        if (stem.Length < 3) stem = (stem + "SNB").Substring(0, 3);
-        for (var attempt = 0; attempt < 50; attempt++)
+        for (var attempt = 0; attempt < 200; attempt++)
         {
-            var code = stem + Random.Shared.Next(10, 99);
+            var code = "SN" + Random.Shared.Next(1000, 10000);
             if (!await db.Partners.AnyAsync(p => p.Code == code, ct)) return code;
         }
-        return stem + Random.Shared.Next(1000, 9999);
+        throw new InvalidOperationException("No free SN codes left: use a custom code.");
     }
 }

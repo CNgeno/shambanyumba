@@ -15,14 +15,64 @@
     <div class="stat"><span class="stat-label">Commission owed</span><span class="stat-value @(p.Owed > 0 ? "text-danger" : "")">KES @p.Owed.ToString("N0")</span><span class="stat-note">KES @p.Paid.ToString("N0") paid</span></div>
 </section>
 
-<section class="panel mb-3">
-    <h2 class="panel-title mb-2">Their link</h2>
-    <div class="d-flex flex-wrap gap-2 align-items-center">
-        <code id="partner-link">@link</code>
-        <button type="button" class="btn btn-sm btn-outline-primary" onclick="navigator.clipboard && navigator.clipboard.writeText(document.getElementById('partner-link').textContent); this.textContent='Copied';">Copy</button>
+<section class="panel mb-3" id="share-kit">
+    <h2 class="panel-title mb-2">Share kit for @p.Name</h2>
+    @{
+        var promoText = $"Manage your rentals and plot sales on your phone with ShambaNyumba: bill tenants in one click, track every payment, sell plots on instalments. FREE for 2 months, no card needed. Use my code {p.Code}: {link}";
+        var kitForPartner = $"Hi {p.Name.Split(' ')[0]}, here is your ShambaNyumba promoter kit.\n\nYour code: {p.Code}\nYour link: {link}\n\nAlways share the link or ask people to type your code when they create their business. That's how your customers (and your commission) are counted.\n\nReady-made post:\n{promoText}";
+        var phone = Model.Phone is null ? null : new string(Model.Phone.Where(char.IsDigit).ToArray());
+        if (phone is { Length: 10 } && phone.StartsWith("0")) phone = "254" + phone[1..];
+    }
+    <div class="row g-3 align-items-start">
+        <div class="col-md-8">
+            <label class="form-label small mb-1">Link</label>
+            <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+                <code id="partner-link">@link</code>
+                <button type="button" class="btn btn-sm btn-outline-primary" data-copy="#partner-link">Copy link</button>
+            </div>
+            <label class="form-label small mb-1" for="promo-text">Ready-made post (for their WhatsApp Status, Facebook, TikTok caption...)</label>
+            <textarea id="promo-text" class="form-control form-control-sm mb-2" rows="4" readonly>@promoText</textarea>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" class="btn btn-sm btn-outline-primary" data-copy="#promo-text">Copy post</button>
+                @if (phone is not null)
+                {
+                    <a class="btn btn-sm btn-success" target="_blank" rel="noopener" href="https://wa.me/@phone?text=@Uri.EscapeDataString(kitForPartner)"><i class="bi bi-whatsapp me-1"></i>Send kit to @p.Name.Split(' ')[0] on WhatsApp</a>
+                }
+                else
+                {
+                    <span class="small text-body-secondary align-self-center">Add their phone below to send the kit on WhatsApp.</span>
+                }
+            </div>
+            <p class="form-text mb-0">Visitors from the link are remembered for 60 days; people can also type the code when creating their business. Posters: give them the WhatsApp Status posters plus this QR code.</p>
+        </div>
+        <div class="col-md-4 text-center">
+            <div id="partner-qr" class="partner-qr" aria-label="QR code for @link"></div>
+            <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="qr-download">Download QR code</button>
+        </div>
     </div>
-    <p class="form-text mb-0">Visitors who arrive through this link are remembered for 60 days. People can also type the code when creating their business.</p>
 </section>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+    (function () {
+        document.querySelectorAll('[data-copy]').forEach(function (b) {
+            b.addEventListener('click', function () {
+                var el = document.querySelector(b.dataset.copy);
+                var text = el.value !== undefined ? el.value : el.textContent;
+                if (navigator.clipboard) navigator.clipboard.writeText(text);
+                b.textContent = 'Copied';
+            });
+        });
+        var box = document.getElementById('partner-qr');
+        if (window.QRCode) new QRCode(box, { text: '@link', width: 200, height: 200, colorDark: '#0B2A4A', colorLight: '#ffffff' });
+        document.getElementById('qr-download').addEventListener('click', function () {
+            var canvas = box.querySelector('canvas'), img = box.querySelector('img');
+            var a = document.createElement('a');
+            a.href = canvas ? canvas.toDataURL('image/png') : img.src;
+            a.download = 'ShambaNyumba-QR-@(p.Code).png';
+            a.click();
+        });
+    })();
+</script>
 
 <div class="row g-3">
     <div class="col-lg-7">

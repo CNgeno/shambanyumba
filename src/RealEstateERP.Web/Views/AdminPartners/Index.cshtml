@@ -11,7 +11,7 @@
             <select id="p-kind" name="kind" class="form-select form-select-sm">
                 @foreach (var k in new[] { PartnerKind.Influencer, PartnerKind.BusinessDeveloper, PartnerKind.Other }) { <option value="@k">@k.Display()</option> }
             </select></div>
-        <div class="col-md-2"><label class="form-label small mb-1" for="p-code">Code (optional)</label><input id="p-code" name="code" class="form-control form-control-sm text-uppercase" placeholder="made from the name" /></div>
+        <div class="col-md-2"><label class="form-label small mb-1" for="p-code">Code (optional)</label><input id="p-code" name="code" class="form-control form-control-sm text-uppercase" placeholder="SN + 4 digits (or a custom code)" /></div>
         <div class="col-md-2"><label class="form-label small mb-1" for="p-comm">KES per paying customer</label><input id="p-comm" name="commission" class="form-control form-control-sm" inputmode="decimal" value="0" /></div>
         <div class="col-md-2"><label class="form-label small mb-1" for="p-phone">Phone</label><input id="p-phone" name="phone" class="form-control form-control-sm" /></div>
         <div class="col-md-1"><button type="submit" class="btn btn-sm btn-primary w-100">Add</button></div>

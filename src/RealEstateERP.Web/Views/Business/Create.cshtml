@@ -47,8 +47,8 @@
     </div>
     <div class="mb-3">
         <label asp-for="ReferralCode" class="form-label"></label>
-        <input asp-for="ReferralCode" class="form-control text-uppercase" value="@(Model?.ReferralCode ?? Context.Request.Cookies["sn_ref"])" placeholder="e.g. JALANG27" />
-        <div class="form-text">If someone recommended ShambaNyumba to you, enter their code.</div>
+        <input asp-for="ReferralCode" class="form-control text-uppercase" value="@(Model?.ReferralCode ?? Context.Request.Cookies["sn_ref"])" placeholder="e.g. SN4827" />
+        <div class="form-text">If someone recommended ShambaNyumba to you, enter their code (the 4 digits are enough).</div>
     </div>
 
     <button type="submit" class="btn btn-primary w-100">Create business</button>
