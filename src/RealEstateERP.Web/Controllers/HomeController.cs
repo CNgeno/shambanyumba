@@ -27,7 +27,8 @@ public class HomeController(IPlanService plans, ISystemConfigService config, IMa
     public async Task<IActionResult> Pricing(CancellationToken ct)
         => View(new PricingViewModel
         {
-            Plans = (await plans.GetAllAsync(ct)).Where(p => p.IsActive).ToList(),
+            Plans = (await plans.GetAllAsync(ct)).Where(p => p.IsActive && p.Metric == null).ToList(),
+            Tariff = await HttpContext.RequestServices.GetRequiredService<ITariffService>().GetTableAsync(ct),
             TrialPlanCode = await config.GetAsync(ConfigKeys.TrialPlanCode, ct) ?? ""
         });
 

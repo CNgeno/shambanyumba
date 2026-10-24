@@ -172,6 +172,18 @@ Visible to **Developer** and **Agency** businesses.
 
 **Migration:** `dotnet ef migrations add Sprint9Sales --project src/RealEstateERP.Infrastructure --startup-project src/RealEstateERP.Web --output-dir Data/Migrations`
 
+## Tariff bands (pricing by rent roll, October 2026)
+- Plans are now tariff bands (`SubscriptionPlan.Metric`, `BandFrom`, `BandTo`, `IsQuoted`), like M-PESA tariffs:
+  rent-roll bands (LITE free up to 20,000; 600; 1,200; 2,500; 4,500; 8,000; quoted over 1,000,000) and instalment-
+  account bands for sellers (1,000; 3,500; 8,500; quoted over 150). Agencies pay their rent band x `Pricing.AgencyMultiplier` (1.5).
+  A business that lets and sells pays both bands
+- `TariffCalculator` (one place): rent roll = monthly rent of active leases; instalment accounts = active or reserved
+  sales with a balance. Renewal amounts come from it (the browser can't choose a cheaper plan); yearly = 10 months
+- Lite: a business whose tariff is free stays Active after its trial
+- Seeded once (marker `Pricing.Tariffs`): bands inserted, trial plan 60 days with no unit limit, old unit plans off sale
+  (the trial plan stays active). Fees and credits editable under Platform > Plans
+- Migration: `dotnet ef migrations add TariffBands` (SubscriptionPlans.Metric, BandFrom, BandTo, IsQuoted)
+
 ## Referrals and sharing
 - **Partners** (Admin > Partners and referrals): influencers, business developers, others; each with a code and a link
   (shambanyumba.com/?ref=CODE, remembered 60 days in the `sn_ref` cookie) and an optional KES commission per paying

@@ -22,5 +22,14 @@ public class SubscriptionPlan : AuditableEntity
     public BusinessType? ForBusinessType { get; set; }
 
     public bool IsActive { get; set; } = true;
+
+    // ---- Tariff bands (like M-PESA tariffs): a plan can be one band of a measure ----
+    /// <summary>Null = a classic plan (e.g. the trial plan). RentRoll / SaleAccounts = a tariff band of that measure.</summary>
+    public TariffMetric? Metric { get; set; }
+    /// <summary>The band covers BandFrom..BandTo inclusive (rent roll in KES, or instalment accounts). BandTo null = no upper limit.</summary>
+    public decimal? BandFrom { get; set; }
+    public decimal? BandTo { get; set; }
+    /// <summary>Above the published bands: priced by agreement ("contact us").</summary>
+    public bool IsQuoted { get; set; }
     public int SortOrder { get; set; }
 }

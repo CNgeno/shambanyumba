@@ -37,6 +37,9 @@ public static class ConfigKeys
     public const string SmtpFromName = "Email.FromName";
     public const string SmtpEnableSsl = "Email.EnableSsl";
 
+    // Tariffs: agencies pay their rent-roll band times this.
+    public const string AgencyMultiplier = "Pricing.AgencyMultiplier";
+
     // Marketplace (verified leads)
     public const string LeadCredits = "Marketplace.LeadCredits";
     public const string LeadRefundDays = "Marketplace.LeadRefundDays";

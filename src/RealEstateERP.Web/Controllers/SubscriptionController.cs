@@ -17,7 +17,7 @@ public class SubscriptionController(
     ISystemConfigService config,
     ICurrentUserService currentUser,
     IFileStorage storage,
-    TimeProvider clock) : Controller
+    TimeProvider clock, ITariffService tariffs) : Controller
 {
     private int BusinessId => currentUser.BusinessId!.Value;   // guaranteed by TenantResolutionMiddleware
     private bool CanRenew => currentUser.Role is BusinessRole.Owner or BusinessRole.Admin;
@@ -81,6 +81,7 @@ public class SubscriptionController(
         return new RenewPageViewModel
         {
             Snapshot = await subscriptions.GetSnapshotAsync(BusinessId, ct),
+            Quote = await tariffs.QuoteAsync(BusinessId, ct),
             Plans = await subscriptions.GetAvailablePlansAsync(BusinessId, ct),
             PendingPayment = await subscriptions.GetPendingPaymentAsync(BusinessId, ct),
             CanRenew = CanRenew,

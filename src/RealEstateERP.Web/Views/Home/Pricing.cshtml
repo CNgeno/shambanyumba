@@ -1,44 +1,75 @@
 @model PricingViewModel
 @{
     ViewData["Title"] = "Pricing";
+    var t = Model.Tariff;
+    string Range(TariffBandLine b, bool money) => b.To is decimal to
+        ? (money ? (b.From <= 0 ? $"Up to KES {to:N0}" : $"KES {Math.Ceiling(b.From):N0} to {to:N0}") : $"{b.From:N0} to {to:N0}")
+        : (money ? $"Over KES {Math.Floor(b.From):N0}" : $"{b.From:N0} and more");
+    string Fee(TariffBandLine b) => b.IsQuoted ? "Ask us" : b.Fee == 0 ? "Free" : $"KES {b.Fee:N0}";
 }
 <section class="page-head">
     <div class="container">
         <h1>Pricing</h1>
-        <p class="section-intro">Monthly plans in Kenya shillings. Every new account starts with a free trial; pay by M-PESA or bank transfer when you're ready.</p>
+        <p class="section-intro">You pay by the size of what you manage, like M-PESA tariffs: a fixed monthly fee for the band your rent roll falls in. <strong>Every account starts free for @(t?.TrialDays / 30 ?? 2) months</strong>, and small estates stay free.</p>
     </div>
 </section>
 <section class="section pt-3">
     <div class="container">
-        <div class="row g-3">
-            @foreach (var p in Model.Plans)
-            {
-                var isTrial = string.Equals(p.Code, Model.TrialPlanCode, StringComparison.OrdinalIgnoreCase);
-                <div class="col-md-6 col-xl-3">
-                    <div class="price-card @(isTrial ? "is-trial" : "")">
-                        <h3>@p.Name</h3>
-                        @if (p.ForBusinessType is not null)
-                        {
-                            <p class="small text-body-secondary mb-1">For @(p.ForBusinessType.Value.ToString().ToLowerInvariant()) businesses</p>
-                        }
-                        <p class="text-body-secondary">@p.Description</p>
-                        <p class="price mb-0">@p.MonthlyFee.Kes() <small>/ month</small></p>
-                        <ul>
-                            <li><i class="bi bi-check2"></i>@p.UnitLimit.UnitLimitText()</li>
-                            <li><i class="bi bi-check2"></i>@p.CreditsPerMonth credits per month</li>
-                            <li><i class="bi bi-check2"></i>@(p.TrialDays)-day free trial</li>
-                        </ul>
-                        @if (isTrial)
-                        {
-                            <p class="small fw-semibold mb-2">Your free trial runs on this plan.</p>
-                        }
-                        <a asp-area="Identity" asp-page="/Account/Register" class="btn @(isTrial ? "btn-gradient" : "btn-outline-primary") mt-auto">Start free trial</a>
+        @if (t is not null && t.RentBands.Count > 0)
+        {
+            <div class="row g-4">
+                <div class="col-lg-7">
+                    <h2 class="h4">Landlords and agencies: by monthly rent roll</h2>
+                    <p class="text-body-secondary">Your rent roll is the monthly rent of your let houses and units (water, garbage and other charges aren't counted).</p>
+                    <div class="table-responsive">
+                        <table class="table align-middle tariff-table">
+                            <thead><tr><th>Monthly rent roll</th><th class="text-end">You pay per month</th><th class="text-end">Credits included</th></tr></thead>
+                            <tbody>
+                            @foreach (var b in t.RentBands)
+                            {
+                                <tr class="@(b.Fee == 0 && !b.IsQuoted ? "tariff-free" : "")"><td>@Range(b, true)</td><td class="text-end fw-semibold">@Fee(b)</td><td class="text-end">@(b.CreditsPerMonth > 0 ? b.CreditsPerMonth.ToString("N0") : "—")</td></tr>
+                            }
+                            </tbody>
+                        </table>
                     </div>
+                    <p class="small text-body-secondary">Agencies managing other owners' properties pay their band × @t.AgencyMultiplier.ToString("0.##") (owner statements, commission and agent logins included).</p>
                 </div>
-            }
+                <div class="col-lg-5">
+                    <h2 class="h4">Selling plots or houses: by instalment accounts</h2>
+                    <p class="text-body-secondary">Plots or houses sold on instalments and still being paid off. Fully paid sales stop counting.</p>
+                    <div class="table-responsive">
+                        <table class="table align-middle tariff-table">
+                            <thead><tr><th>Instalment accounts</th><th class="text-end">Per month</th></tr></thead>
+                            <tbody>
+                            @foreach (var b in t.SaleBands)
+                            {
+                                <tr><td>@Range(b, false)</td><td class="text-end fw-semibold">@Fee(b)</td></tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="small text-body-secondary">If you both let and sell, you pay both bands.</p>
+                </div>
+            </div>
+
+            <div class="row g-3 mt-2">
+                <div class="col-md-4"><div class="tariff-example"><strong>10 houses at KES 2,000</strong><span>Rent roll KES 20,000</span><b>Free</b></div></div>
+                <div class="col-md-4"><div class="tariff-example"><strong>7 houses at KES 6,000</strong><span>Rent roll KES 42,000</span><b>KES 600 a month</b></div></div>
+                <div class="col-md-4"><div class="tariff-example"><strong>10 houses at KES 7,000</strong><span>Rent roll KES 70,000</span><b>KES 1,200 a month</b></div></div>
+            </div>
+        }
+
+        <div class="tariff-notes mt-4">
+            <p class="mb-1"><i class="bi bi-check2-circle"></i> <strong>Free for @(t?.TrialDays / 30 ?? 2) months</strong> with everything included, no card needed.</p>
+            <p class="mb-1"><i class="bi bi-check2-circle"></i> <strong>Pay yearly, get 2 months free</strong> (12 months for the price of 10).</p>
+            <p class="mb-1"><i class="bi bi-check2-circle"></i> Pay by M-PESA or bank. Your band is worked out from your figures when you renew.</p>
+            <p class="mb-1"><i class="bi bi-check2-circle"></i> <strong>Credits</strong> pay for extras: PDFs, SMS and verified leads (KES 5 each, some included every month).</p>
+            <p class="mb-0"><i class="bi bi-check2-circle"></i> Your tenants' and buyers' money goes straight to <strong>your</strong> paybill or bank: we never hold it.</p>
         </div>
-        <p class="small text-body-secondary mt-4 mb-0">
-            Credits are used for PDFs, SMS and bulk actions (for example, 1 credit per invoice PDF). Extra credit bundles can be bought any time.
-        </p>
+
+        <div class="d-flex flex-wrap gap-2 mt-4">
+            <a href="/Identity/Account/Register" class="btn btn-accent btn-lg">Start free trial</a>
+            <form method="post" asp-area="" asp-controller="Demo" asp-action="Start" class="d-inline"><button type="submit" class="btn btn-outline-primary btn-lg">Try the live demo</button></form>
+        </div>
     </div>
 </section>

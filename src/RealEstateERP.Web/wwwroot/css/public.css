@@ -308,3 +308,10 @@ div.gallery-main { display: grid; place-items: center; font-size: 4rem; }
 .site-header .info-strip { padding: 0; }
 /* Share a listing */
 .share-card { background: #fff; border: 1px solid #DFE5EE; border-radius: .9rem; padding: .9rem 1rem; }
+/* Tariff */
+.tariff-table th { font-size: .85rem; color: #5B6B80; font-weight: 600; }
+.tariff-table .tariff-free td { background: #E8F5EE; }
+.tariff-example { background: #fff; border: 1px solid #DFE5EE; border-radius: .9rem; padding: 1rem 1.1rem; display: flex; flex-direction: column; gap: .15rem; height: 100%; }
+.tariff-example span { color: #5B6B80; font-size: .9rem; }
+.tariff-example b { color: #0B2A4A; font-size: 1.15rem; }
+.tariff-notes i { color: #2FA866; }

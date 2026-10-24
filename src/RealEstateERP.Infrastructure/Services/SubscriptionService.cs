@@ -81,6 +81,15 @@ public sealed class SubscriptionService(
         var isTrial = current.IsTrial && current.PeriodEndUtc >= paidThrough;
         var status = SubscriptionStatusCalculator.Evaluate(isTrial, paidThrough, now, graceDays);
 
+        // Lite: a business whose tariff is free (small rent roll, no instalment sales) stays active after its trial.
+        if (status is SubscriptionStatus.Grace or SubscriptionStatus.Suspended)
+        {
+            var quote = await TariffCalculator.QuoteAsync(db, businessId, await config.GetDecimalAsync(ConfigKeys.AgencyMultiplier, 1.5m, ct), ct);
+            if (quote.IsFree && quote.RentBand is not null)
+                return new SubscriptionSnapshot(SubscriptionStatus.Active, quote.RentBand.Name, quote.RentBand.Code, null, 0,
+                    paidThrough, paidThrough.AddDays(graceDays), false);
+        }
+
         return new SubscriptionSnapshot(
             status,
             current.Plan.Name,
@@ -107,10 +116,24 @@ public sealed class SubscriptionService(
         if (!AllowedMonths.Contains(request.Months))
             return Result<int>.Fail("Choose 1, 3, 6 or 12 months.");
 
-        var plans = await GetAvailablePlansAsync(businessId, ct);
-        var plan = plans.FirstOrDefault(p => p.Id == request.PlanId);
-        if (plan is null)
-            return Result<int>.Fail("That plan isn't available for your business.");
+        // Tariffs: the price comes from the business's real rent roll and instalment sales, never from the browser.
+        var quote = await TariffCalculator.QuoteAsync(db, businessId, await config.GetDecimalAsync(ConfigKeys.AgencyMultiplier, 1.5m, ct), ct);
+        SubscriptionPlan? plan;
+        decimal amount;
+        if (quote.RentBand is not null || quote.SaleBand is not null)
+        {
+            if (quote.IsQuoted) return Result<int>.Fail("Your business is above our published bands: contact us for a quote.");
+            if (quote.IsFree) return Result<int>.Fail("You're on Lite: there's nothing to pay.");
+            plan = await db.SubscriptionPlans.FirstAsync(p => p.Id == quote.PrimaryPlanId, ct);
+            amount = quote.TotalFor(request.Months);
+        }
+        else
+        {
+            var plans = await GetAvailablePlansAsync(businessId, ct);   // no tariff bands set up: classic plans
+            plan = plans.FirstOrDefault(p => p.Id == request.PlanId);
+            if (plan is null) return Result<int>.Fail("That plan isn't available for your business.");
+            amount = plan.MonthlyFee * request.Months;
+        }
 
         if (await db.SubscriptionPayments.AnyAsync(p => p.BusinessId == businessId && p.Status == PaymentVerificationStatus.Pending, ct))
             return Result<int>.Fail("You already have a payment waiting for verification.");
@@ -137,7 +160,7 @@ public sealed class SubscriptionService(
             BusinessId = businessId,
             PlanId = plan.Id,
             Months = request.Months,
-            Amount = plan.MonthlyFee * request.Months,
+            Amount = amount,
             Method = request.Method,
             Reference = reference,
             ProofStorageKey = proofKey,

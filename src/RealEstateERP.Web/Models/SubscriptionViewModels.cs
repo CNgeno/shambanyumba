@@ -47,6 +47,9 @@ public sealed class PaymentInstructions
 public sealed class RenewPageViewModel
 {
     public required SubscriptionSnapshot Snapshot { get; init; }
+    /// <summary>What this business pays under the tariff bands (null when no bands are set up).</summary>
+    public TariffQuote? Quote { get; init; }
+    public bool UsesTariff => Quote is { } q && (q.RentBand is not null || q.SaleBand is not null);
     public required IReadOnlyList<SubscriptionPlan> Plans { get; init; }
     public required PaymentInstructions Instructions { get; init; }
     public SubscriptionPayment? PendingPayment { get; init; }

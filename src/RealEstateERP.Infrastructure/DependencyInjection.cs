@@ -64,7 +64,8 @@ public static class DependencyInjection
         services.AddScoped<IAutomationService, AutomationService>();  // ORCHESTRATOR -> IBillingRunService, IArrearsService, ITenantMessagingService
         services.AddScoped<IListingService, ListingService>();
         services.AddScoped<IPublicDemoService, PublicDemoService>();
-        services.AddScoped<IReferralService, ReferralService>();           // partners, codes, commissions
+        services.AddScoped<IReferralService, ReferralService>();
+        services.AddScoped<ITariffService, TariffService>();               // tariff bands: what each business pays           // partners, codes, commissions
         services.AddScoped<ICapabilityService, CapabilityService>();       // -> ISubscriptionService (what the business uses, from its properties)
         services.AddScoped<IEstateService, EstateService>();               // -> IFileStorage, ISystemConfigService
         services.AddScoped<IMarketplaceService, MarketplaceService>(); // -> IEmailService, ISystemConfigService (public, cross-business reads)

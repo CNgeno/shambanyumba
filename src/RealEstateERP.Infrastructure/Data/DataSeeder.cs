@@ -19,6 +19,7 @@ public static class DataSeeder
         await SeedConfigurationAsync(db);
         await BackfillPropertyPurposeAsync(db);
         await ApplyBrandAsync(db);
+        await ApplyTariffsAsync(db);
         await SeedIdentityAsync(scopedServices, config);
     }
 
@@ -72,6 +73,47 @@ public static class DataSeeder
         await db.SystemConfigurations.Where(x => x.Key == ConfigKeys.SupportEmail)
             .ExecuteUpdateAsync(u => u.SetProperty(x => x.Value, "info@shambanyumba.com"));
         db.SystemConfigurations.Add(Setting(marker, "ShambaNyumba", ConfigValueType.Text, "Platform", "Brand applied (set automatically; don't change)."));
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Tariff bands (October 2026): rent-roll bands and instalment-account bands replace unit-based plans. Inserted if
+    /// missing; once (marker "Pricing.Tariffs"): retire the old unit plans from sale and make the trial 60 days with no
+    /// unit limit. Admins can change fees and credits later under Platform > Plans.
+    /// </summary>
+    private static async Task ApplyTariffsAsync(ApplicationDbContext db)
+    {
+        SubscriptionPlan Band(string code, string name, TariffMetric metric, decimal from, decimal? to, decimal fee, int credits, int order, bool quoted = false, bool agency = true)
+            => new() { Code = code, Name = name, Metric = metric, BandFrom = from, BandTo = to, MonthlyFee = fee, CreditsPerMonth = credits,
+                       SortOrder = order, IsQuoted = quoted, IncludesAgency = agency, UnitLimit = null, IsActive = true, TrialDays = 60 };
+        var bands = new[]
+        {
+            Band("LITE",   "Lite (free)",                 TariffMetric.RentRoll, 0,         20_000,    0,     0,    10, agency: false),
+            Band("RENT-1", "Rent roll up to 50,000",      TariffMetric.RentRoll, 20_000.01m, 50_000,    600,   50,   11),
+            Band("RENT-2", "Rent roll up to 100,000",     TariffMetric.RentRoll, 50_000.01m, 100_000,   1_200, 100,  12),
+            Band("RENT-3", "Rent roll up to 250,000",     TariffMetric.RentRoll, 100_000.01m, 250_000,  2_500, 200,  13),
+            Band("RENT-4", "Rent roll up to 500,000",     TariffMetric.RentRoll, 250_000.01m, 500_000,  4_500, 400,  14),
+            Band("RENT-5", "Rent roll up to 1,000,000",   TariffMetric.RentRoll, 500_000.01m, 1_000_000, 8_000, 600, 15),
+            Band("RENT-X", "Rent roll over 1,000,000",    TariffMetric.RentRoll, 1_000_000.01m, null,   0,     1_000, 16, quoted: true),
+            Band("SALE-1", "1 to 10 instalment accounts", TariffMetric.SaleAccounts, 1, 10,  1_000, 50,  20),
+            Band("SALE-2", "11 to 50 instalment accounts",TariffMetric.SaleAccounts, 11, 50, 3_500, 200, 21),
+            Band("SALE-3", "51 to 150 instalment accounts", TariffMetric.SaleAccounts, 51, 150, 8_500, 500, 22),
+            Band("SALE-X", "Over 150 instalment accounts",  TariffMetric.SaleAccounts, 151, null, 0, 1_000, 23, quoted: true),
+        };
+        var existing = await db.SubscriptionPlans.Select(p => p.Code).ToListAsync();
+        db.SubscriptionPlans.AddRange(bands.Where(b => !existing.Contains(b.Code)));
+        if (!await db.SystemConfigurations.AnyAsync(x => x.Key == ConfigKeys.AgencyMultiplier))
+            db.SystemConfigurations.Add(Setting(ConfigKeys.AgencyMultiplier, "1.5", ConfigValueType.Decimal, "Billing", "Agencies pay their rent-roll band times this."));
+        await db.SaveChangesAsync();
+
+        const string marker = "Pricing.Tariffs";
+        if (await db.SystemConfigurations.AnyAsync(x => x.Key == marker)) return;
+        var trialCode = await db.SystemConfigurations.Where(x => x.Key == ConfigKeys.TrialPlanCode).Select(x => x.Value).FirstOrDefaultAsync();
+        await db.SubscriptionPlans.Where(p => p.Code == trialCode)
+            .ExecuteUpdateAsync(u => u.SetProperty(p => p.TrialDays, 60).SetProperty(p => p.UnitLimit, (int?)null));
+        await db.SubscriptionPlans.Where(p => p.Metric == null && p.Code != trialCode)   // classic unit plans off sale; the trial plan stays active (sign-ups need it)
+            .ExecuteUpdateAsync(u => u.SetProperty(p => p.IsActive, false));
+        db.SystemConfigurations.Add(Setting(marker, "2026-10", ConfigValueType.Text, "Billing", "Tariff bands applied (set automatically; don't change)."));
         await db.SaveChangesAsync();
     }
 

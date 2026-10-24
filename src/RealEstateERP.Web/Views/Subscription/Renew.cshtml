@@ -36,6 +36,55 @@ else
     <form method="post" asp-action="Renew" enctype="multipart/form-data" id="renew-form" novalidate>
         <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
+        @if (Model.UsesTariff)
+        {
+            var q = Model.Quote!;
+            <input type="hidden" name="Input.PlanId" value="@(q.PrimaryPlanId ?? 0)" />
+            <section class="panel mb-3">
+                <h2 class="h6 mb-1">Your tariff</h2>
+                <p class="small text-body-secondary">Worked out from your figures today, like M-PESA tariffs: the band your monthly rent roll falls in@(q.SaleAccounts > 0 ? ", plus the band for your instalment sales" : "").</p>
+                <table class="table table-sm small mb-2">
+                    <tbody>
+                        @if (q.RentBand is { } rb)
+                        {
+                            <tr><td>Monthly rent roll <strong>@q.RentRoll.Kes()</strong> (let units)</td><td>@rb.Name@(q.IsAgency && rb.Fee > 0 ? $" × {q.AgencyMultiplier:0.##} agency" : "")</td><td class="text-end fw-semibold">@(rb.IsQuoted ? "Quoted" : rb.Fee.Kes())</td></tr>
+                        }
+                        @if (q.SaleBand is { } sb)
+                        {
+                            <tr><td>Instalment accounts <strong>@q.SaleAccounts</strong> (plots still being paid off)</td><td>@sb.Name</td><td class="text-end fw-semibold">@(sb.IsQuoted ? "Quoted" : sb.Fee.Kes())</td></tr>
+                        }
+                        <tr class="fw-semibold"><td colspan="2">Per month</td><td class="text-end">@(q.IsQuoted ? "Quoted" : q.MonthlyTotal.Kes())</td></tr>
+                    </tbody>
+                </table>
+                @if (q.IsQuoted)
+                {
+                    <div class="sub-banner sub-banner-info"><i class="bi bi-chat-dots"></i><span>Your business is above our published bands. Email <strong>info@shambanyumba.com</strong> for a quote.</span></div>
+                }
+                else if (q.IsFree)
+                {
+                    <div class="sub-banner sub-banner-info"><i class="bi bi-gift"></i><span><strong>You're on Lite: free.</strong> There's nothing to pay while your rent roll stays within KES 20,000 and you have no instalment sales. Credits for extras can still be bought under Credits.</span></div>
+                }
+                else
+                {
+                    <div class="row g-3 align-items-end mt-1">
+                        <div class="col-sm-4">
+                            <label asp-for="Input.Months" class="form-label">Pay for</label>
+                            <select asp-for="Input.Months" class="form-select" id="months" data-monthly="@q.MonthlyTotal.ToString(CultureInfo.InvariantCulture)">
+                                <option value="1">1 month</option>
+                                <option value="3">3 months</option>
+                                <option value="6">6 months</option>
+                                <option value="12">12 months (2 months free)</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-8">
+                            <p class="renew-total mb-1">Amount to pay: <strong id="renew-total">KES 0.00</strong></p>
+                        </div>
+                    </div>
+                }
+            </section>
+        }
+        else
+        {
         <section class="panel mb-3">
             <h2 class="h6 mb-3">Plan</h2>
             <div class="plan-grid" role="radiogroup" aria-label="Plan">
@@ -69,7 +118,10 @@ else
                 </div>
             </div>
         </section>
+        }
 
+        @if (!(Model.UsesTariff && (Model.Quote!.IsFree || Model.Quote!.IsQuoted)))   // Lite or quoted: nothing to pay here
+        {
         <section class="panel mb-3">
             <h2 class="h6 mb-3">Payment</h2>
             <div class="btn-group mb-3" role="group" aria-label="Payment method">
@@ -116,6 +168,7 @@ else
         </section>
 
         <button type="submit" class="btn btn-primary">Submit payment for verification</button>
+        }
         <a asp-action="Index" class="btn btn-link">Cancel</a>
     </form>
 }
@@ -131,9 +184,15 @@ else
             var fmt = new Intl.NumberFormat('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
             function updateTotal() {
+                if (!months || !total) return;
+                var m = parseInt(months.value, 10);
+                if (months.dataset.monthly) {   // tariff: yearly is billed as 10 months
+                    total.textContent = 'KES ' + fmt.format(sbNum(months.dataset.monthly) * (m === 12 ? 10 : m));
+                    return;
+                }
                 var plan = form.querySelector('input[name="Input.PlanId"]:checked');
                 var fee = plan ? sbNum(plan.dataset.fee) : 0;
-                total.textContent = 'KES ' + fmt.format(fee * parseInt(months.value, 10));
+                total.textContent = 'KES ' + fmt.format(fee * m);
             }
             function updateMethod() {
                 var method = form.querySelector('input[name="Input.Method"]:checked');
