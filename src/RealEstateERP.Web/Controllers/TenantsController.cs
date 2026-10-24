@@ -38,7 +38,7 @@ public class TenantsController(
             Tenants = list,
             Balances = balances,
             Owing = owing,
-            Assets = await assets.ListAsync(ct),
+            Assets = (await assets.ListAsync(ct)).ToLet(),
             Status = status,
             AssetId = assetId,
             Search = q,

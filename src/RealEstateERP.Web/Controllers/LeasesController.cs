@@ -1,3 +1,4 @@
+using RealEstateERP.Web.Formatting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RealEstateERP.Core.Common;
@@ -27,7 +28,7 @@ public class LeasesController(
         => View(new LeasesIndexViewModel
         {
             Leases = await leases.ListAsync(new LeaseListFilter(view, assetId, q), ct),
-            Assets = await assets.ListAsync(ct),
+            Assets = (await assets.ListAsync(ct)).ToLet(),
             Counts = await leases.GetCountsAsync(ct),
             View = view,
             AssetId = assetId,

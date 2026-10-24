@@ -16,7 +16,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddMemoryCache();
-builder.Services.AddHealthChecks();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddInfrastructure(builder.Configuration);
 
@@ -97,7 +96,6 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
-app.MapHealthChecks("/health").AllowAnonymous();
 app.UseAuthentication();
 app.UseMiddleware<TenantResolutionMiddleware>();   // after auth (needs the user), before authorization
 app.UseAuthorization();

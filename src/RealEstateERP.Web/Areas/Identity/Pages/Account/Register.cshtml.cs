@@ -60,7 +60,9 @@ public class RegisterModel(UserManager<ApplicationUser> users, AccountEmails ema
         }
 
         logger.LogInformation("New account created: {Email}", email);
-        await emails.SendConfirmationAsync(user, ReturnUrl);
+        // The account exists now; a mail failure must not turn that into an error page. An admin can resend from Users.
+        try { await emails.SendConfirmationAsync(user, ReturnUrl); }
+        catch (Exception ex) { logger.LogError(ex, "Confirmation email to {Email} failed.", email); }
         return RedirectToPage("./RegisterConfirmation", new { email, returnUrl = ReturnUrl });
     }
 

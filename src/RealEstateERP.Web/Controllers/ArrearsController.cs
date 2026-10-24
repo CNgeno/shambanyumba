@@ -1,3 +1,4 @@
+using RealEstateERP.Web.Formatting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using RealEstateERP.Core.Constants;
@@ -27,7 +28,7 @@ public class ArrearsController(
         return View(new ArrearsIndexViewModel
         {
             Report = report,
-            Assets = await assets.ListAsync(ct),
+            Assets = (await assets.ListAsync(ct)).ToLet(),
             AssetId = assetId,
             Stage = stage,
             PenaltiesDue = (await arrears.PreviewPenaltiesAsync(ct)).Count,

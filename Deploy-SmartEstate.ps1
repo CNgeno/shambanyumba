@@ -12,7 +12,8 @@
 param(
     [string]$ServerIP = "178.162.244.255",
     [string]$ServerUser = "root",
-    [string]$ServerPassword = "w8Rve5hW68gbwFCE",
+    # Never write the password here (this repo is shared). Leave empty to be asked when the script runs.
+    [string]$ServerPassword = $env:SMARTESTATE_SSH_PASSWORD,
     [string]$PlinkPath = "plink.exe",
     [string]$PscpPath  = "pscp.exe",
     [switch]$DryRun
@@ -32,6 +33,10 @@ $Excluded = @("*.pdb", "*.exe", "web.config", "appsettings.Development.json")
 
 # PuTTY's first-connect host-key prompt would hang a non-interactive script, so we auto-accept
 # on first connect (TOFU). Remove -hostkey / -batch to be stricter.
+if ([string]::IsNullOrEmpty($ServerPassword)) {
+    $secure = Read-Host "SSH password for $ServerUser@$ServerIP" -AsSecureString
+    $ServerPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure))
+}
 $PlinkArgs = @("-batch", "-ssh", "-pw", $ServerPassword, "$ServerUser@$ServerIP")
 $PscpArgs  = @("-batch", "-pw", $ServerPassword)
 

@@ -1,3 +1,4 @@
+using RealEstateERP.Web.Formatting;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -36,7 +37,7 @@ public class InvoicesController(
         return View(new InvoicesIndexViewModel
         {
             Invoices = await invoices.ListAsync(new InvoiceListFilter(view, monthDate, assetId, q), ct),
-            Assets = await assets.ListAsync(ct),
+            Assets = (await assets.ListAsync(ct)).ToLet(),
             Summary = await invoices.GetSummaryAsync(ct),
             View = view,
             Month = month,
@@ -242,7 +243,7 @@ public class InvoicesController(
 
     private async Task FillGenerateAsync(GenerateInvoicesViewModel model, CancellationToken ct)
     {
-        model.Assets = await assets.ListAsync(ct);
+        model.Assets = (await assets.ListAsync(ct)).ToLet();
         var (year, month) = model.Parse();
         if (year > 0)
             model.Preview = await billing.PreviewAsync(new BillingRunRequest(year, month, model.AssetId, model.IncludeDeposits, false), ct);
