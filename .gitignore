@@ -3,3 +3,10 @@ obj/
 .vs/
 *.user
 App_Data/
+.env
+
+# publish output (deploy script cleans these, but never commit them)
+/publish-deploy/
+/publish-changed/
+/smartestate-changed.tar.gz
+/smartestate-apply-*.sh

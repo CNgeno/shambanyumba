@@ -28,12 +28,27 @@ $ArchiveFile = "./smartestate-changed.tar.gz"
 $ApplyScript = "./deploy/smartestate-apply.sh"
 $Stamp = Get-Date -Format "yyyyMMdd-HHmmss"
 
-# Never sent: debug symbols, the Windows launcher, IIS-only config, and dev-only settings.
-$Excluded = @("*.pdb", "*.exe", "web.config", "appsettings.Development.json")
+# Never sent: debug symbols, the Windows launcher, IIS-only config, and settings. appsettings.json holds the
+# local dev connection string; the server keeps its own copy with the production database and email settings.
+$Excluded = @("*.pdb", "*.exe", "web.config", "appsettings.json", "appsettings.Development.json")
 
 # PuTTY's first-connect host-key prompt would hang a non-interactive script, so we auto-accept
 # on first connect (TOFU). Remove -hostkey / -batch to be stricter.
+$Interactive = [Environment]::UserInteractive -and -not [Console]::IsInputRedirected
+
+# Fall back to the git-ignored .env next to this script (KEY=value lines).
+$EnvFile = Join-Path $PSScriptRoot ".env"
+if ([string]::IsNullOrEmpty($ServerPassword) -and (Test-Path $EnvFile)) {
+    foreach ($line in Get-Content $EnvFile) {
+        if ($line -match '^\s*SMARTESTATE_SSH_PASSWORD\s*=\s*(.*?)\s*$') { $ServerPassword = $Matches[1].Trim('"', "'") }
+    }
+}
+
 if ([string]::IsNullOrEmpty($ServerPassword)) {
+    if (-not $Interactive) {
+        Write-Host "CRITICAL: No SSH password. Set `$env:SMARTESTATE_SSH_PASSWORD or pass -ServerPassword (no terminal to prompt in)." -ForegroundColor Red
+        exit 1
+    }
     $secure = Read-Host "SSH password for $ServerUser@$ServerIP" -AsSecureString
     $ServerPassword = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure))
 }
@@ -42,7 +57,7 @@ $PscpArgs  = @("-batch", "-pw", $ServerPassword)
 
 function Fail($message) {
     Write-Host "CRITICAL: $message" -ForegroundColor Red
-    Read-Host "Press Enter to exit"
+    if ($Interactive) { Read-Host "Press Enter to exit" }
     exit 1
 }
 
