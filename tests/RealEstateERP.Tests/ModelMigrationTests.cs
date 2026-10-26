@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using RealEstateERP.Infrastructure.Data;
 
 namespace RealEstateERP.Tests;
@@ -16,6 +18,11 @@ public class ModelMigrationTests
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
             .UseSqlServer("Server=(localdb)\\MSSQLLocalDB;Database=ModelCheckOnly;Trusted_Connection=True")   // never opened
+            // AddDefaultIdentity in Program.cs limits Identity's key columns to 128 characters, and the migrations were
+            // made with that; without it Identity assumes 450 and this test reports changes that aren't there.
+            .UseApplicationServiceProvider(new ServiceCollection()
+                .Configure<IdentityOptions>(o => o.Stores.MaxLengthForKeys = 128)
+                .BuildServiceProvider())
             .Options;
         using var db = new ApplicationDbContext(options, new FakeCurrentUser(), TimeProvider.System);
         Assert.False(db.Database.HasPendingModelChanges(),
