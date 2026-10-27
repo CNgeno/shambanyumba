@@ -74,7 +74,7 @@ public sealed class PlanEditViewModel
 {
     public int? Id { get; set; }
 
-    [Required, StringLength(30), RegularExpression("^[A-Za-z0-9_]+$", ErrorMessage = "Letters, numbers and underscores only.")]
+    [Required, StringLength(30), RegularExpression("^[A-Za-z0-9_-]+$", ErrorMessage = "Letters, numbers, hyphens and underscores only.")]
     public string Code { get; set; } = "";
 
     [Required, StringLength(100)]
@@ -107,4 +107,19 @@ public sealed class PlanEditViewModel
 
     [Display(Name = "Available to businesses")]
     public bool IsActive { get; set; } = true;
+
+    // ---- Tariff band (blank measure = a classic plan, e.g. the trial plan) ----
+    [Display(Name = "Tariff measure")]
+    public TariffMetric? Metric { get; set; }
+
+    [Range(0, 1_000_000_000)]
+    [Display(Name = "From")]
+    public decimal? BandFrom { get; set; }
+
+    [Range(0, 1_000_000_000)]
+    [Display(Name = "To (blank = no upper limit)")]
+    public decimal? BandTo { get; set; }
+
+    [Display(Name = "Quoted (\"contact us\" instead of a price)")]
+    public bool IsQuoted { get; set; }
 }

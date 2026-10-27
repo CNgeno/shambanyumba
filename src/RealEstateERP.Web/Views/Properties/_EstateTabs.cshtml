@@ -1,0 +1,80 @@
+@model EstatePanelModel
+@{
+    // The estate's stages as tabs: each tab holds its own work, so nothing sends you elsewhere on the page.
+    var steps = Model.Setup.Steps.ToDictionary(s => s.Key);
+    bool Done(params string[] keys) => keys.All(k => !steps.ContainsKey(k) || steps[k].Done);
+    var tabs = new List<(string Key, string Label, bool Done, bool Optional, bool IsStep)>
+    {
+        ("units", "Units", Done("units"), false, true),
+        ("photos", "Photos", Done("photos"), true, true),
+        ("charges", "Charges and readings", Done("charges", "readings"), false, true),
+        ("leases", "Tenants and leases", Done("leases"), false, true),
+        ("invoices", "Invoices", Done("invoices"), false, true),
+        ("advertise", "Advertise", Done("listing"), true, true)
+    };
+    if (Model.CanSeeFinances) tabs.Add(("costs", "Running costs", false, false, false));
+    var first = Model.Setup.Complete ? "units" : Model.Setup.Next?.Key switch { "readings" => "charges", "listing" => "advertise", string k => k, null => "units" };
+    var number = 0;
+}
+<nav class="estate-tabs mb-3" aria-label="Estate">
+    <div class="estate-tabs-head">
+        <strong>@(Model.Setup.Complete ? "This estate" : "Set up this estate")</strong>
+        <span class="small text-body-secondary">@Model.Setup.Steps.Count(s => s.Done && !s.Optional) of @Model.Setup.RequiredCount done</span>
+    </div>
+    <div class="estate-tab-row" role="tablist" data-first="@first">
+        @foreach (var t in tabs)
+        {
+            if (t.IsStep) number++;
+            var mark = !t.IsStep ? "" : t.Done ? "done" : number.ToString();
+            <button type="button" role="tab" class="estate-tab @(t.Done && t.IsStep ? "is-done" : "")" id="tab-@t.Key" data-tab="@t.Key" data-label="@t.Label" aria-controls="pane-@t.Key" aria-selected="false">
+                <span class="estate-tab-mark" aria-hidden="true">
+                    @if (mark == "done") { <i class="bi bi-check-lg"></i> }
+                    else if (mark == "") { <i class="bi bi-graph-up"></i> }
+                    else { @mark }
+                </span>
+                <span>@t.Label@if (t.Optional && !t.Done) { <small class="text-body-secondary"> (optional)</small> }</span>
+            </button>
+        }
+    </div>
+</nav>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var row = document.querySelector('.estate-tab-row');
+        if (!row) return;
+        var tabs = row.querySelectorAll('.estate-tab');
+        function show(key, remember) {
+            var pane = document.getElementById('pane-' + key);
+            if (!pane) return;
+            document.querySelectorAll('.estate-pane').forEach(function (p) { p.hidden = p !== pane; });
+            tabs.forEach(function (t) { var on = t.dataset.tab === key; t.classList.toggle('is-active', on); t.setAttribute('aria-selected', on); });
+            if (remember) history.replaceState(null, '', '#' + key);
+        }
+        tabs.forEach(function (t) { t.addEventListener('click', function () { show(t.dataset.tab, true); }); });
+
+        // Any action opened from a tab remembers this estate and tab, so a "Back to ..." bar leads straight back.
+        var estate = (document.querySelector('.page-title') || {}).textContent || 'the estate';
+        document.addEventListener('click', function (e) {
+            var a = e.target.closest && e.target.closest('.estate-pane a[href]');
+            if (!a || a.target === '_blank') return;
+            var href = a.getAttribute('href');
+            if (!href || href.charAt(0) !== '/' || href.charAt(1) === '/') return;
+            var active = row.querySelector('.estate-tab.is-active');
+            var u = new URL(href, location.origin);
+            u.searchParams.set('returnUrl', location.pathname + '#' + (active ? active.dataset.tab : 'units'));
+            u.searchParams.set('returnLabel', estate.trim() + (active ? ' · ' + active.dataset.label : ''));
+            a.setAttribute('href', u.pathname + u.search + u.hash);
+        }, true);
+        // After saving, the page comes back with an anchor (e.g. #estate-charges): open the tab that holds it.
+        var hash = decodeURIComponent((location.hash || '').slice(1)), key = row.dataset.first;
+        if (hash) {
+            if (document.getElementById('pane-' + hash)) key = hash;
+            else {
+                var target = document.getElementById(hash), pane = target && target.closest('.estate-pane');
+                if (pane) key = pane.id.replace('pane-', '');
+            }
+        }
+        show(key, false);
+        if (hash && document.getElementById(hash) && !document.getElementById('pane-' + hash))
+            document.getElementById(hash).scrollIntoView({ block: 'start' });
+    });
+</script>

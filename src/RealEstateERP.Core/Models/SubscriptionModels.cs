@@ -42,4 +42,8 @@ public sealed record SubscriptionPlanInput(
     int TrialDays,
     bool IsActive,
     int SortOrder,
-    BusinessType? ForBusinessType);
+    BusinessType? ForBusinessType,
+    TariffMetric? Metric = null,
+    decimal? BandFrom = null,
+    decimal? BandTo = null,
+    bool IsQuoted = false);

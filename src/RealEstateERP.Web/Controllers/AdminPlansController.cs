@@ -27,7 +27,8 @@ public class AdminPlansController(IPlanService plans) : Controller
         {
             Id = p.Id, Code = p.Code, Name = p.Name, Description = p.Description, UnitLimit = p.UnitLimit,
             MonthlyFee = p.MonthlyFee, CreditsPerMonth = p.CreditsPerMonth, TrialDays = p.TrialDays,
-            ForBusinessType = p.ForBusinessType, SortOrder = p.SortOrder, IsActive = p.IsActive
+            ForBusinessType = p.ForBusinessType, SortOrder = p.SortOrder, IsActive = p.IsActive,
+            Metric = p.Metric, BandFrom = p.BandFrom, BandTo = p.BandTo, IsQuoted = p.IsQuoted
         });
     }
 
@@ -38,7 +39,8 @@ public class AdminPlansController(IPlanService plans) : Controller
 
         var result = await plans.SaveAsync(new SubscriptionPlanInput(
             model.Id, model.Code, model.Name, model.Description, model.UnitLimit, model.MonthlyFee,
-            model.CreditsPerMonth, model.TrialDays, model.IsActive, model.SortOrder, model.ForBusinessType), ct);
+            model.CreditsPerMonth, model.TrialDays, model.IsActive, model.SortOrder, model.ForBusinessType,
+            model.Metric, model.BandFrom, model.BandTo, model.IsQuoted), ct);
 
         if (!result.Succeeded)
         {

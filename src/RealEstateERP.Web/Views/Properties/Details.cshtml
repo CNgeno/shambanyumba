@@ -85,13 +85,14 @@ else
 }
 @if (ViewData["Estate"] is EstatePanelModel estatePanel)
 {
-    <partial name="_EstateSetup" model="estatePanel" />
+    <partial name="_EstateTabs" model="estatePanel" />
 }
 
 
-<div class="property-grid">
+@* For an estate this grid is the Units tab; the other stages are panes below (_EstatePanes). *@
+<div class="property-grid @(ViewData["Estate"] is EstatePanelModel ? "estate-pane" : "")" id="pane-units" role="@(ViewData["Estate"] is EstatePanelModel ? "tabpanel" : null)">
     <aside>
-        <partial name="_PropertyEnquiries" />
+        @if (ViewData["Estate"] is null) { <partial name="_PropertyEnquiries" /> }
         @if (ViewData["Project"] is LandProjectModel landSide)
         {
             <section class="panel mb-3">
@@ -106,12 +107,6 @@ else
         }
         else
         {
-            @if (ViewData["Estate"] is EstatePanelModel estateSide)
-            {
-                @if (estateSide.CanSeeFinances) { <partial name="_EstateRunningCosts" model="estateSide" /> }
-                <partial name="_EstateCharges" model="estateSide" />
-                <partial name="_EstatePhotos" model="estateSide" />
-            }
         <section class="panel mb-3" id="structure">
             <div class="d-flex align-items-center gap-2 mb-2">
                 <h2 class="panel-title me-auto">Blocks and floors</h2>
@@ -458,6 +453,7 @@ else
         }
     </section>
 </div>
+@if (ViewData["Estate"] is EstatePanelModel) { <partial name="_EstatePanes" /> }
 
 @if (Model.CanEdit)
 {

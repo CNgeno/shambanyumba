@@ -1,0 +1,110 @@
+@model PropertyDetailsViewModel
+@{
+    var e = (EstatePanelModel)ViewData["Estate"]!;
+    var assetId = Model.Details.Asset.Id;
+    var units = Model.Details.Units.Where(u => u.Status != UnitStatus.Inactive).ToList();
+    var letUnits = units.Where(u => u.ActiveLeaseId is not null).ToList();
+    var vacant = units.Where(u => u.ActiveLeaseId is null && u.Status == UnitStatus.Available).ToList();
+    var metered = e.Charges.FirstOrDefault(c => c.IsMetered);
+    var readingsStep = e.Setup.Steps.FirstOrDefault(s => s.Key == "readings");
+}
+
+<section class="estate-pane" id="pane-photos" role="tabpanel" aria-labelledby="tab-photos" hidden>
+    <div class="row g-3"><div class="col-lg-8"><partial name="_EstatePhotos" model="e" /></div></div>
+</section>
+
+<section class="estate-pane" id="pane-charges" role="tabpanel" aria-labelledby="tab-charges" hidden>
+    <div class="row g-3">
+        <div class="col-lg-6"><partial name="_EstateCharges" model="e" /></div>
+        <div class="col-lg-6">
+            <section class="panel">
+                <h2 class="panel-title mb-1">Meter readings</h2>
+                @if (metered is null)
+                {
+                    <p class="small text-body-secondary mb-0">No metered charge here. Add one (e.g. water, price per unit) in Estate charges if tenants pay by the meter.</p>
+                }
+                else
+                {
+                    <p class="small text-body-secondary">Each unit needs a starting (opening) reading; it isn't billed. After that, enter readings at the end of each month: they go on the next invoice.</p>
+                    @if (readingsStep is { Done: false }) { <p class="small text-danger mb-2"><i class="bi bi-exclamation-circle me-1"></i>Opening readings are still missing for some units.</p> }
+                    @if (e.CanEdit) { <a asp-controller="Readings" asp-action="Sheet" asp-route-assetId="@assetId" asp-route-chargeId="@metered.ChargeDefinitionId" class="btn btn-sm btn-primary">Enter @metered.Name.ToLowerInvariant() readings</a> }
+                }
+            </section>
+        </div>
+    </div>
+</section>
+
+<section class="estate-pane" id="pane-leases" role="tabpanel" aria-labelledby="tab-leases" hidden>
+    <section class="panel p-0">
+        <div class="units-toolbar">
+            <h2 class="panel-title me-auto">Tenants and leases <span class="small text-body-secondary fw-normal">@letUnits.Count let, @vacant.Count vacant</span></h2>
+            <a asp-controller="Leases" asp-action="Index" asp-route-assetId="@assetId" class="btn btn-sm btn-outline-primary">All leases here</a>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0 table-stack">
+                <thead><tr><th>Unit</th><th>Tenant</th><th class="text-end">Rent</th><th></th></tr></thead>
+                <tbody>
+                @foreach (var u in vacant)
+                {
+                    <tr>
+                        <td class="fw-semibold">@u.UnitNumber</td>
+                        <td class="text-body-secondary">Vacant</td>
+                        <td class="text-end">@u.MonthlyRent.Kes()</td>
+                        <td class="text-end">@if (e.CanEdit) { <a asp-controller="Leases" asp-action="Create" asp-route-unitId="@u.Id" class="btn btn-sm btn-primary">Create lease</a> }</td>
+                    </tr>
+                }
+                @foreach (var u in letUnits)
+                {
+                    <tr>
+                        <td class="fw-semibold">@u.UnitNumber</td>
+                        <td>@if (u.TenantId is int tid) { <a asp-controller="Tenants" asp-action="Details" asp-route-id="@tid" class="row-link">@u.TenantName</a> } else { @u.TenantName }</td>
+                        <td class="text-end">@u.MonthlyRent.Kes()</td>
+                        <td class="text-end"><a asp-controller="Leases" asp-action="Details" asp-route-id="@u.ActiveLeaseId" class="btn btn-sm btn-outline-primary">View lease</a></td>
+                    </tr>
+                }
+                @if (units.Count == 0) { <tr><td colspan="4" class="small text-body-secondary">Add the units first (Units tab).</td></tr> }
+                </tbody>
+            </table>
+        </div>
+    </section>
+    <p class="small text-body-secondary mt-2">New leases here get the estate's charges automatically.</p>
+</section>
+
+<section class="estate-pane" id="pane-invoices" role="tabpanel" aria-labelledby="tab-invoices" hidden>
+    <section class="panel">
+        <h2 class="panel-title mb-1">Invoices for this estate</h2>
+        <p class="small text-body-secondary">Each month every active lease gets one invoice: rent, the estate's charges and water from the readings. The preview checks for missing charges and readings before anything is issued.</p>
+        <div class="d-flex flex-wrap gap-2">
+            @if (e.CanEdit) { <a asp-controller="Invoices" asp-action="Generate" asp-route-assetId="@assetId" class="btn btn-primary"><i class="bi bi-receipt me-1"></i>Generate this month's invoices</a> }
+            <a asp-controller="Invoices" asp-action="Index" asp-route-assetId="@assetId" class="btn btn-outline-primary">Invoices here</a>
+            <a asp-controller="Arrears" asp-action="Index" asp-route-assetId="@assetId" class="btn btn-outline-primary">Arrears here</a>
+            @if (metered is not null) { <a asp-controller="Readings" asp-action="Sheet" asp-route-assetId="@assetId" asp-route-chargeId="@metered.ChargeDefinitionId" class="btn btn-outline-primary">Meter readings</a> }
+        </div>
+        <p class="small text-body-secondary mt-3 mb-0">Prefer it automatic? <a asp-controller="BusinessSettings" asp-action="Automation">Business settings → Automation</a> can invoice every month and email tenants.</p>
+    </section>
+</section>
+
+<section class="estate-pane" id="pane-advertise" role="tabpanel" aria-labelledby="tab-advertise" hidden>
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <section class="panel">
+                <h2 class="panel-title mb-1">Advertise vacant units</h2>
+                <p class="small text-body-secondary">Listing is free; you pay credits only for verified leads. Listings use this estate's photos and description (Photos tab).</p>
+                <div class="d-flex flex-wrap gap-2">
+                    @if (e.CanEdit && vacant.Count > 0) { <a asp-controller="Listings" asp-action="Create" asp-route-unitId="@vacant[0].Id" class="btn btn-primary">List a vacant unit</a> }
+                    <a asp-controller="Listings" asp-action="Index" class="btn btn-outline-primary">All listings</a>
+                    <a asp-controller="BusinessSettings" asp-action="Automation" class="btn btn-outline-primary">List vacant units automatically</a>
+                </div>
+                @if (vacant.Count == 0) { <p class="small text-body-secondary mt-2 mb-0">No vacant units right now.</p> }
+            </section>
+        </div>
+        <div class="col-lg-6"><partial name="_PropertyEnquiries" /></div>
+    </div>
+</section>
+
+@if (e.CanSeeFinances)
+{
+    <section class="estate-pane" id="pane-costs" role="tabpanel" aria-labelledby="tab-costs" hidden>
+        <div class="row g-3"><div class="col-lg-6"><partial name="_EstateRunningCosts" model="e" /></div></div>
+    </section>
+}

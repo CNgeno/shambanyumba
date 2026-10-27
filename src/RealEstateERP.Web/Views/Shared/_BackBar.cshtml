@@ -1,0 +1,24 @@
+@{
+    // "Back to Belbur Estate · Tenants and leases": set when an action is opened from an estate tab (see Program.cs).
+    var raw = Context.Items["sn_back"] as string ?? Context.Request.Cookies["sn_back"];
+    string? label = null, url = null;
+    if (raw?.Split('|') is { Length: 2 } parts)
+    {
+        label = Uri.UnescapeDataString(parts[0]);
+        url = Uri.UnescapeDataString(parts[1]);
+        if (!url.StartsWith('/') || url.StartsWith("//") || url.StartsWith("/\\")) { label = url = null; }
+    }
+    var backPath = url?.Split('#', '?')[0];
+    var onReturnPage = backPath is not null && string.Equals(backPath, Context.Request.Path.Value, StringComparison.OrdinalIgnoreCase);
+}
+@if (url is not null && !onReturnPage)
+{
+    <div class="back-bar" id="back-bar">
+        <a href="@url" class="back-bar-link"><i class="bi bi-arrow-left" aria-hidden="true"></i> Back to <strong>@label</strong></a>
+        <button type="button" class="back-bar-close" aria-label="Close" onclick="document.cookie='sn_back=; Max-Age=0; path=/'; document.getElementById('back-bar').remove();">&times;</button>
+    </div>
+}
+else if (onReturnPage)
+{
+    <script>document.cookie = 'sn_back=; Max-Age=0; path=/';</script>
+}

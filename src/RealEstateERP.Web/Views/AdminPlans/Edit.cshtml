@@ -66,6 +66,34 @@
             </div>
         </div>
     </div>
+
+    <h2 class="h6 mt-4 mb-1">Tariff band</h2>
+    <p class="small text-body-secondary">For pricing like M-PESA tariffs: a business whose rent roll (or number of instalment accounts) falls between <em>From</em> and <em>To</em> pays this plan's monthly fee. Leave the measure blank for a classic plan such as the trial. Active bands of the same measure can't overlap; to split a band, first narrow it here, then add the new one.</p>
+    <div class="row g-3">
+        <div class="col-sm-4">
+            <label asp-for="Metric" class="form-label"></label>
+            <select asp-for="Metric" asp-items="Html.GetEnumSelectList<TariffMetric>()" class="form-select">
+                <option value="">None (classic plan)</option>
+            </select>
+        </div>
+        <div class="col-sm-3">
+            <label asp-for="BandFrom" class="form-label"></label>
+            <input asp-for="BandFrom" class="form-control" inputmode="decimal" />
+            <span asp-validation-for="BandFrom" class="invalid-feedback d-block"></span>
+        </div>
+        <div class="col-sm-3">
+            <label asp-for="BandTo" class="form-label"></label>
+            <input asp-for="BandTo" class="form-control" inputmode="decimal" />
+            <span asp-validation-for="BandTo" class="invalid-feedback d-block"></span>
+        </div>
+        <div class="col-sm-2 d-flex align-items-end">
+            <div class="form-check">
+                <input asp-for="IsQuoted" class="form-check-input" />
+                <label asp-for="IsQuoted" class="form-check-label">Quoted</label>
+            </div>
+        </div>
+    </div>
+    <p class="form-text">Rent-roll bands are in KES of monthly rent (e.g. From 20,000.01 To 30,000). Instalment bands count accounts (e.g. From 11 To 50).</p>
     <button type="submit" class="btn btn-primary mt-4">Save plan</button>
 </form>
 

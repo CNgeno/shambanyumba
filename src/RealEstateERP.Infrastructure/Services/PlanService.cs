@@ -1,3 +1,4 @@
+using RealEstateERP.Core.Enums;
 using Microsoft.EntityFrameworkCore;
 using RealEstateERP.Core.Common;
 using RealEstateERP.Core.Constants;
@@ -36,6 +37,23 @@ public sealed class PlanService(ApplicationDbContext db, ISystemConfigService co
             db.SubscriptionPlans.Add(plan);
         }
 
+        // Tariff bands: a sensible range that doesn't overlap another active band of the same measure
+        // (an overlap would make the price ambiguous; the calculator picks one band per measure).
+        if (input.Metric is TariffMetric metric)
+        {
+            var from = input.BandFrom ?? 0m;
+            if (from < 0) return Result<int>.Fail("'From' can't be negative.");
+            if (input.BandTo is decimal to && to <= from) return Result<int>.Fail("'To' must be more than 'From' (or blank for no upper limit).");
+            if (input.IsActive)
+            {
+                var others = await db.SubscriptionPlans.AsNoTracking()
+                    .Where(p => p.IsActive && p.Metric == metric && p.Id != (input.Id ?? 0)).ToListAsync(ct);
+                var clash = others.FirstOrDefault(o => (o.BandFrom ?? 0) <= (input.BandTo ?? decimal.MaxValue) && from <= (o.BandTo ?? decimal.MaxValue));
+                if (clash is not null)
+                    return Result<int>.Fail($"This range overlaps the active band '{clash.Name}' ({clash.BandFrom:N2} to {(clash.BandTo is decimal t ? t.ToString("N2") : "no limit")}). Adjust or deactivate that band first.");
+            }
+        }
+
         var trialCode = await config.GetAsync(ConfigKeys.TrialPlanCode, ct);
         if (!input.IsActive && string.Equals(plan.Code, trialCode, StringComparison.OrdinalIgnoreCase))
             return Result<int>.Fail("This plan is used for new-business trials. Choose another trial plan in Settings first.");
@@ -49,6 +67,10 @@ public sealed class PlanService(ApplicationDbContext db, ISystemConfigService co
         plan.IsActive = input.IsActive;
         plan.SortOrder = input.SortOrder;
         plan.ForBusinessType = input.ForBusinessType;
+        plan.Metric = input.Metric;
+        plan.BandFrom = input.Metric is null ? null : input.BandFrom ?? 0m;
+        plan.BandTo = input.Metric is null ? null : input.BandTo;
+        plan.IsQuoted = input.Metric is not null && input.IsQuoted;
 
         await db.SaveChangesAsync(ct);
         return Result<int>.Ok(plan.Id);

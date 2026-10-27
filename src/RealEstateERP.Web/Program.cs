@@ -111,6 +111,24 @@ app.Use(async (context, next) =>
     await next();
 });
 app.UseMiddleware<RealEstateERP.Web.Security.DemoGuardMiddleware>();   // demo logins can't touch account, payments or settings
+// "Back to …" trail: a link that carries returnUrl + returnLabel (e.g. from an estate's tab) is remembered for 2 hours,
+// so every page in that flow shows a bar leading straight back to the same estate tab.
+app.Use(async (context, next) =>
+{
+    if (HttpMethods.IsGet(context.Request.Method)
+        && context.Request.Query.TryGetValue("returnLabel", out var label) && context.Request.Query.TryGetValue("returnUrl", out var url)
+        && url.ToString() is { Length: > 1 } back && back.StartsWith('/') && !back.StartsWith("//") && !back.StartsWith("/\\")
+        && label.ToString() is { Length: > 0 and <= 100 } text)
+    {
+        var value = Uri.EscapeDataString(text) + "|" + Uri.EscapeDataString(back);
+        context.Items["sn_back"] = value;   // this request's page shows the bar too
+        context.Response.Cookies.Append("sn_back", value, new CookieOptions
+        {
+            Path = "/", Expires = DateTimeOffset.UtcNow.AddHours(2), SameSite = SameSiteMode.Lax, Secure = context.Request.IsHttps, IsEssential = true
+        });
+    }
+    await next();
+});
 app.UseRateLimiter();
 
 app.MapControllerRoute("default", "{controller=Home}/{action=Index}/{id?}");

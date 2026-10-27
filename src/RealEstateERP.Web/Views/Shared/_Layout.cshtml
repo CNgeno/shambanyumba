@@ -224,6 +224,7 @@
         </header>
 
         <main class="content" id="main-content">
+            <partial name="_BackBar" />
             @if (!hideBanner)
             {
                 @await Component.InvokeAsync("SubscriptionBanner")

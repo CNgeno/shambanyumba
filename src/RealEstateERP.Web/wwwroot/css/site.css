@@ -586,3 +586,25 @@ h1, h2, h3, h4, h5, h6 { color: var(--sb-ink); }
 .auth-brand .brand-lockup { width: 210px; margin: 0 auto; }
 .partner-qr { display: inline-block; padding: .6rem; background: #fff; border: 1px solid var(--sb-line); border-radius: .6rem; }
 .partner-qr img, .partner-qr canvas { display: block; }
+
+/* ================= Estate stages as tabs ================= */
+.estate-tabs { background: var(--sb-surface, #fff); border: 1px solid var(--sb-line); border-radius: .9rem; padding: .8rem 1rem .4rem; }
+.estate-tabs-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: .5rem; }
+.estate-tab-row { display: flex; gap: .35rem; overflow-x: auto; padding-bottom: .4rem; scrollbar-width: thin; }
+.estate-tab { display: inline-flex; align-items: center; gap: .5rem; white-space: nowrap; border: 1px solid var(--sb-line); background: #fff;
+    color: var(--sb-text); border-radius: 999px; padding: .4rem .85rem .4rem .45rem; font-size: .88rem; font-weight: 600; }
+.estate-tab:hover { border-color: var(--sb-brand); }
+.estate-tab-mark { width: 1.6rem; height: 1.6rem; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    border: 2px solid var(--sb-line); font-size: .8rem; flex: 0 0 auto; }
+.estate-tab.is-done .estate-tab-mark { background: var(--sb-brand); border-color: var(--sb-brand); color: #fff; }
+.estate-tab.is-active { background: var(--sb-brand); border-color: var(--sb-brand); color: #fff; }
+.estate-tab.is-active .estate-tab-mark { border-color: rgba(255,255,255,.7); color: #fff; }
+.estate-tab.is-active small { color: rgba(255,255,255,.8) !important; }
+.estate-pane[hidden] { display: none !important; }
+/* "Back to …" bar: pinned while working on an action opened from an estate tab */
+.back-bar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: .75rem; margin: -.25rem 0 1rem;
+    background: var(--sb-brand); color: #fff; border-radius: .6rem; padding: .55rem .9rem; box-shadow: 0 4px 12px rgba(11,42,74,.18); }
+.back-bar-link { color: #fff; text-decoration: none; flex: 1; }
+.back-bar-link:hover { color: #fff; text-decoration: underline; }
+.back-bar-close { background: none; border: 0; color: #fff; font-size: 1.3rem; line-height: 1; opacity: .8; }
+.back-bar-close:hover { opacity: 1; }
