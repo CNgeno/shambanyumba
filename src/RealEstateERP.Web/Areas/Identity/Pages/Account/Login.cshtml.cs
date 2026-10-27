@@ -5,10 +5,11 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using RealEstateERP.Infrastructure.Identity;
+using RealEstateERP.Web.Filters;
 
 namespace RealEstateERP.Web.Areas.Identity.Pages.Account;
 
-[AllowAnonymous]
+[AllowAnonymous, StaleFormRecovery]
 public class LoginModel(SignInManager<ApplicationUser> signIn, UserManager<ApplicationUser> users, ILogger<LoginModel> logger) : PageModel
 {
     [BindProperty] public InputModel Input { get; set; } = new();
