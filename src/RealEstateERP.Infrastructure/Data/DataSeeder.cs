@@ -20,6 +20,7 @@ public static class DataSeeder
         await BackfillPropertyPurposeAsync(db);
         await ApplyBrandAsync(db);
         await ApplyTariffsAsync(db);
+        await ApplySetupWindowAsync(db);
         await SeedIdentityAsync(scopedServices, config);
     }
 
@@ -88,7 +89,7 @@ public static class DataSeeder
                        SortOrder = order, IsQuoted = quoted, IncludesAgency = agency, UnitLimit = null, IsActive = true, TrialDays = 60 };
         var bands = new[]
         {
-            Band("LITE",   "Lite (free)",                 TariffMetric.RentRoll, 0,         20_000,    0,     0,    10, agency: false),
+            Band("LITE",   "Rent roll up to 20,000",      TariffMetric.RentRoll, 0,         20_000,    200,   20,   10, agency: false),
             Band("RENT-1", "Rent roll up to 50,000",      TariffMetric.RentRoll, 20_000.01m, 50_000,    600,   50,   11),
             Band("RENT-2", "Rent roll up to 100,000",     TariffMetric.RentRoll, 50_000.01m, 100_000,   1_200, 100,  12),
             Band("RENT-3", "Rent roll up to 250,000",     TariffMetric.RentRoll, 100_000.01m, 250_000,  2_500, 200,  13),
@@ -114,6 +115,23 @@ public static class DataSeeder
         await db.SubscriptionPlans.Where(p => p.Metric == null && p.Code != trialCode)   // classic unit plans off sale; the trial plan stays active (sign-ups need it)
             .ExecuteUpdateAsync(u => u.SetProperty(p => p.IsActive, false));
         db.SystemConfigurations.Add(Setting(marker, "2026-10", ConfigValueType.Text, "Billing", "Tariff bands applied (set automatically; don't change)."));
+        await db.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// November 2026: no free trial and no free band. New businesses get a 14-day setup window (never advertised as
+    /// free; sales agents follow them up), and the lowest band (LITE) costs KES 200 with 20 credits. Once (marker
+    /// "Pricing.SetupWindow"), so later edits under Platform > Plans are kept.
+    /// </summary>
+    private static async Task ApplySetupWindowAsync(ApplicationDbContext db)
+    {
+        const string marker = "Pricing.SetupWindow";
+        if (await db.SystemConfigurations.AnyAsync(x => x.Key == marker)) return;
+        var trialCode = await db.SystemConfigurations.Where(x => x.Key == ConfigKeys.TrialPlanCode).Select(x => x.Value).FirstOrDefaultAsync();
+        await db.SubscriptionPlans.Where(p => p.Code == trialCode).ExecuteUpdateAsync(u => u.SetProperty(p => p.TrialDays, 14));
+        await db.SubscriptionPlans.Where(p => p.Code == "LITE").ExecuteUpdateAsync(u => u
+            .SetProperty(p => p.MonthlyFee, 200m).SetProperty(p => p.CreditsPerMonth, 20).SetProperty(p => p.Name, "Rent roll up to 20,000"));
+        db.SystemConfigurations.Add(Setting(marker, "2026-11", ConfigValueType.Text, "Billing", "14-day setup window and KES 200 lowest band applied (set automatically; don't change)."));
         await db.SaveChangesAsync();
     }
 

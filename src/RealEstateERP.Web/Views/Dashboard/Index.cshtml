@@ -206,7 +206,7 @@ else if (Model.AwaitingConfirmation > 0)
         {
             <p class="sub-days"><span class="sub-days-num">@days</span> @(days == 1 ? "day" : "days") left</p>
             <p class="small text-body-secondary mb-3">
-                @(s.IsTrial ? "Free trial ends" : "Paid through") @s.PaidThroughUtc.ToEatDate()
+                @(s.IsTrial ? "Setup period ends" : "Paid through") @s.PaidThroughUtc.ToEatDate()
             </p>
         }
         <ul class="sub-facts">

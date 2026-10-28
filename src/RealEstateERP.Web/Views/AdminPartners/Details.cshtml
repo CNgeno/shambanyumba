@@ -10,7 +10,7 @@
 
 <section class="stat-strip mb-3">
     <div class="stat"><span class="stat-label">Code</span><span class="stat-value"><code>@p.Code</code></span></div>
-    <div class="stat"><span class="stat-label">Trials started</span><span class="stat-value">@p.Trials</span></div>
+    <div class="stat"><span class="stat-label">Signed up</span><span class="stat-value">@p.Trials</span></div>
     <div class="stat"><span class="stat-label">Paying customers</span><span class="stat-value">@p.Paying</span></div>
     <div class="stat"><span class="stat-label">Commission owed</span><span class="stat-value @(p.Owed > 0 ? "text-danger" : "")">KES @p.Owed.ToString("N0")</span><span class="stat-note">KES @p.Paid.ToString("N0") paid</span></div>
 </section>
@@ -18,7 +18,7 @@
 <section class="panel mb-3" id="share-kit">
     <h2 class="panel-title mb-2">Share kit for @p.Name</h2>
     @{
-        var promoText = $"Manage your rentals and plot sales on your phone with ShambaNyumba: bill tenants in one click, track every payment, sell plots on instalments. FREE for 2 months, no card needed. Use my code {p.Code}: {link}";
+        var promoText = $"Manage your rentals and plot sales on your phone with ShambaNyumba: bill tenants in one click, track every payment, sell plots on instalments. From just KES 200 a month, and their team sets you up free. Use my code {p.Code}: {link}";
         var kitForPartner = $"Hi {p.Name.Split(' ')[0]}, here is your ShambaNyumba promoter kit.\n\nYour code: {p.Code}\nYour link: {link}\n\nAlways share the link or ask people to type your code when they create their business. That's how your customers (and your commission) are counted.\n\nReady-made post:\n{promoText}";
         var phone = Model.Phone is null ? null : new string(Model.Phone.Where(char.IsDigit).ToArray());
         if (phone is { Length: 10 } && phone.StartsWith("0")) phone = "254" + phone[1..];
@@ -87,7 +87,7 @@
                         <tr>
                             <td class="fw-semibold">@b.Name</td>
                             <td>@b.CreatedAtUtc.ToEatDate()</td>
-                            <td>@(b.Paying ? "Paying" : "Trial")</td>
+                            <td>@(b.Paying ? "Paying" : "Setup period: follow up")</td>
                             <td class="text-end">
                                 @if (b.CommissionId is int cid && b.Commission is decimal amount && amount > 0)
                                 {

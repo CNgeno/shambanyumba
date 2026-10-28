@@ -93,7 +93,7 @@
                     else
                     {
                         <a asp-area="Identity" asp-page="/Account/Login" class="nav-link nav-signin">Sign in</a>
-                        <a asp-area="Identity" asp-page="/Account/Register" class="btn btn-accent">Start free trial</a>
+                        <a asp-area="Identity" asp-page="/Account/Register" class="btn btn-accent">Get started</a>
                     }
                 </div>
             </div>
@@ -135,7 +135,7 @@
             <div class="col-md-4 col-lg-3">
                 <h2 class="footer-title">Get started</h2>
                 <ul class="footer-links">
-                    <li><a asp-area="Identity" asp-page="/Account/Register">Start a free trial</a></li>
+                    <li><a asp-area="Identity" asp-page="/Account/Register">Get started</a></li>
                     <li><a asp-area="Identity" asp-page="/Account/Login">Sign in</a></li>
                     @if (!string.IsNullOrWhiteSpace(supportEmail)) { <li><a href="mailto:@supportEmail">@supportEmail</a></li> }
                 </ul>

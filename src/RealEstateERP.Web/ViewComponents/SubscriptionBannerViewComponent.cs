@@ -34,7 +34,7 @@ public sealed class SubscriptionBannerViewComponent(
         return s.Status switch
         {
             SubscriptionStatus.Trial => new(days <= 7 ? "warning" : "info",
-                $"Free trial: {days} {dayWord} left, ends {s.PaidThroughUtc.ToEatDate()}.", true),
+                $"Setup period: {days} {dayWord} left, ends {s.PaidThroughUtc.ToEatDate()}. Pay your first month to keep going.", true),
 
             SubscriptionStatus.Active when days <= 5 => new("info",
                 $"Your {s.PlanName} plan ends in {days} {dayWord} ({s.PaidThroughUtc.ToEatDate()}).", true),

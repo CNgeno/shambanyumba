@@ -23,7 +23,7 @@
                             <input asp-for="ManagesForOthers" class="form-check-input" />
                             <label asp-for="ManagesForOthers" class="form-check-label"></label>
                         </div>
-                        <div class="form-text">Adds owners, management contracts, owner statements and agent logins (Agent and Enterprise plans, or during the trial). Letting and selling follow your properties.</div>
+                        <div class="form-text">Adds owners, management contracts, owner statements and agent logins (Agent and Enterprise plans, or during the setup perial). Letting and selling follow your properties.</div>
                     </div>
                     <div class="col-sm-6">
                         <label asp-for="Email" class="form-label"></label>
@@ -74,7 +74,7 @@
 @if (ViewData["Referral"] is CustomerReferral referral)
 {
     var refLink = $"https://shambanyumba.com/?ref={referral.Code}";
-    var refText = Uri.EscapeDataString($"I manage my rentals with ShambaNyumba. Try it free for 2 months: {refLink}");
+    var refText = Uri.EscapeDataString($"I manage my rentals with ShambaNyumba. From KES 200 a month, and they set it up for you: {refLink}");
     <section class="panel mt-3 referral-panel">
         <h2 class="panel-title mb-1"><i class="bi bi-gift me-1"></i>Refer a landlord, get a month free</h2>
         <p class="small text-body-secondary">Share your link. When a landlord, agency or developer you refer subscribes, your subscription runs a month longer, every time.</p>
