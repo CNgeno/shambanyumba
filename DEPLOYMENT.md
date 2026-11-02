@@ -123,3 +123,11 @@ The booking site is a second web app (`src/RealEstateERP.Booking.Web`) using the
 
 Locally: run both projects (main on https://localhost:7180, booking on https://localhost:7280); sign in on the main
 site, then open https://localhost:7280/host.
+
+### On the ShambaNyumba server (this VM)
+
+Both sites run on the one server behind nginx: `smartestate` (shambanyumba.com, 127.0.0.1:5010) and
+`smartestate-booking` (booking.shambanyumba.com, 127.0.0.1:5011), each with its own env file. To deploy, run
+`bash deploy/deploy-live.sh` (both sites), or add `main` or `booking` to deploy only one. It pulls `main`, builds,
+tests, backs up the database, then deploys the main site (which migrates) before the booking site, rolling back the
+files of either site if its `/health` fails.
