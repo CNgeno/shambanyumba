@@ -15,6 +15,11 @@ using RealEstateERP.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Behind nginx: trust its X-Forwarded-Proto/For (only from this machine, the .NET default), so the app knows visitors
+// use https: correct absolute links, secure cookies, and sign-in returns between the two sites.
+builder.Services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>(o =>
+    o.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto);
+
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -92,6 +97,7 @@ builder.Services.AddControllersWithViews(o => o.Filters.Add<SubscriptionGateFilt
 builder.Services.AddRazorPages();
 
 var app = builder.Build();
+app.UseForwardedHeaders();   // first: everything after sees the real scheme and client address
 
 // Migrations (Development, with safety checks) + seeding. See DatabaseInitializer.
 await DatabaseInitializer.InitializeAsync(app.Services, app.Environment, app.Configuration);

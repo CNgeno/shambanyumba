@@ -44,6 +44,7 @@
                     <td data-label="Nightly" class="text-end">@(u.Nightly > 0 ? u.Nightly.Kes() : "Not set")</td>
                     <td class="text-end text-nowrap">
                         <a asp-controller="Units" asp-action="Edit" asp-route-id="@u.UnitId" class="btn btn-sm btn-link">Edit unit</a>
+                        <a asp-controller="Estate" asp-action="UnitPhotos" asp-route-unitId="@u.UnitId" class="btn btn-sm btn-link">Photos</a>
                         <a href="@site/host/stays/@u.StayUnitId" class="btn btn-sm btn-outline-primary">Rates and details</a>
                     </td>
                 </tr>
@@ -55,5 +56,13 @@
             </tbody>
         </table>
     </div>
+</section>
+<section class="panel mb-3" id="estate-photos">
+    <h2 class="panel-title mb-1">Property photos</h2>
+    <p class="small text-body-secondary">Outside, gate, compound and views. Guests see them after each stay's own photos (add those with <strong>Photos</strong> on each unit above).</p>
+    <form method="post" asp-controller="Estate" asp-action="AddPhotos" asp-route-assetId="@ViewContext.RouteData.Values["id"]" enctype="multipart/form-data" class="d-flex flex-wrap gap-2 align-items-center">
+        <input type="file" name="files" accept="image/*" multiple class="form-control form-control-sm" style="max-width: 360px" required />
+        <button type="submit" class="btn btn-sm btn-primary">Upload photos</button>
+    </form>
 </section>
 <p class="small text-body-secondary">Short stays don't use leases, rent or invoices: guests book by the night on the booking site, where you also set weekend and seasonal rates, length-of-stay discounts and cleaning fees.</p>

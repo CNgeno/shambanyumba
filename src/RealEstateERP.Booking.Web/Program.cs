@@ -8,6 +8,11 @@ using RealEstateERP.Infrastructure.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Behind nginx: trust its X-Forwarded-Proto/For (only from this machine, the .NET default), so the app knows visitors
+// use https: correct absolute links, secure cookies, and sign-in returns between the two sites.
+builder.Services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>(o =>
+    o.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto);
+
 // Shared services may be registered for things this site never uses (e.g. the main site's sign-in manager),
 // so don't fail at start-up over them; each is resolved only when used.
 builder.Host.UseDefaultServiceProvider(o => { o.ValidateScopes = true; o.ValidateOnBuild = false; });
@@ -42,6 +47,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddHostedService<HoldExpiryService>();   // releases unpaid guest-site holds
 
 var app = builder.Build();
+app.UseForwardedHeaders();   // first: everything after sees the real scheme and client address
 
 if (!app.Environment.IsDevelopment())
 {
