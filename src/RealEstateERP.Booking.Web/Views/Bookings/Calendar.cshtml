@@ -1,0 +1,76 @@
+@model HostCalendar
+@{
+    ViewData["Title"] = "Calendar";
+    var canEdit = ViewData["CanEdit"] is true;
+    var today = (DateOnly)ViewData["Today"]!;
+    var days = Enumerable.Range(0, Model.Days).Select(i => Model.From.AddDays(i)).ToList();
+    string Cls(CalendarCell c) => c.BlockId is not null ? "bk-cal-block" : c.Channel switch
+    {
+        BookingChannel.Airbnb => "bk-cal-airbnb", BookingChannel.BookingCom => "bk-cal-bcom", null => "", _ => "bk-cal-direct"
+    };
+}
+<section class="bk-wrap">
+    <div class="bk-head">
+        <h1 class="bk-title">Calendar</h1>
+        <div class="bk-actions bk-actions-tight">
+            <a class="bk-btn bk-btn-light bk-btn-outline" href="/host/calendar?from=@Model.From.AddDays(-14).ToString("yyyy-MM-dd")">&larr; Earlier</a>
+            <a class="bk-btn bk-btn-light bk-btn-outline" href="/host/calendar">Today</a>
+            <a class="bk-btn bk-btn-light bk-btn-outline" href="/host/calendar?from=@Model.From.AddDays(14).ToString("yyyy-MM-dd")">Later &rarr;</a>
+        </div>
+    </div>
+    <p class="bk-muted bk-small"><span class="bk-key bk-cal-direct"></span> Direct, walk-in or phone <span class="bk-key bk-cal-airbnb"></span> Airbnb <span class="bk-key bk-cal-bcom"></span> Booking.com <span class="bk-key bk-cal-block"></span> Blocked. @(canEdit ? "Click a free night to book it." : "")</p>
+    <div class="bk-cal-wrap">
+        <table class="bk-cal">
+            <thead>
+                <tr><th class="bk-cal-unit">Stay</th>
+                    @foreach (var d in days) { <th class="@(d == today ? "bk-cal-today" : "") @(d.DayOfWeek is DayOfWeek.Friday or DayOfWeek.Saturday ? "bk-cal-weekend" : "")">@d.ToString("ddd")<br />@d.Day</th> }
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var row in Model.Rows)
+            {
+                <tr>
+                    <th class="bk-cal-unit"><a href="/host/stays/@row.StayUnitId">@row.Title</a><br /><span class="bk-muted">@row.UnitNumber</span></th>
+                    @foreach (var c in row.Cells)
+                    {
+                        if (c.BookingId is int bid)
+                        {
+                            <td class="bk-cal-busy @Cls(c)"><a href="/host/bookings/@bid" title="@c.BookingNumber · @c.GuestName">@(c.IsFirstNight ? c.GuestName : "")</a></td>
+                        }
+                        else if (c.BlockId is int blockId)
+                        {
+                            <td class="bk-cal-busy bk-cal-block" title="@c.BlockReason">
+                                @if (canEdit)
+                                {
+                                    <form method="post" action="/host/calendar/unblock/@blockId?from=@Model.From.ToString("yyyy-MM-dd")" class="bk-inline" onsubmit="return confirm('Open these dates again?');">@Html.AntiForgeryToken()<button type="submit" class="bk-cal-x" title="Unblock">×</button></form>
+                                }
+                            </td>
+                        }
+                        else
+                        {
+                            <td class="bk-cal-free">@if (canEdit && c.Night >= today) { <a href="/host/bookings/new?stayUnitId=@row.StayUnitId&checkIn=@c.Night.ToString("yyyy-MM-dd")&checkOut=@c.Night.AddDays(1).ToString("yyyy-MM-dd")" title="Book @c.Night.ToString("d MMM")">+</a> }</td>
+                        }
+                    }
+                </tr>
+            }
+            @if (Model.Rows.Count == 0) { <tr><td colspan="@(Model.Days + 1)" class="bk-muted">No short stays yet. <a href="/host/stays">Make a unit a short stay</a>.</td></tr> }
+            </tbody>
+        </table>
+    </div>
+
+    @if (canEdit && Model.Rows.Count > 0)
+    {
+        <form method="post" action="/host/calendar/block" class="bk-panel bk-form">
+            @Html.AntiForgeryToken()
+            <h2>Block dates</h2>
+            <p class="bk-muted bk-small">Close dates for owner use or maintenance. Nights already booked can't be blocked.</p>
+            <div class="bk-row4">
+                <div><label>Stay</label><select name="stayUnitId">@foreach (var r in Model.Rows) { <option value="@r.StayUnitId">@r.Title</option> }</select></div>
+                <div><label>From</label><input type="date" name="from" value="@today.ToString("yyyy-MM-dd")" required /></div>
+                <div><label>To (last night)</label><input type="date" name="to" value="@today.ToString("yyyy-MM-dd")" required /></div>
+                <div><label>Reason</label><input name="reason" placeholder="Owner use, repairs..." /></div>
+            </div>
+            <button type="submit" class="bk-btn bk-btn-small bk-btn-primary">Block</button>
+        </form>
+    }
+</section>

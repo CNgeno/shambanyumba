@@ -1,0 +1,35 @@
+@model IReadOnlyList<BookingListItem>
+@{
+    ViewData["Title"] = "Bookings";
+    var view = (string)ViewData["View"]!;
+    string Kes(decimal v) => "KES " + v.ToString("N0");
+}
+<section class="bk-wrap">
+    <div class="bk-head"><h1 class="bk-title">Bookings</h1><a class="bk-btn bk-btn-primary" href="/host/bookings/new">New booking</a></div>
+    <nav class="bk-tabs">
+        @foreach (var (key, label) in new[] { ("upcoming", "Upcoming"), ("inhouse", "In house"), ("past", "Past"), ("cancelled", "Cancelled") })
+        {
+            <a href="/host/bookings?view=@key" class="@(view == key ? "is-active" : "")">@label</a>
+        }
+    </nav>
+    <div class="bk-panel bk-table-wrap">
+        <table class="bk-table">
+            <thead><tr><th>Booking</th><th>Guest</th><th>Stay</th><th>Dates</th><th>Channel</th><th class="bk-right">Total</th><th class="bk-right">Balance</th></tr></thead>
+            <tbody>
+            @foreach (var b in Model)
+            {
+                <tr>
+                    <td><a href="/host/bookings/@b.Id"><strong>@b.BookingNumber</strong></a><br /><span class="bk-muted bk-small">@b.Status</span></td>
+                    <td>@b.GuestName<br /><span class="bk-muted bk-small">@b.GuestPhone</span></td>
+                    <td>@b.StayTitle</td>
+                    <td>@b.CheckIn.ToString("d MMM") to @b.CheckOut.ToString("d MMM")<br /><span class="bk-muted bk-small">@b.Nights night@(b.Nights == 1 ? "" : "s")</span></td>
+                    <td>@b.Channel</td>
+                    <td class="bk-right">@Kes(b.Total)</td>
+                    <td class="bk-right">@(b.Total - b.AmountPaid > 0 ? Kes(b.Total - b.AmountPaid) : "Paid")</td>
+                </tr>
+            }
+            @if (Model.Count == 0) { <tr><td colspan="7" class="bk-muted">No bookings here.</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</section>

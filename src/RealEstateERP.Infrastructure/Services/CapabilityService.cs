@@ -26,11 +26,12 @@ public sealed class CapabilityService(ApplicationDbContext db, ISubscriptionServ
             var toLet = await assets.AnyAsync(a => a.Purpose == PropertyPurpose.Let || a.Purpose == PropertyPurpose.Both
                                                    || (a.Purpose == null && a.Type != AssetType.Land), ct);
             var agencyOn = await db.Businesses.AsNoTracking().AnyAsync(b => b.Id == businessId && b.Type == BusinessType.Agency, ct);
+            var shortStays = await assets.AnyAsync(a => a.Purpose == PropertyPurpose.ShortStay, ct);
 
             var snapshot = await subscriptions.GetSnapshotAsync(businessId, ct);
             var includes = await db.SubscriptionPlans.AsNoTracking().Where(p => p.Code == snapshot.PlanCode).Select(p => p.IncludesAgency).FirstOrDefaultAsync(ct);
             // Menus appear with the properties that need them: letting with the first property to let, selling with the first for sale.
-            return new Capabilities(hasProperties, toLet, forSale, agencyOn, PlanRules.AllowsAgency(snapshot.PlanCode, includes, snapshot.IsTrial));
+            return new Capabilities(hasProperties, toLet, forSale, agencyOn, PlanRules.AllowsAgency(snapshot.PlanCode, includes, snapshot.IsTrial), shortStays);
         }))!;
     }
 

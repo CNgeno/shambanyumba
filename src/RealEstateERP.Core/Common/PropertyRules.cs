@@ -11,6 +11,7 @@ public static class PropertyRules
 
     public static bool IsForSale(PropertyPurpose purpose) => purpose is PropertyPurpose.Sell or PropertyPurpose.Both;
     public static bool IsToLet(PropertyPurpose purpose) => purpose is PropertyPurpose.Let or PropertyPurpose.Both;
+    public static bool IsShortStay(PropertyPurpose purpose) => purpose is PropertyPurpose.ShortStay;
 }
 
 public static class PlanRules

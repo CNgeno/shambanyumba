@@ -7,7 +7,7 @@ using RealEstateERP.Web.Security;
 
 namespace RealEstateERP.Web.Controllers;
 
-public class PropertiesController(IAssetService assets, IUnitService units, IAgencyService agency, IProjectCostService costing, ISaleService sales, IEstateService estate, IChargeService charges, IReportService reports, ICapabilityService capabilities, IListingService listings, ICurrentUserService currentUser) : Controller
+public class PropertiesController(IAssetService assets, IUnitService units, IAgencyService agency, IProjectCostService costing, ISaleService sales, IEstateService estate, IChargeService charges, IReportService reports, ICapabilityService capabilities, IListingService listings, ICurrentUserService currentUser, IStayService stays, IConfiguration config) : Controller
 {
     private bool CanEdit => currentUser.Role is BusinessRole.Owner or BusinessRole.Admin or BusinessRole.User;
     private bool CanAdmin => currentUser.Role is BusinessRole.Owner or BusinessRole.Admin;
@@ -43,8 +43,15 @@ public class PropertiesController(IAssetService assets, IUnitService units, IAge
         ViewData["AwaitingEnquiries"] = await listings.GetAwaitingConfirmationAsync(id, ct);
 
         // The property's purpose decides its page: for sale = a project (plots, buyers, margins); to let (or both) = an estate.
-        var isProject = RealEstateERP.Core.Common.PropertyRules.Effective(details.Asset.Purpose, details.Asset.Type) == PropertyPurpose.Sell;
-        if (isProject && await costing.GetOverviewAsync(id, ct) is { } overview)
+        var purpose = RealEstateERP.Core.Common.PropertyRules.Effective(details.Asset.Purpose, details.Asset.Type);
+        var isProject = purpose == PropertyPurpose.Sell;
+        if (purpose == PropertyPurpose.ShortStay)
+        {
+            // Short stays: nightly rates, nights booked and booking income; the work happens on the booking site.
+            ViewData["Stays"] = await stays.GetPropertySummaryAsync(id, ct);
+            ViewData["BookingSite"] = (config["Booking:SiteUrl"] ?? "https://booking.shambanyumba.com").TrimEnd('/');
+        }
+        else if (isProject && await costing.GetOverviewAsync(id, ct) is { } overview)
         {
             var overdue = (await sales.ListAsync(SalesListView.Open, null, id, null, ct)).Sum(x => x.OverdueAmount);
             ViewData["Project"] = new LandProjectModel(ProjectCard.From(overview, overdue), overview, currentUser.Role is not (BusinessRole.Viewer or null));

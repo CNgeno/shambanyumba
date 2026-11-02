@@ -1,0 +1,21 @@
+@model PublicStayCard
+@{
+    var q = Context.Request.QueryString.HasValue ? Context.Request.QueryString.Value : "";
+    string Kes(decimal v) => "KES " + v.ToString("N0");
+}
+<a class="bk-stay" href="/stay/@Model.StayUnitId@q">
+    <div class="bk-stay-photo">@if (Model.PhotoId is int pid) { <img src="/photo/@Model.PhotoKind/@pid" alt="@Model.Title" loading="lazy" /> } else { <span>No photo yet</span> }</div>
+    <div class="bk-stay-body">
+        <strong>@Model.Title</strong>
+        <span class="bk-muted">@Model.Place</span>
+        <span class="bk-muted bk-small">@Model.Beds bed@(Model.Beds == 1 ? "" : "s") · up to @Model.MaxGuests guests</span>
+        @if (Model.Quote is { Error: null } quote)
+        {
+            <span class="bk-price"><b>@Kes(quote.Total)</b> for @quote.NightCount night@(quote.NightCount == 1 ? "" : "s")</span>
+        }
+        else
+        {
+            <span class="bk-price">From <b>@Kes(Model.FromNightly)</b> a night</span>
+        }
+    </div>
+</a>

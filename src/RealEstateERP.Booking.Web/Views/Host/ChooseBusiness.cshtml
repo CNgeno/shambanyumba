@@ -1,0 +1,6 @@
+@{ ViewData["Title"] = "Choose a business"; }
+<section class="bk-wrap bk-panel">
+    <h1>Choose a business first</h1>
+    <p>You're signed in, but no business is selected. Choose one (or create one) on ShambaNyumba: you'll come straight back here.</p>
+    <div class="bk-actions"><a class="bk-btn bk-btn-primary" href="@ViewData["MainSite"]/Business/Select?returnUrl=@Uri.EscapeDataString((string)ViewData["Back"]!)">Choose a business</a></div>
+</section>

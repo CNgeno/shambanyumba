@@ -1,3 +1,4 @@
+@inject IConfiguration Configuration
 @inject RealEstateERP.Core.Interfaces.ICapabilityService Capabilities
 @using System.Security.Claims
 @using RealEstateERP.Core.Constants
@@ -100,6 +101,17 @@
                         {
                             <a class="side-link @Active("Costing")" aria-current="@Current("Costing")" asp-area="" asp-controller="Costing" asp-action="Index"><i class="bi bi-calculator"></i>Costs and yield</a>
                         }
+                    }
+
+                    @if (caps.ShortStays)
+                    {
+                        var bookingSite = (Configuration["Booking:SiteUrl"] ?? "https://booking.shambanyumba.com").TrimEnd('/');
+                        <p class="side-group">Short stays</p>
+                        <a class="side-link" href="@bookingSite/host"><i class="bi bi-sun"></i>Today</a>
+                        <a class="side-link" href="@bookingSite/host/calendar"><i class="bi bi-calendar3"></i>Calendar</a>
+                        <a class="side-link" href="@bookingSite/host/bookings"><i class="bi bi-journal-check"></i>Bookings</a>
+                        <a class="side-link" href="@bookingSite/host/stays"><i class="bi bi-door-open"></i>Stays and rates</a>
+                        <a class="side-link" href="@bookingSite/host/cleaning"><i class="bi bi-stars"></i>Cleaning</a>
                     }
 
                     @if (showSelling)

@@ -1,4 +1,5 @@
 using System.Reflection;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using RealEstateERP.Core.Common;
@@ -8,7 +9,7 @@ using RealEstateERP.Infrastructure.Identity;
 
 namespace RealEstateERP.Infrastructure.Data;
 
-public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
+public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IDataProtectionKeyContext
 {
     private readonly ICurrentUserService _currentUser;
     private readonly TimeProvider _clock;
@@ -61,6 +62,23 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<ProjectCost> ProjectCosts => Set<ProjectCost>();
     public DbSet<PropertyCharge> PropertyCharges => Set<PropertyCharge>();
     public DbSet<Partner> Partners => Set<Partner>();
+
+    /// <summary>
+    /// ASP.NET Core data protection keys, shared by shambanyumba.com and booking.shambanyumba.com (one sign-in for both),
+    /// and kept safe across restarts and servers (also what a self-hosted edition needs).
+    /// </summary>
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+
+    // booking.shambanyumba.com (schema "booking")
+    public DbSet<StayUnit> StayUnits => Set<StayUnit>();
+    public DbSet<StaySeason> StaySeasons => Set<StaySeason>();
+    public DbSet<StayDiscount> StayDiscounts => Set<StayDiscount>();
+    public DbSet<Guest> Guests => Set<Guest>();
+    public DbSet<Booking> Bookings => Set<Booking>();
+    public DbSet<BookingPayment> BookingPayments => Set<BookingPayment>();
+    public DbSet<BookingNight> BookingNights => Set<BookingNight>();
+    public DbSet<CalendarBlock> CalendarBlocks => Set<CalendarBlock>();
+    public DbSet<CleaningTask> CleaningTasks => Set<CleaningTask>();
     public DbSet<PartnerCommission> PartnerCommissions => Set<PartnerCommission>();
     public DbSet<AssetPhoto> AssetPhotos => Set<AssetPhoto>();
     public DbSet<UnitPhoto> UnitPhotos => Set<UnitPhoto>();

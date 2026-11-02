@@ -30,7 +30,17 @@ public enum CostCategory
     [Display(Name = "Utilities paid by the owner")] OwnerUtilities = 45,
     [Display(Name = "Rates and insurance")] RatesInsurance = 46,
     [Display(Name = "Security and caretaker")] Security = 47,
-    [Display(Name = "Other running costs")] OtherRunning = 48
+    [Display(Name = "Other running costs")] OtherRunning = 48,
+
+    // Short stays (booking.shambanyumba.com): the cost of hosting guests. Reduce booking income.
+    [Display(Name = "Cleaning (stays)")] StayCleaning = 60,
+    [Display(Name = "Laundry and guest supplies")] StayLaundry = 61,
+    [Display(Name = "Staff wages (cleaners, caretakers)")] StayWages = 62,
+    [Display(Name = "Utilities (power, water, gas)")] StayUtilities = 63,
+    [Display(Name = "Internet and TV")] StayInternet = 64,
+    [Display(Name = "Airbnb and Booking.com commissions")] StayCommissions = 65,
+    [Display(Name = "Repairs and replacements (stays)")] StayRepairs = 66,
+    [Display(Name = "Other stay costs")] StayOther = 67
 }
 
 public enum CostGroup
@@ -39,7 +49,8 @@ public enum CostGroup
     Development,
     Subdivision,
     Other,
-    [Display(Name = "Running costs")] Letting
+    [Display(Name = "Running costs")] Letting,
+    [Display(Name = "Stay costs")] Stays
 }
 
 /// <summary>How shared project costs are spread over units.</summary>

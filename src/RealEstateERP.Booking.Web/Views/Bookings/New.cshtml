@@ -1,0 +1,43 @@
+@model NewBookingInput
+@{
+    ViewData["Title"] = "New booking";
+    var stays = (List<StayListItem>)ViewData["Stays"]!;
+}
+<section class="bk-wrap">
+    <p class="bk-back"><a href="/host/calendar">&larr; Calendar</a></p>
+    <h1 class="bk-title">New booking</h1>
+    <p class="bk-muted">For walk-ins, phone bookings, or a booking taken on Airbnb or Booking.com. The price comes from the stay's rates.</p>
+    @if (stays.Count == 0)
+    {
+        <div class="bk-panel"><p>No short stays yet. <a href="/host/stays">Make a unit a short stay</a> first.</p></div>
+    }
+    else
+    {
+        <form method="post" action="/host/bookings/new" class="bk-panel bk-form">
+            @Html.AntiForgeryToken()
+            <h2>Stay and dates</h2>
+            <label>Stay</label>
+            <select name="stayUnitId">@foreach (var s in stays) { <option value="@s.StayUnitId" selected="@(s.StayUnitId == Model.StayUnitId)">@s.Title (@s.UnitNumber)</option> }</select>
+            <div class="bk-row4">
+                <div><label>Check-in</label><input type="date" name="checkIn" value="@Model.CheckIn.ToString("yyyy-MM-dd")" required /></div>
+                <div><label>Check-out</label><input type="date" name="checkOut" value="@Model.CheckOut.ToString("yyyy-MM-dd")" required /></div>
+                <div><label>Adults</label><input type="number" name="adults" min="1" value="@Model.Adults" /></div>
+                <div><label>Children</label><input type="number" name="children" min="0" value="@Model.Children" /></div>
+            </div>
+            <h2>Guest</h2>
+            <div class="bk-row3">
+                <div><label>Name</label><input name="guestName" value="@Model.GuestName" required /></div>
+                <div><label>Phone</label><input name="guestPhone" type="tel" value="@Model.GuestPhone" placeholder="07..." required /></div>
+                <div><label>Email (optional)</label><input name="guestEmail" type="email" value="@Model.GuestEmail" /></div>
+            </div>
+            <h2>Where it came from</h2>
+            <div class="bk-row3">
+                <div><label>Channel</label><select name="channel" asp-items="Html.GetEnumSelectList<BookingChannel>()"></select></div>
+                <div><label>Channel reference (optional)</label><input name="externalRef" value="@Model.ExternalRef" placeholder="e.g. Airbnb code" /></div>
+                <div></div>
+            </div>
+            <label>Notes (optional)</label><textarea name="notes" rows="2">@Model.Notes</textarea>
+            <button type="submit" class="bk-btn bk-btn-primary">Confirm booking</button>
+        </form>
+    }
+</section>

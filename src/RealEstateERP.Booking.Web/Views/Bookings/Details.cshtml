@@ -1,0 +1,96 @@
+@model RealEstateERP.Core.Entities.Booking
+@{
+    ViewData["Title"] = Model.BookingNumber;
+    var canEdit = ViewData["CanEdit"] is true;
+    var today = (DateOnly)ViewData["Today"]!;
+    string Kes(decimal v) => "KES " + v.ToString("N0");
+}
+<section class="bk-wrap">
+    <p class="bk-back"><a href="/host/bookings">&larr; Bookings</a></p>
+    <div class="bk-head">
+        <div><h1 class="bk-title">@Model.BookingNumber · @Model.Guest.FullName</h1>
+            <p class="bk-muted">@Model.StayUnit.Title (@Model.StayUnit.Unit.UnitNumber, @Model.StayUnit.Unit.Asset.Name) · <span class="bk-badge">@Model.Status</span> · @Model.Channel@(Model.ExternalRef is null ? "" : $" ({Model.ExternalRef})")</p></div>
+    </div>
+    <div class="bk-grid">
+        <div class="bk-panel">
+            @if (Model.Status == BookingStatus.Held && Model.HoldExpiresUtc is DateTime hold)
+            {
+                <p class="bk-alert bk-alert-err">Awaiting deposit of @Kes(Math.Max(0, Model.DepositDue - Model.AmountPaid)). The nights are held until @hold.AddHours(3).ToString("ddd d MMM, HH:mm"); if no deposit is recorded by then, the booking is released.</p>
+            }
+            <h2>Stay</h2>
+            <table class="bk-table">
+                <tr><td>Check-in</td><td class="bk-right">@Model.CheckIn.ToString("dddd d MMM yyyy"), from @Model.StayUnit.CheckInFrom.ToString("HH:mm")</td></tr>
+                <tr><td>Check-out</td><td class="bk-right">@Model.CheckOut.ToString("dddd d MMM yyyy"), by @Model.StayUnit.CheckOutBy.ToString("HH:mm")</td></tr>
+                <tr><td>Guests</td><td class="bk-right">@Model.Adults adult@(Model.Adults == 1 ? "" : "s")@(Model.Children > 0 ? $", {Model.Children} child{(Model.Children == 1 ? "" : "ren")}" : "")</td></tr>
+                <tr><td>Guest phone</td><td class="bk-right"><a href="tel:@Model.Guest.Phone">@Model.Guest.Phone</a></td></tr>
+                @if (Model.Guest.Email is string em) { <tr><td>Guest email</td><td class="bk-right">@em</td></tr> }
+            </table>
+            <h2>Price</h2>
+            <table class="bk-table">
+                <tr><td>@Model.Nights night@(Model.Nights == 1 ? "" : "s")</td><td class="bk-right">@Kes(Model.NightsTotal)</td></tr>
+                @if (Model.CleaningFee > 0) { <tr><td>Cleaning fee</td><td class="bk-right">@Kes(Model.CleaningFee)</td></tr> }
+                @if (Model.Discount > 0) { <tr><td>Discount</td><td class="bk-right">− @Kes(Model.Discount)</td></tr> }
+                <tr class="bk-total"><td>Total</td><td class="bk-right">@Kes(Model.Total)</td></tr>
+                <tr><td>Paid</td><td class="bk-right">@Kes(Model.AmountPaid)</td></tr>
+                <tr class="bk-total"><td>Balance</td><td class="bk-right">@Kes(Model.Balance)</td></tr>
+            </table>
+            <h2 id="payments">Payments</h2>
+            <table class="bk-table">
+                @foreach (var p in Model.Payments)
+                {
+                    <tr><td>@p.ReceivedOn.ToString("d MMM yyyy") · @p.Method@(p.Reference is null ? "" : $" {p.Reference}")<br /><span class="bk-muted bk-small">Receipt @p.ReceiptNumber</span></td><td class="bk-right">@Kes(p.Amount)</td></tr>
+                }
+                @if (Model.Payments.Count == 0) { <tr><td class="bk-muted">No payments yet. Deposit due: @Kes(Math.Max(0, Model.DepositDue - Model.AmountPaid))</td></tr> }
+            </table>
+            @if (canEdit && Model.Balance > 0 && Model.Status != BookingStatus.Cancelled)
+            {
+                <form method="post" action="/host/bookings/@Model.Id/payments" class="bk-form">
+                    @Html.AntiForgeryToken()
+                    <div class="bk-row4">
+                        <div><label>Method</label><select name="method" asp-items="Html.GetEnumSelectList<StayPaymentMethod>()"></select></div>
+                        <div><label>Amount (KES)</label><input name="amount" inputmode="decimal" value="@Math.Max(0, Model.DepositDue - Model.AmountPaid).ToString("0")" required /></div>
+                        <div><label>Date</label><input name="receivedOn" type="date" value="@today.ToString("yyyy-MM-dd")" required /></div>
+                        <div><label>M-PESA code or reference</label><input name="reference" placeholder="SJA9X8Y7Z6" /></div>
+                    </div>
+                    <button type="submit" class="bk-btn bk-btn-small bk-btn-primary">Record payment</button>
+                </form>
+            }
+            @if (Model.Notes is string notes) { <p><strong>Notes:</strong> @notes</p> }
+            @if (Model.CancellationReason is string why) { <p><strong>Cancelled:</strong> @why</p> }
+        </div>
+        <div>
+            @if (canEdit)
+            {
+                <section class="bk-panel">
+                    <h2>Actions</h2>
+                    @if (Model.Status is BookingStatus.Confirmed or BookingStatus.CheckedIn)
+                    {
+                        <form method="post" action="/host/bookings/@Model.Id/confirmation">@Html.AntiForgeryToken()<button class="bk-btn bk-btn-small bk-btn-light bk-btn-outline" type="submit">Email confirmation to guest</button></form>
+                        <p class="bk-muted bk-small">Includes the booking details and how to pay (your payment instructions in ShambaNyumba Business settings), with @Model.BookingNumber as the account number.</p>
+                    }
+                    @if (Model.Status == BookingStatus.Confirmed && today >= Model.CheckIn)
+                    {
+                        <form method="post" action="/host/bookings/@Model.Id/checkin">@Html.AntiForgeryToken()<button class="bk-btn bk-btn-primary" type="submit">Check in</button></form>
+                    }
+                    @if (Model.Status == BookingStatus.CheckedIn)
+                    {
+                        <form method="post" action="/host/bookings/@Model.Id/checkout">@Html.AntiForgeryToken()<button class="bk-btn bk-btn-primary" type="submit">Check out</button></form>
+                    }
+                    @if (Model.Status is BookingStatus.Confirmed or BookingStatus.Held)
+                    {
+                        <form method="post" action="/host/bookings/@Model.Id/cancel" class="bk-form" onsubmit="return confirm('Cancel this booking?');">
+                            @Html.AntiForgeryToken()
+                            <label>Reason for cancelling</label><input name="reason" placeholder="Guest changed plans..." />
+                            <button class="bk-btn bk-btn-small bk-btn-light bk-btn-outline" type="submit">Cancel booking</button>
+                        </form>
+                        @if (today >= Model.CheckIn)
+                        {
+                            <form method="post" action="/host/bookings/@Model.Id/cancel">@Html.AntiForgeryToken()<input type="hidden" name="noShow" value="true" /><button class="bk-link" type="submit">Mark as no-show</button></form>
+                        }
+                    }
+                    @if (Model.Status is BookingStatus.CheckedOut or BookingStatus.Cancelled or BookingStatus.NoShow) { <p class="bk-muted">No actions: this booking is closed.</p> }
+                </section>
+            }
+        </div>
+    </div>
+</section>

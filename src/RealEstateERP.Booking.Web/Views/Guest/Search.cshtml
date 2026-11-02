@@ -1,0 +1,15 @@
+@model IReadOnlyList<PublicStayCard>
+@{
+    ViewData["Title"] = "Search stays";
+    var where = ViewData["Where"] as string;
+}
+<section class="bk-band"><div class="bk-wrap"><partial name="_SearchForm" /></div></section>
+<section class="bk-wrap">
+    <h1 class="bk-title">@Model.Count stay@(Model.Count == 1 ? "" : "s") @(string.IsNullOrWhiteSpace(where) ? "" : $"in {where}")</h1>
+    @if (ViewData["CheckIn"] is DateOnly ci && ViewData["CheckOut"] is DateOnly co)
+    {
+        <p class="bk-muted">Free from @ci.ToString("ddd d MMM") to @co.ToString("ddd d MMM") for @ViewData["Guests"] guest(s), with the full price for your dates.</p>
+    }
+    <div class="bk-stays">@foreach (var s in Model) { <partial name="_StayCard" model="s" /> }</div>
+    @if (Model.Count == 0) { <p class="bk-panel">Nothing free for those dates and guests. Try other dates, fewer guests, or a nearby town.</p> }
+</section>

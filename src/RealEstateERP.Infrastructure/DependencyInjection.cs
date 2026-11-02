@@ -63,9 +63,12 @@ public static class DependencyInjection
         services.AddScoped<IPlatformReportService, PlatformReportService>(); // -> ISubscriptionService (read-only)
         services.AddScoped<IAutomationService, AutomationService>();  // ORCHESTRATOR -> IBillingRunService, IArrearsService, ITenantMessagingService
         services.AddScoped<IListingService, ListingService>();
-        services.AddScoped<IPublicDemoService, PublicDemoService>();
-        services.AddScoped<IReferralService, ReferralService>();
-        services.AddScoped<ITariffService, TariffService>();               // tariff bands: what each business pays           // partners, codes, commissions
+        services.AddScoped<IPublicDemoService, PublicDemoService>();       // one-click demo, reset nightly
+        services.AddScoped<IReferralService, ReferralService>();           // partners, codes, commissions
+        services.AddScoped<ITariffService, TariffService>();               // tariff bands: what each business pays
+        services.AddScoped<IStayService, StayService>();                   // booking.shambanyumba.com: short stays
+        services.AddScoped<IBookingService, BookingService>();             // booking.shambanyumba.com: calendar and bookings
+        services.AddScoped<IStaySearchService, StaySearchService>();       // booking.shambanyumba.com: the public guest site
         services.AddScoped<ICapabilityService, CapabilityService>();       // -> ISubscriptionService (what the business uses, from its properties)
         services.AddScoped<IEstateService, EstateService>();               // -> IFileStorage, ISystemConfigService
         services.AddScoped<IMarketplaceService, MarketplaceService>(); // -> IEmailService, ISystemConfigService (public, cross-business reads)

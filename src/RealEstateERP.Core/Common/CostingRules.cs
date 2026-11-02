@@ -14,6 +14,7 @@ public static class CostingRules
         CostCategory.PurchaseCosts => CostGroup.Purchase,
         CostCategory.Construction or CostCategory.Infrastructure or CostCategory.ProfessionalFees or CostCategory.Approvals => CostGroup.Development,
         CostCategory.Subdivision => CostGroup.Subdivision,
+        >= CostCategory.StayCleaning => CostGroup.Stays,
         >= CostCategory.Letting => CostGroup.Letting,
         _ => CostGroup.Other
     };
@@ -22,7 +23,10 @@ public static class CostingRules
     public static bool IsDevelopmentCost(CostCategory c) => c < CostCategory.Letting;
 
     /// <summary>The owner's running costs of a property to let (repairs, cleaning, advertising...): reduce rental income.</summary>
-    public static bool IsRunningCost(CostCategory c) => c >= CostCategory.Letting;
+    public static bool IsRunningCost(CostCategory c) => c >= CostCategory.Letting && c < CostCategory.StayCleaning;
+
+    /// <summary>The cost of hosting short-stay guests (cleaning, laundry, wages, commissions...): reduce booking income.</summary>
+    public static bool IsStayCost(CostCategory c) => c >= CostCategory.StayCleaning;
 
     /// <summary>Forecast final cost of a budget line: spending beyond the budget counts; unspent budget is still expected.</summary>
     public static decimal Expected(decimal budget, decimal actual) => Math.Max(budget, actual);

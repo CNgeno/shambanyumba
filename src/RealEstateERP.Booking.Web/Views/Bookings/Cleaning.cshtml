@@ -1,0 +1,26 @@
+@model IReadOnlyList<CleaningItem>
+@{ ViewData["Title"] = "Cleaning"; var all = ViewData["All"] is true; }
+<section class="bk-wrap">
+    <div class="bk-head"><h1 class="bk-title">Cleaning</h1><a href="/host/cleaning?all=@(!all)">@(all ? "Show only to do" : "Show done too")</a></div>
+    <p class="bk-muted">A task is added at every check-out. Mark it done when the unit is clean and ready for the next guest.</p>
+    <div class="bk-panel bk-table-wrap">
+        <table class="bk-table">
+            <thead><tr><th>Stay</th><th>Due</th><th>After booking</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var t in Model)
+            {
+                <tr>
+                    <td><strong>@t.StayTitle</strong><br /><span class="bk-muted bk-small">@t.UnitNumber</span></td>
+                    <td>@t.Due.ToString("ddd d MMM")</td>
+                    <td>@t.BookingNumber</td>
+                    <td class="bk-right">
+                        @if (t.Status == CleaningStatus.Pending) { <form method="post" action="/host/cleaning/@t.Id/done" class="bk-inline">@Html.AntiForgeryToken()<button class="bk-btn bk-btn-small bk-btn-primary" type="submit">Mark done</button></form> }
+                        else { <span class="bk-badge bk-badge-on">Done</span> }
+                    </td>
+                </tr>
+            }
+            @if (Model.Count == 0) { <tr><td colspan="4" class="bk-muted">Nothing to clean.</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</section>

@@ -14,7 +14,11 @@
     </div>
 </div>
 <nav class="filter-chips mb-3" aria-label="Project sections">
-    @if (purpose == PropertyPurpose.Let)
+    @if (purpose == PropertyPurpose.ShortStay)
+    {
+        <a asp-action="Costs" asp-route-id="@Model.Asset.Id" class="filter-chip @Css("Costs")">Stay expenses</a>
+    }
+    else if (purpose == PropertyPurpose.Let)
     {
         <a asp-action="Project" asp-route-id="@Model.Asset.Id" class="filter-chip @Css("Project")">Income and yield</a>
         <a asp-action="Costs" asp-route-id="@Model.Asset.Id" class="filter-chip @Css("Costs")">Running costs</a>

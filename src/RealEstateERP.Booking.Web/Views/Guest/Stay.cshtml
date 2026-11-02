@@ -1,0 +1,96 @@
+@model PublicStayDetails
+@{
+    var c = Model.Card;
+    ViewData["Title"] = c.Title;
+    var today = (DateOnly)ViewData["Today"]!;
+    var ci = ViewData["CheckIn"] as DateOnly? ?? today.AddDays(7);
+    var co = ViewData["CheckOut"] as DateOnly? ?? ci.AddDays(Math.Max(2, Model.MinNights));
+    var guests = ViewData["Guests"] as int? ?? 2;
+    var q = c.Quote;
+    string Kes(decimal v) => "KES " + v.ToString("N0");
+}
+<section class="bk-wrap">
+    <p class="bk-back"><a href="/stays">&larr; All stays</a></p>
+    <h1 class="bk-title">@c.Title</h1>
+    <p class="bk-muted">@c.Place · hosted by @Model.HostName</p>
+
+    @if (Model.Photos.Count > 0)
+    {
+        <div class="bk-gallery">@foreach (var p in Model.Photos.Take(6)) { <img src="/photo/@p.Kind/@p.Id" alt="@(p.Caption ?? c.Title)" loading="lazy" /> }</div>
+    }
+
+    <div class="bk-grid">
+        <div>
+            <section class="bk-panel">
+                <h2>About this stay</h2>
+                <p>@c.Beds bed@(c.Beds == 1 ? "" : "s") · up to @c.MaxGuests guests · from @Kes(c.FromNightly) a night</p>
+                @if (Model.Description is string d) { <p>@d</p> }
+                @if (Model.Amenities.Count > 0) { <h3>Amenities</h3><ul class="bk-chips">@foreach (var a in Model.Amenities) { <li>@a</li> }</ul> }
+                @if (Model.HouseRules is string rules) { <h3>House rules</h3><p>@rules</p> }
+                <h3>Good to know</h3>
+                <ul class="bk-facts">
+                    <li>Check-in from @Model.CheckInFrom.ToString("HH:mm"), check-out by @Model.CheckOutBy.ToString("HH:mm")</li>
+                    <li>Minimum stay @Model.MinNights night@(Model.MinNights == 1 ? "" : "s")@(Model.MaxNights is int mx ? $", longest {mx} nights" : "")</li>
+                    @if (Model.CleaningFee > 0) { <li>Cleaning fee @Kes(Model.CleaningFee) per stay</li> }
+                    @foreach (var disc in Model.Discounts) { <li>@disc</li> }
+                    <li>Deposit at booking: @Model.DepositPercent% of the total</li>
+                    <li>Cancellation: @EnumNames.Display(Model.CancellationPolicy)</li>
+                </ul>
+                @if (Model.TakenNights.Count > 0)
+                {
+                    <h3>Already booked</h3>
+                    <p class="bk-muted bk-small">@string.Join(", ", Model.TakenNights.Take(40).Select(n => n.ToString("d MMM")))@(Model.TakenNights.Count > 40 ? "…" : "")</p>
+                }
+            </section>
+        </div>
+
+        <div>
+            <section class="bk-panel" id="book">
+                <h2>Book</h2>
+                <form method="get" action="/stay/@c.StayUnitId#book" class="bk-form">
+                    <div class="bk-row3">
+                        <div><label>Check-in</label><input type="date" name="checkIn" value="@ci.ToString("yyyy-MM-dd")" min="@today.ToString("yyyy-MM-dd")" /></div>
+                        <div><label>Check-out</label><input type="date" name="checkOut" value="@co.ToString("yyyy-MM-dd")" /></div>
+                        <div><label>Guests</label><input type="number" name="guests" min="1" max="@c.MaxGuests" value="@guests" /></div>
+                    </div>
+                    <button type="submit" class="bk-btn bk-btn-small bk-btn-light bk-btn-outline">See the price</button>
+                </form>
+                @if (q is not null)
+                {
+                    if (q.Error is string e) { <p class="bk-alert bk-alert-err">@e</p> }
+                    else
+                    {
+                        <table class="bk-table">
+                            @foreach (var g in q.Nights.GroupBy(n => (n.Source, n.Rate)))
+                            {
+                                <tr><td>@g.Count() × @(g.Key.Source == "Standard" ? "" : g.Key.Source + " ")night@(g.Count() == 1 ? "" : "s") at @Kes(g.Key.Rate)</td><td class="bk-right">@Kes(g.Count() * g.Key.Rate)</td></tr>
+                            }
+                            @if (q.CleaningFee > 0) { <tr><td>Cleaning fee</td><td class="bk-right">@Kes(q.CleaningFee)</td></tr> }
+                            @if (q.Discount > 0) { <tr><td>@q.DiscountLabel</td><td class="bk-right">− @Kes(q.Discount)</td></tr> }
+                            <tr class="bk-total"><td>Total</td><td class="bk-right">@Kes(q.Total)</td></tr>
+                            <tr><td>Deposit to confirm</td><td class="bk-right">@Kes(q.Deposit)</td></tr>
+                        </table>
+                        <form method="post" action="/stay/@c.StayUnitId/book" class="bk-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="checkIn" value="@ci.ToString("yyyy-MM-dd")" />
+                            <input type="hidden" name="checkOut" value="@co.ToString("yyyy-MM-dd")" />
+                            <div class="bk-row3">
+                                <div><label>Adults</label><input type="number" name="adults" min="1" max="@c.MaxGuests" value="@Math.Max(1, guests)" /></div>
+                                <div><label>Children</label><input type="number" name="children" min="0" value="0" /></div>
+                                <div></div>
+                            </div>
+                            <label>Your name</label><input name="name" required />
+                            <div class="bk-row3">
+                                <div><label>Phone (M-PESA)</label><input name="phone" type="tel" placeholder="07..." required /></div>
+                                <div style="grid-column: span 2"><label>Email (for your confirmation)</label><input name="email" type="email" /></div>
+                            </div>
+                            <label>Message to the host (optional)</label><textarea name="message" rows="2"></textarea>
+                            <button type="submit" class="bk-btn bk-btn-accent">Book: pay deposit of @Kes(q.Deposit) within 24 hours</button>
+                            <p class="bk-muted bk-small">Your nights are held for 24 hours. Pay the deposit to the host's M-PESA as shown on the next page; the host confirms once it's received.</p>
+                        </form>
+                    }
+                }
+            </section>
+        </div>
+    </div>
+</section>

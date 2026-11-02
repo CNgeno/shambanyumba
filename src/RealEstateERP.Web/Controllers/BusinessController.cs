@@ -14,21 +14,24 @@ public class BusinessController(
     IBusinessService businesses,
     ITeamService team,
     UserManager<ApplicationUser> users,
-    BusinessContextSignIn businessSignIn, IReferralService referrals) : Controller
+    BusinessContextSignIn businessSignIn, IReferralService referrals, IConfiguration config) : Controller
 {
     [HttpGet]
-    public async Task<IActionResult> Select(CancellationToken ct)
+    public async Task<IActionResult> Select(string? returnUrl, CancellationToken ct)
     {
         var userId = users.GetUserId(User)!;
         var list = await businesses.GetBusinessesForUserAsync(userId, ct);
         var invitations = await team.GetInvitationsForUserAsync(userId, ct);
+        // Came from another of our sites (e.g. the booking site)? Go back there after choosing.
+        var back = TrustedReturnUrl.Check(returnUrl, Url, config);
+        ViewData["ReturnUrl"] = back;
         if (list.Count == 0 && invitations.Count == 0)
-            return RedirectToAction(nameof(Create));
+            return RedirectToAction(nameof(Create), new { returnUrl = back });
         return View(new SelectBusinessViewModel { Businesses = list, Invitations = invitations });
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Choose(int businessId, CancellationToken ct)
+    public async Task<IActionResult> Choose(int businessId, string? returnUrl, CancellationToken ct)
     {
         var user = await users.GetUserAsync(User);
         if (user is null) return Challenge();
@@ -37,15 +40,21 @@ public class BusinessController(
         if (membership is null) return Forbid();
 
         await businessSignIn.SelectBusinessAsync(user, membership);
-        return RedirectToAction("Index", "Dashboard");
+        return TrustedReturnUrl.Check(returnUrl, Url, config) is string back ? Redirect(back) : RedirectToAction("Index", "Dashboard");
     }
 
     [HttpGet]
-    public IActionResult Create() => View(new CreateBusinessViewModel());
+    public IActionResult Create(string? returnUrl)
+    {
+        ViewData["ReturnUrl"] = TrustedReturnUrl.Check(returnUrl, Url, config);
+        return View(new CreateBusinessViewModel());
+    }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(CreateBusinessViewModel model, CancellationToken ct)
+    public async Task<IActionResult> Create(CreateBusinessViewModel model, string? returnUrl, CancellationToken ct)
     {
+        var back = TrustedReturnUrl.Check(returnUrl, Url, config);
+        ViewData["ReturnUrl"] = back;
         if (!ModelState.IsValid) return View(model);
 
         var user = await users.GetUserAsync(User);
@@ -62,7 +71,7 @@ public class BusinessController(
         await businessSignIn.SelectBusinessAsync(user, membership!);
 
         TempData["Success"] = $"{model.Name} is ready.";
-        return RedirectToAction("Index", "Dashboard");
+        return back is not null ? Redirect(back) : RedirectToAction("Index", "Dashboard");
     }
 
     [HttpPost, ValidateAntiForgeryToken]

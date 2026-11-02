@@ -1,0 +1,31 @@
+@model IReadOnlyList<StayListItem>
+@{
+    ViewData["Title"] = "Short stays";
+
+    string Kes(decimal v) => "KES " + v.ToString("N0");
+}
+<section class="bk-wrap bk-panel">
+    <p class="bk-eyebrow">Host</p>
+    <h1>Your short stays</h1>
+    <p class="bk-muted">Every unit of your short-stay properties is listed here. To add stays, add units to a property whose purpose is <strong>Short stays (nightly)</strong> on ShambaNyumba.</p>
+    <div class="bk-table-wrap">
+        <table class="bk-table">
+            <thead><tr><th>Unit</th><th>Property</th><th>Stay</th><th class="bk-right">Nightly</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var u in Model)
+            {
+                <tr>
+                    <td><strong>@u.UnitNumber</strong>@(u.Bedrooms is int b ? $" · {b} bed" : "")</td>
+                    <td>@u.PropertyName</td>
+                    <td><span class="bk-badge @(u.IsPublished ? "bk-badge-on" : "")">@(u.IsPublished ? "Published" : "Draft")</span> @u.Title</td>
+                    <td class="bk-right">@(u.BaseNightly is decimal n && n > 0 ? Kes(n) : "")</td>
+                    <td class="bk-right">
+                        <a class="bk-btn bk-btn-small bk-btn-primary" href="/host/stays/@u.StayUnitId">Open</a>
+                    </td>
+                </tr>
+            }
+            @if (Model.Count == 0) { <tr><td colspan="5" class="bk-muted">No short stays yet. On ShambaNyumba, add a property with the purpose <strong>Short stays (nightly)</strong>, then add its units with their nightly rate.</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</section>

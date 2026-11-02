@@ -1,0 +1,12 @@
+@{
+    var today = (DateOnly)ViewData["Today"]!;
+    var ci = ViewData["CheckIn"] as DateOnly? ?? today.AddDays(7);
+    var co = ViewData["CheckOut"] as DateOnly? ?? ci.AddDays(2);
+}
+<form method="get" action="/stays" class="bk-search">
+    <div><label>Where</label><input name="where" value="@ViewData["Where"]" placeholder="Town or area, e.g. Nakuru" /></div>
+    <div><label>Check-in</label><input type="date" name="checkIn" value="@ci.ToString("yyyy-MM-dd")" min="@today.ToString("yyyy-MM-dd")" /></div>
+    <div><label>Check-out</label><input type="date" name="checkOut" value="@co.ToString("yyyy-MM-dd")" /></div>
+    <div><label>Guests</label><input type="number" name="guests" min="1" max="20" value="@(ViewData["Guests"] ?? 2)" /></div>
+    <div class="bk-end"><button type="submit" class="bk-btn bk-btn-accent">Search</button></div>
+</form>

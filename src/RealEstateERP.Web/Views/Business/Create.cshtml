@@ -7,6 +7,7 @@
 <p class="text-body-secondary mb-4">This is the account your properties, tenants and invoices will live under.</p>
 
 <form method="post" asp-action="Create" novalidate>
+    @if (ViewData["ReturnUrl"] is string back) { <input type="hidden" name="returnUrl" value="@back" /> }
     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
 
     <div class="mb-3">

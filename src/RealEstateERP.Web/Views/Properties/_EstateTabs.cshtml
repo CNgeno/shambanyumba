@@ -26,7 +26,7 @@
         {
             if (t.IsStep) number++;
             var mark = !t.IsStep ? "" : t.Done ? "done" : number.ToString();
-            <button type="button" role="tab" class="estate-tab @(t.Done && t.IsStep ? "is-done" : "")" id="tab-@t.Key" data-tab="@t.Key" data-label="@t.Label" aria-controls="pane-@t.Key" aria-selected="false">
+            <button type="button" role="tab" class="estate-tab @(t.Done && t.IsStep ? "is-done" : "")" id="tab-@t.Key" data-tab="@t.Key" aria-controls="pane-@t.Key" aria-selected="false">
                 <span class="estate-tab-mark" aria-hidden="true">
                     @if (mark == "done") { <i class="bi bi-check-lg"></i> }
                     else if (mark == "") { <i class="bi bi-graph-up"></i> }
@@ -50,20 +50,6 @@
             if (remember) history.replaceState(null, '', '#' + key);
         }
         tabs.forEach(function (t) { t.addEventListener('click', function () { show(t.dataset.tab, true); }); });
-
-        // Any action opened from a tab remembers this estate and tab, so a "Back to ..." bar leads straight back.
-        var estate = (document.querySelector('.page-title') || {}).textContent || 'the estate';
-        document.addEventListener('click', function (e) {
-            var a = e.target.closest && e.target.closest('.estate-pane a[href]');
-            if (!a || a.target === '_blank') return;
-            var href = a.getAttribute('href');
-            if (!href || href.charAt(0) !== '/' || href.charAt(1) === '/') return;
-            var active = row.querySelector('.estate-tab.is-active');
-            var u = new URL(href, location.origin);
-            u.searchParams.set('returnUrl', location.pathname + '#' + (active ? active.dataset.tab : 'units'));
-            u.searchParams.set('returnLabel', estate.trim() + (active ? ' · ' + active.dataset.label : ''));
-            a.setAttribute('href', u.pathname + u.search + u.hash);
-        }, true);
         // After saving, the page comes back with an anchor (e.g. #estate-charges): open the tab that holds it.
         var hash = decodeURIComponent((location.hash || '').slice(1)), key = row.dataset.first;
         if (hash) {

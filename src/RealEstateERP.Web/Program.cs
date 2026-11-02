@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -31,6 +32,14 @@ builder.Services
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddClaimsPrincipalFactory<AppClaimsPrincipalFactory>()
     .AddSignInManager<AppSignInManager>();   // keeps the selected business when Identity refreshes the cookie
+
+// One sign-in for shambanyumba.com and booking.shambanyumba.com: the same key ring (in the database), the same
+// application name, and (in production) the sign-in cookie set for the parent domain, Auth:CookieDomain = .shambanyumba.com
+builder.Services.AddDataProtection()
+    .SetApplicationName("ShambaNyumba")
+    .PersistKeysToDbContext<ApplicationDbContext>();
+if (builder.Configuration["Auth:CookieDomain"] is { Length: > 0 } cookieDomain)
+    builder.Services.ConfigureApplicationCookie(o => o.Cookie.Domain = cookieDomain);
 
 // Real email for Identity's built-in pages + our account emails (confirmation, password reset).
 builder.Services.AddTransient<Microsoft.AspNetCore.Identity.UI.Services.IEmailSender, IdentityEmailSender>();

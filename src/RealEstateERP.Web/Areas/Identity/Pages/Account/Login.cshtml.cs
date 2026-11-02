@@ -9,7 +9,7 @@ using RealEstateERP.Infrastructure.Identity;
 namespace RealEstateERP.Web.Areas.Identity.Pages.Account;
 
 [AllowAnonymous]
-public class LoginModel(SignInManager<ApplicationUser> signIn, UserManager<ApplicationUser> users, ILogger<LoginModel> logger) : PageModel
+public class LoginModel(SignInManager<ApplicationUser> signIn, UserManager<ApplicationUser> users, ILogger<LoginModel> logger, IConfiguration config) : PageModel
 {
     [BindProperty] public InputModel Input { get; set; } = new();
     public string ReturnUrl { get; set; } = "/";
@@ -47,7 +47,7 @@ public class LoginModel(SignInManager<ApplicationUser> signIn, UserManager<Appli
                 user.LastLoginAtUtc = DateTime.UtcNow;
                 await users.UpdateAsync(user);
             }
-            return LocalRedirect(ReturnUrl);
+            return Redirect(ReturnUrl);   // ReturnUrl is local or on a trusted ShambaNyumba site (SafeReturnUrl)
         }
         if (result.RequiresTwoFactor) return RedirectToPage("./LoginWith2fa", new { returnUrl = ReturnUrl, rememberMe = Input.RememberMe });
         if (result.IsLockedOut)
@@ -66,5 +66,17 @@ public class LoginModel(SignInManager<ApplicationUser> signIn, UserManager<Appli
         return Page();
     }
 
-    private string SafeReturnUrl(string? returnUrl) => !string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl) ? returnUrl : Url.Content("~/");
+    /// <summary>
+    /// Local addresses, or addresses on our other sites listed in Auth:TrustedReturnHosts (e.g. booking.shambanyumba.com),
+    /// so signing in from the booking site returns there. Anything else goes home: no open redirects.
+    /// </summary>
+    private string SafeReturnUrl(string? returnUrl)
+    {
+        if (string.IsNullOrEmpty(returnUrl)) return Url.Content("~/");
+        if (Url.IsLocalUrl(returnUrl)) return returnUrl;
+        var trusted = (config["Auth:TrustedReturnHosts"] ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return Uri.TryCreate(returnUrl, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps
+               && trusted.Contains(uri.Authority, StringComparer.OrdinalIgnoreCase)
+            ? returnUrl : Url.Content("~/");
+    }
 }

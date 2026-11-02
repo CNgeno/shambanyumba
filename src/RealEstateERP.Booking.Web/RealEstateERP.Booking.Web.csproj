@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <!-- booking.shambanyumba.com: short stays. Shares Core, Infrastructure, the database and the sign-in with shambanyumba.com. -->
+  <ItemGroup>
+    <ProjectReference Include="..\RealEstateERP.Core\RealEstateERP.Core.csproj" />
+    <ProjectReference Include="..\RealEstateERP.Infrastructure\RealEstateERP.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

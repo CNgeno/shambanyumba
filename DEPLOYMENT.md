@@ -103,3 +103,23 @@ claimed once per day). To switch it off on a particular app (e.g. a staging slot
 
 Enable **Application Insights** on the App Service (no code change needed for basic request and exception telemetry).
 Watch: failed requests, `/health` status, and SQL DTU usage.
+
+
+## booking.shambanyumba.com (short stays, B0 Foundation)
+
+The booking site is a second web app (`src/RealEstateERP.Booking.Web`) using the same database and sign-in.
+
+1. Main site first: run the `SharedSignIn` migration (data protection keys table) and publish. **After this release
+   everyone signs in again once, and the SMTP password in Admin > Settings must be re-entered** (it was encrypted with
+   the old keys).
+2. Main site settings (App Service > Environment variables):
+   `Auth__CookieDomain=.shambanyumba.com` and `Auth__TrustedReturnHosts=booking.shambanyumba.com`.
+3. Create a second App Service for the booking site (same plan is fine), Always on, with:
+   `ConnectionStrings__DefaultConnection` (same database), `Auth__CookieDomain=.shambanyumba.com`,
+   `Booking__MainSiteUrl=https://shambanyumba.com`.
+4. DNS: a CNAME `booking` to the new App Service; add the custom domain and a free managed certificate.
+5. Publish: `dotnet publish src/RealEstateERP.Booking.Web -c Release -o ./publish-booking`. The booking site never runs
+   migrations; deploy the main site first whenever the database changes.
+
+Locally: run both projects (main on https://localhost:7180, booking on https://localhost:7280); sign in on the main
+site, then open https://localhost:7280/host.

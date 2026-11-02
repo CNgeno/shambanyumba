@@ -1,0 +1,49 @@
+@model HostToday
+@{
+    ViewData["Title"] = "Today";
+    string Kes(decimal v) => "KES " + v.ToString("N0");
+}
+<section class="bk-wrap">
+    <div class="bk-head">
+        <div><p class="bk-eyebrow">@ViewData["Business"]</p><h1 class="bk-title">Today, @Model.Date.ToString("dddd d MMMM")</h1></div>
+        <div class="bk-actions bk-actions-tight">
+            <a class="bk-btn bk-btn-primary" href="/host/bookings/new">New booking</a>
+            <a class="bk-btn bk-btn-light bk-btn-outline" href="/host/calendar">Calendar</a>
+        </div>
+    </div>
+    @if (ViewData["Stays"] is 0)
+    {
+        <div class="bk-panel"><h2>Start here</h2><p>You have @ViewData["Units"] unit(s) on ShambaNyumba. Turn a vacant one into a short stay and set its rates.</p>
+            <a class="bk-btn bk-btn-primary" href="/host/stays">Your short stays</a></div>
+    }
+    @if (Model.AwaitingDeposit is { Count: > 0 } awaiting)
+    {
+        <section class="bk-panel bk-awaiting">
+            <h2>Awaiting deposit <span class="bk-count">@awaiting.Count</span></h2>
+            <p class="bk-muted bk-small">Booked on the guest site. Their nights are held for 24 hours; record the deposit when it arrives and the booking confirms itself. Unpaid ones are released automatically.</p>
+            @foreach (var b in awaiting)
+            {
+                <a class="bk-item" href="/host/bookings/@b.Id#payments"><strong>@b.GuestName · @b.GuestPhone</strong><span>@b.BookingNumber · @b.StayTitle · @b.CheckIn.ToString("d MMM") to @b.CheckOut.ToString("d MMM") · total @Kes(b.Total)</span></a>
+            }
+        </section>
+    }
+    <div class="bk-today">
+        @foreach (var (title, list, empty) in new[] { ("Arriving", Model.Arrivals, "No arrivals today."), ("Leaving", Model.Departures, "No departures today."), ("In house", Model.InHouse, "No guests in house.") })
+        {
+            <section class="bk-panel">
+                <h2>@title <span class="bk-count">@list.Count</span></h2>
+                @foreach (var b in list)
+                {
+                    <a class="bk-item" href="/host/bookings/@b.Id"><strong>@b.GuestName</strong><span>@b.StayTitle · @b.CheckIn.ToString("d MMM") to @b.CheckOut.ToString("d MMM")</span>
+                        @if (b.Total - b.AmountPaid > 0) { <span class="bk-due">Balance @Kes(b.Total - b.AmountPaid)</span> }</a>
+                }
+                @if (list.Count == 0) { <p class="bk-muted">@empty</p> }
+            </section>
+        }
+        <section class="bk-panel">
+            <h2>To clean <span class="bk-count">@Model.Cleaning.Count</span></h2>
+            @foreach (var c in Model.Cleaning.Take(6)) { <div class="bk-item"><strong>@c.StayTitle</strong><span>@c.UnitNumber · due @c.Due.ToString("d MMM")</span></div> }
+            @if (Model.Cleaning.Count == 0) { <p class="bk-muted">Nothing to clean.</p> } else { <a href="/host/cleaning">All cleaning tasks</a> }
+        </section>
+    </div>
+</section>

@@ -1,0 +1,158 @@
+@model StayEditModel
+@{
+    var stay = (StayUnit)ViewData["Stay"]!;
+    var canEdit = ViewData["CanEdit"] is true;
+    var quote = ViewData["Quote"] as StayQuote;
+    ViewData["Title"] = stay.Title;
+    string Kes(decimal v) => "KES " + v.ToString("N0");
+    var today = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(3));
+}
+<div class="bk-wrap">
+    <p class="bk-back"><a href="/host/stays">&larr; Short stays</a></p>
+    <h1 class="bk-title">@stay.Title</h1>
+    <p class="bk-muted">@stay.Unit.UnitNumber at @stay.Unit.Asset.Name · @(stay.IsPublished ? "Published" : "Draft, not visible to guests")</p>
+
+    <div class="bk-grid">
+        <form method="post" class="bk-panel bk-form">
+            @Html.AntiForgeryToken()
+            <div asp-validation-summary="ModelOnly" class="bk-alert bk-alert-err"></div>
+            <fieldset disabled="@(!canEdit)">
+                <h2>Listing</h2>
+                <label asp-for="Title"></label><input asp-for="Title" />
+                <label asp-for="Description"></label><textarea asp-for="Description" rows="4"></textarea>
+                <div class="bk-row3">
+                    <div><label asp-for="MaxGuests"></label><input asp-for="MaxGuests" /></div>
+                    <div><label asp-for="Beds"></label><input asp-for="Beds" /></div>
+                    <div><label asp-for="Bathrooms"></label><input asp-for="Bathrooms" /></div>
+                </div>
+                <label asp-for="Amenities"></label><input asp-for="Amenities" placeholder="Wi-Fi, Parking, Hot shower, Kitchen" />
+                <label asp-for="HouseRules"></label><textarea asp-for="HouseRules" rows="3" placeholder="No smoking. No parties. Quiet after 10 pm."></textarea>
+
+                <h2>Rules</h2>
+                <div class="bk-row3">
+                    <div><label asp-for="CheckInFrom"></label><input asp-for="CheckInFrom" type="time" /></div>
+                    <div><label asp-for="CheckOutBy"></label><input asp-for="CheckOutBy" type="time" /></div>
+                    <div><label asp-for="MinNights"></label><input asp-for="MinNights" /></div>
+                </div>
+                <div class="bk-row3">
+                    <div><label asp-for="MaxAdvanceDays"></label><input asp-for="MaxAdvanceDays" /></div>
+                    <div><label asp-for="DepositPercent"></label><input asp-for="DepositPercent" /></div>
+                    <div></div>
+                </div>
+                <label asp-for="CancellationPolicy"></label>
+                <select asp-for="CancellationPolicy" asp-items="Html.GetEnumSelectList<CancellationPolicy>()"></select>
+
+                <h2>Rates</h2>
+                <div class="bk-row3">
+                    <div><label asp-for="BaseNightly"></label><input asp-for="BaseNightly" inputmode="decimal" /></div>
+                    <div><label asp-for="WeekendNightly"></label><input asp-for="WeekendNightly" inputmode="decimal" /></div>
+                    <div><label asp-for="CleaningFee"></label><input asp-for="CleaningFee" inputmode="decimal" /></div>
+                </div>
+                <div class="bk-row3">
+                    <div><label asp-for="MaxNights"></label><input asp-for="MaxNights" /></div>
+                    <div></div><div></div>
+                </div>
+                <p class="bk-muted bk-small">Discounts for longer stays (a week, a fortnight, a month...) are set in <a href="#discounts">Length-of-stay discounts</a>.</p>
+                <label class="bk-check"><input asp-for="IsPublished" /> @Html.DisplayNameFor(m => m.IsPublished)</label>
+                @if (canEdit) { <button type="submit" class="bk-btn bk-btn-primary">Save</button> }
+            </fieldset>
+        </form>
+
+        <div>
+            <section class="bk-panel" id="seasons">
+                <h2>Seasons</h2>
+                <p class="bk-muted">Dates with their own nightly rate, such as December holidays or Easter.</p>
+                <table class="bk-table">
+                    @foreach (var s in stay.Seasons)
+                    {
+                        <tr>
+                            <td><strong>@s.Name</strong><br /><span class="bk-muted">@s.From.ToString("d MMM yyyy") to @s.To.ToString("d MMM yyyy")</span></td>
+                            <td class="bk-right">@Kes(s.Nightly)</td>
+                            <td class="bk-right">
+                                @if (canEdit)
+                                {
+                                    <form method="post" action="/host/stays/@stay.Id/seasons/@s.Id/remove" class="bk-inline">@Html.AntiForgeryToken()<button type="submit" class="bk-link">Remove</button></form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @if (stay.Seasons.Count == 0) { <tr><td class="bk-muted">No seasons yet.</td></tr> }
+                </table>
+                @if (canEdit)
+                {
+                    <form method="post" action="/host/stays/@stay.Id/seasons" class="bk-form bk-season-form">
+                        @Html.AntiForgeryToken()
+                        <input name="name" placeholder="Season name" required />
+                        <div class="bk-row3">
+                            <div><label>From</label><input name="from" type="date" required /></div>
+                            <div><label>To</label><input name="to" type="date" required /></div>
+                            <div><label>Nightly (KES)</label><input name="nightly" inputmode="decimal" required /></div>
+                        </div>
+                        <button type="submit" class="bk-btn bk-btn-small bk-btn-primary">Add season</button>
+                    </form>
+                }
+            </section>
+
+            <section class="bk-panel" id="discounts">
+                <h2>Length-of-stay discounts</h2>
+                <p class="bk-muted">Reward longer stays: the longest one a booking reaches applies, e.g. 5+ nights 5%, 10+ nights 8%, 14+ nights 12%, 27+ nights 20%.</p>
+                <table class="bk-table">
+                    @foreach (var d in stay.Discounts)
+                    {
+                        <tr>
+                            <td><strong>@d.MinNights+ nights</strong></td>
+                            <td class="bk-right">@d.Percent% off the nights</td>
+                            <td class="bk-right">
+                                @if (canEdit)
+                                {
+                                    <form method="post" action="/host/stays/@stay.Id/discounts/@d.Id/remove" class="bk-inline">@Html.AntiForgeryToken()<button type="submit" class="bk-link">Remove</button></form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                    @if (stay.Discounts.Count == 0) { <tr><td class="bk-muted">No discounts yet.</td></tr> }
+                </table>
+                @if (canEdit)
+                {
+                    <form method="post" action="/host/stays/@stay.Id/discounts" class="bk-form">
+                        @Html.AntiForgeryToken()
+                        <div class="bk-row3">
+                            <div><label>Stays of at least (nights)</label><input name="minNights" type="number" min="2" max="365" required /></div>
+                            <div><label>Discount (%)</label><input name="percent" type="number" min="1" max="90" required /></div>
+                            <div class="bk-end"><button type="submit" class="bk-btn bk-btn-small bk-btn-primary">Add discount</button></div>
+                        </div>
+                    </form>
+                }
+            </section>
+
+            <section class="bk-panel" id="preview">
+                <h2>Price preview</h2>
+                <form method="get" action="/host/stays/@stay.Id#preview" class="bk-form">
+                    <div class="bk-row3">
+                        <div><label>Check-in</label><input name="checkIn" type="date" value="@(Context.Request.Query["checkIn"].ToString() is { Length: > 0 } ci ? ci : today.AddDays(7).ToString("yyyy-MM-dd"))" /></div>
+                        <div><label>Check-out</label><input name="checkOut" type="date" value="@(Context.Request.Query["checkOut"].ToString() is { Length: > 0 } co ? co : today.AddDays(10).ToString("yyyy-MM-dd"))" /></div>
+                        <div class="bk-end"><button type="submit" class="bk-btn bk-btn-small bk-btn-light bk-btn-outline">Show price</button></div>
+                    </div>
+                </form>
+                @if (quote is not null)
+                {
+                    if (quote.Error is string e) { <p class="bk-alert bk-alert-err">@e</p> }
+                    else
+                    {
+                        <table class="bk-table">
+                            @foreach (var g in quote.Nights.GroupBy(n => (n.Source, n.Rate)))
+                            {
+                                <tr><td>@g.Count() × @g.Key.Source night@(g.Count() == 1 ? "" : "s") at @Kes(g.Key.Rate)</td><td class="bk-right">@Kes(g.Count() * g.Key.Rate)</td></tr>
+                            }
+                            @if (quote.CleaningFee > 0) { <tr><td>Cleaning fee</td><td class="bk-right">@Kes(quote.CleaningFee)</td></tr> }
+                            @if (quote.Discount > 0) { <tr><td>@quote.DiscountLabel</td><td class="bk-right">− @Kes(quote.Discount)</td></tr> }
+                            <tr class="bk-total"><td>Total for @quote.NightCount night@(quote.NightCount == 1 ? "" : "s")</td><td class="bk-right">@Kes(quote.Total)</td></tr>
+                            <tr><td>Deposit at booking (@stay.DepositPercent%)</td><td class="bk-right">@Kes(quote.Deposit)</td></tr>
+                        </table>
+                        <p class="bk-muted bk-small">The preview uses the saved rates; save changes first.</p>
+                    }
+                }
+            </section>
+        </div>
+    </div>
+</div>

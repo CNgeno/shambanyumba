@@ -65,7 +65,7 @@
         <h2 class="panel-title mb-3">Money</h2>
         <div class="row g-3">
             <div class="col-sm-6">
-                <label asp-for="MonthlyRent" class="form-label"></label>
+                <label asp-for="MonthlyRent" class="form-label">@(ViewData["ShortStay"] is true ? "Nightly rate (KES)" : Html.DisplayNameFor(m => m.MonthlyRent))</label>
                 <input asp-for="MonthlyRent" class="form-control" inputmode="decimal" />
                 <span asp-validation-for="MonthlyRent" class="invalid-feedback d-block"></span>
             </div>

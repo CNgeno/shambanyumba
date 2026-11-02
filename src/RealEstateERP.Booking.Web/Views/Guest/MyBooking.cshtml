@@ -1,0 +1,60 @@
+@model GuestBookingView?
+@{
+    ViewData["Title"] = "My booking";
+    string Kes(decimal v) => "KES " + v.ToString("N0");
+}
+<section class="bk-wrap">
+    @if (Model is null)
+    {
+        <div class="bk-panel bk-narrow">
+            <h1 class="bk-title">My booking</h1>
+            <p class="bk-muted">Enter your booking number and the phone number you booked with.</p>
+            @if (ViewData["NotFound"] is true) { <p class="bk-alert bk-alert-err">We couldn't find that booking. Check the number (e.g. BK-00012) and your phone number.</p> }
+            <form method="get" action="/my-booking" class="bk-form">
+                <label>Booking number</label><input name="number" value="@ViewData["Number"]" placeholder="BK-00012" required />
+                <label>Phone number</label><input name="phone" type="tel" value="@ViewData["Phone"]" required />
+                <button type="submit" class="bk-btn bk-btn-primary">Find my booking</button>
+            </form>
+        </div>
+    }
+    else
+    {
+        var b = Model;
+        <div class="bk-panel bk-narrow">
+            @if (ViewData["New"] is true) { <p class="bk-alert bk-alert-ok">Thank you! Your booking is in. @(b.Status == BookingStatus.Held ? "Pay the deposit to confirm it." : "")</p> }
+            <p class="bk-eyebrow">@b.BookingNumber</p>
+            <h1 class="bk-title">@b.StayTitle</h1>
+            <p class="bk-muted">@b.Place · host: @b.HostName@(b.HostPhone is null ? "" : $", {b.HostPhone}")</p>
+            <p><span class="bk-badge @(b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.CheckedIn ? "bk-badge-on" : "")">@EnumNames.Display(b.Status)</span></p>
+            <table class="bk-table">
+                <tr><td>Check-in</td><td class="bk-right">@b.CheckIn.ToString("dddd d MMM yyyy"), from @b.CheckInFrom.ToString("HH:mm")</td></tr>
+                <tr><td>Check-out</td><td class="bk-right">@b.CheckOut.ToString("dddd d MMM yyyy"), by @b.CheckOutBy.ToString("HH:mm")</td></tr>
+                <tr><td>Total</td><td class="bk-right">@Kes(b.Total)</td></tr>
+                <tr><td>Paid</td><td class="bk-right">@Kes(b.AmountPaid)</td></tr>
+                <tr class="bk-total"><td>Balance</td><td class="bk-right">@Kes(b.Balance)</td></tr>
+            </table>
+            @if (b.Status == BookingStatus.Held)
+            {
+                <div class="bk-pay">
+                    <h2>Pay the deposit: @Kes(b.DepositOutstanding)</h2>
+                    @if (b.HoldExpiresUtc is DateTime hold) { <p>Please pay by <strong>@hold.AddHours(3).ToString("ddd d MMM, HH:mm")</strong>, or the nights are released.</p> }
+                    @if (!string.IsNullOrWhiteSpace(b.PaymentInstructions))
+                    {
+                        <p style="white-space: pre-line">@b.PaymentInstructions</p>
+                        <p>Use <strong>@b.BookingNumber</strong> as the account number or reference.</p>
+                    }
+                    else { <p>The host will contact you@(b.HostPhone is null ? "" : $" from {b.HostPhone}") with how to pay.</p> }
+                    <p class="bk-muted bk-small">Your booking confirms once the host receives the deposit.</p>
+                </div>
+            }
+            else if (b.Status is BookingStatus.Cancelled or BookingStatus.NoShow)
+            {
+                <p class="bk-muted">This booking was cancelled.</p>
+            }
+            else if (b.Balance > 0)
+            {
+                <p>Balance of @Kes(b.Balance) to pay before or at check-in. @(string.IsNullOrWhiteSpace(b.PaymentInstructions) ? "" : $"Pay as before, with {b.BookingNumber} as the account.")</p>
+            }
+        </div>
+    }
+</section>

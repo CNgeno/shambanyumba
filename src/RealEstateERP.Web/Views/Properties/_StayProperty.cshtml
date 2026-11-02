@@ -1,0 +1,59 @@
+@model StayPropertySummary
+@inject RealEstateERP.Core.Interfaces.ICapabilityService Capabilities
+@{
+    // A short-stay property: nightly figures instead of rent roll; bookings, calendar and rates live on the booking site.
+    var site = (string)ViewData["BookingSite"]!;
+    var seesFinances = await Capabilities.CanViewFinancialsAsync();
+    string Rate() => Model.MinNightly is decimal lo && Model.MaxNightly is decimal hi ? (lo == hi ? lo.Kes() : $"{lo.Kes()} to {hi.ToString("N0")}") : "Not set";
+}
+<section class="stat-strip mb-3" aria-label="Short stays summary">
+    <div class="stat"><span class="stat-label">Short stays</span><span class="stat-value">@Model.Units</span><span class="stat-note">@Model.Published published</span></div>
+    <div class="stat"><span class="stat-label">Nightly rate</span><span class="stat-value">@Rate()</span><span class="stat-note">before weekends and seasons</span></div>
+    <div class="stat"><span class="stat-label">Booked this month</span><span class="stat-value">@Model.OccupancyPercent%</span><span class="stat-note">@Model.NightsBookedThisMonth of @Model.NightsInMonth nights</span></div>
+    @if (seesFinances)
+    {
+        <div class="stat"><span class="stat-label">Net this month</span><span class="stat-value">@Model.NetThisMonth.Kes()</span><span class="stat-note">@Model.BookingIncomeThisMonth.Kes() bookings − @Model.ExpensesThisMonth.ToString("N0") expenses</span></div>
+    }
+    else
+    {
+        <div class="stat"><span class="stat-label">Free tonight</span><span class="stat-value">@Model.FreeTonight</span><span class="stat-note">of @Model.Units</span></div>
+    }
+</section>
+
+<section class="panel p-0 mb-3">
+    <div class="units-toolbar">
+        <h2 class="panel-title me-auto">Stay units</h2>
+        <a href="@site/host/calendar" class="btn btn-sm btn-primary"><i class="bi bi-calendar3 me-1"></i>Calendar</a>
+        <a href="@site/host/bookings" class="btn btn-sm btn-outline-primary">Bookings</a>
+        <a href="@site/host/stays" class="btn btn-sm btn-outline-primary">Rates and details</a>
+        @if (seesFinances)
+        {
+            <a asp-controller="Costing" asp-action="Costs" asp-route-id="@ViewContext.RouteData.Values["id"]" asp-route-add="Actual" class="btn btn-sm btn-outline-primary">Record an expense</a>
+        }
+    </div>
+    <div class="table-responsive">
+        <table class="table align-middle mb-0 table-stack">
+            <thead><tr><th>Unit</th><th>Stay</th><th>Tonight</th><th class="text-end">Nightly</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var u in Model.Rows)
+            {
+                <tr>
+                    <td data-label="Unit" class="fw-semibold">@u.UnitNumber</td>
+                    <td data-label="Stay">@u.Title @if (!u.IsPublished) { <span class="badge text-bg-light border">Draft</span> }</td>
+                    <td data-label="Tonight">@(u.OccupiedTonight ? "Booked" : "Free")</td>
+                    <td data-label="Nightly" class="text-end">@(u.Nightly > 0 ? u.Nightly.Kes() : "Not set")</td>
+                    <td class="text-end text-nowrap">
+                        <a asp-controller="Units" asp-action="Edit" asp-route-id="@u.UnitId" class="btn btn-sm btn-link">Edit unit</a>
+                        <a href="@site/host/stays/@u.StayUnitId" class="btn btn-sm btn-outline-primary">Rates and details</a>
+                    </td>
+                </tr>
+            }
+            @if (Model.Rows.Count == 0)
+            {
+                <tr><td colspan="5" class="text-body-secondary small">No units yet. Use <strong>Add unit</strong> above: on this property the rate you enter is the <strong>nightly</strong> rate, and each unit becomes a short stay automatically.</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</section>
+<p class="small text-body-secondary">Short stays don't use leases, rent or invoices: guests book by the night on the booking site, where you also set weekend and seasonal rates, length-of-stay discounts and cleaning fees.</p>

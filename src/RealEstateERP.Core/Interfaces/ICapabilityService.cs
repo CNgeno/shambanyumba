@@ -5,7 +5,7 @@ namespace RealEstateERP.Core.Interfaces;
 /// Rentals when any property is to let, Sales when any is for sale, Agency when it manages for other owners
 /// and its plan allows it.
 /// </summary>
-public sealed record Capabilities(bool HasProperties, bool Rentals, bool Sales, bool AgencyOn, bool AgencyAllowedByPlan)
+public sealed record Capabilities(bool HasProperties, bool Rentals, bool Sales, bool AgencyOn, bool AgencyAllowedByPlan, bool ShortStays = false)
 {
     public bool Agency => AgencyOn && AgencyAllowedByPlan;
     public static readonly Capabilities None = new(false, false, false, false, false);

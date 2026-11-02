@@ -5,6 +5,7 @@
     var pageCategories = Enum.GetValues<CostCategory>().Where(c => pagePurpose switch
     {
         PropertyPurpose.Let => RealEstateERP.Core.Common.CostingRules.IsRunningCost(c),
+        PropertyPurpose.ShortStay => RealEstateERP.Core.Common.CostingRules.IsStayCost(c),
         PropertyPurpose.Sell => RealEstateERP.Core.Common.CostingRules.IsDevelopmentCost(c),
         _ => true
     }).ToList();
@@ -93,10 +94,11 @@
                         var allowed = Enum.GetValues<CostCategory>().Where(c => costPurpose switch
                         {
                             PropertyPurpose.Let => RealEstateERP.Core.Common.CostingRules.IsRunningCost(c),
+        PropertyPurpose.ShortStay => RealEstateERP.Core.Common.CostingRules.IsStayCost(c),
                             PropertyPurpose.Sell => RealEstateERP.Core.Common.CostingRules.IsDevelopmentCost(c),
                             _ => true
                         }).ToList();
-                        var chosen = allowed.Contains(f.Category) ? f.Category : (costPurpose == PropertyPurpose.Let ? CostCategory.Repairs : allowed.First());
+                        var chosen = allowed.Contains(f.Category) ? f.Category : (costPurpose == PropertyPurpose.Let ? CostCategory.Repairs : costPurpose == PropertyPurpose.ShortStay ? CostCategory.StayCleaning : allowed.First());
                     }
                     <select id="cost-cat" name="Category" class="form-select form-select-sm">
                         @foreach (var g in allowed.GroupBy(RealEstateERP.Core.Common.CostingRules.Group))

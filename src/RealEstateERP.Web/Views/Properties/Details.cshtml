@@ -74,6 +74,10 @@
 {
     <partial name="_LandProject" model="project" />
 }
+else if (ViewData["Stays"] is StayPropertySummary stayProperty)
+{
+    <partial name="_StayProperty" model="stayProperty" />
+}
 else
 {
 <section class="stat-strip mb-3" aria-label="Property summary">
@@ -90,6 +94,8 @@ else
 
 
 @* For an estate this grid is the Units tab; the other stages are panes below (_EstatePanes). *@
+@if (ViewData["Stays"] is null)   // short-stay properties show their stays panel instead of the rental grid
+{
 <div class="property-grid @(ViewData["Estate"] is EstatePanelModel ? "estate-pane" : "")" id="pane-units" role="@(ViewData["Estate"] is EstatePanelModel ? "tabpanel" : null)">
     <aside>
         @if (ViewData["Estate"] is null) { <partial name="_PropertyEnquiries" /> }
@@ -453,6 +459,7 @@ else
         }
     </section>
 </div>
+}
 @if (ViewData["Estate"] is EstatePanelModel) { <partial name="_EstatePanes" /> }
 
 @if (Model.CanEdit)

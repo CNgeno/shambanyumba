@@ -1,0 +1,14 @@
+@model IReadOnlyList<PublicStayCard>
+@{ ViewData["Title"] = "Short stays across Kenya"; }
+<section class="bk-hero">
+    <div class="bk-wrap">
+        <h1>Stay in homes across Kenya. <span>Book in minutes.</span></h1>
+        <p class="bk-lead">Furnished flats and guest houses from trusted ShambaNyumba hosts. See the full price for your dates, book, and pay the deposit to the host's M-PESA.</p>
+        <partial name="_SearchForm" />
+    </div>
+</section>
+<section class="bk-wrap">
+    <h2 class="bk-section-title">Stays you can book</h2>
+    <div class="bk-stays">@foreach (var s in Model) { <partial name="_StayCard" model="s" /> }</div>
+    @if (Model.Count == 0) { <p class="bk-muted">No stays are listed yet. Hosts: <a href="/host">list your stay</a>.</p> }
+</section>

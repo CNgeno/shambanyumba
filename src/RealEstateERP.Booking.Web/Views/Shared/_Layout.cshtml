@@ -1,0 +1,62 @@
+@inject IConfiguration Configuration
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] | ShambaNyumba Stays</title>
+    <link rel="icon" href="/img/favicon.ico" sizes="any" />
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#0B2A4A" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/css/booking.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="bk-header">
+        <div class="bk-wrap bk-header-row">
+            <a href="/" class="bk-brand"><img src="/img/shambanyumba-logo-dark.svg" alt="ShambaNyumba" width="190" height="31" /><span class="bk-product">Stays</span></a>
+            <nav class="bk-nav">
+                @if (User.Identity?.IsAuthenticated == true && Context.Request.Path.StartsWithSegments("/host"))
+                {
+                    <a href="/host">Today</a>
+                    <a href="/host/calendar">Calendar</a>
+                    <a href="/host/bookings">Bookings</a>
+                    <a href="/host/cleaning">Cleaning</a>
+                    <a href="/host/stays">Stays</a>
+                }
+                else
+                {
+                    <a href="/">Find a stay</a>
+                    <a href="/my-booking">My booking</a>
+                    <a href="/host">@(User.Identity?.IsAuthenticated == true ? "Host dashboard" : "Host sign in")</a>
+                }
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    var fullName = User.FindFirst(RealEstateERP.Core.Constants.AppClaimTypes.FullName)?.Value ?? User.Identity?.Name;
+                    var businessName = User.FindFirst(RealEstateERP.Core.Constants.AppClaimTypes.BusinessName)?.Value;
+                    var mainSite = (Configuration["Booking:MainSiteUrl"] ?? "https://shambanyumba.com").TrimEnd('/');
+                    var back = $"{Context.Request.Scheme}://{Context.Request.Host}/host";
+                    <details class="bk-user">
+                        <summary><span class="bk-avatar">@(string.IsNullOrEmpty(fullName) ? "?" : fullName[..1].ToUpperInvariant())</span><span class="bk-user-name">@fullName</span></summary>
+                        <div class="bk-user-menu">
+                            @if (businessName is not null) { <p class="bk-user-biz">@businessName</p> }
+                            <a href="@mainSite/Business/Select?returnUrl=@Uri.EscapeDataString(back)">Switch business</a>
+                            <a href="@mainSite/Dashboard">Back to ShambaNyumba</a>
+                            <form method="post" action="/host/signout">@Html.AntiForgeryToken()<button type="submit">Sign out</button></form>
+                        </div>
+                    </details>
+                }
+            </nav>
+        </div>
+    </header>
+    <main class="bk-main">
+        @if (TempData["Success"] is string ok) { <div class="bk-wrap"><p class="bk-alert bk-alert-ok">@ok</p></div> }
+        @if (TempData["Error"] is string err) { <div class="bk-wrap"><p class="bk-alert bk-alert-err">@err</p></div> }
+        @RenderBody()
+    </main>
+    <footer class="bk-footer">
+        <div class="bk-wrap">ShambaNyumba Stays · part of <a href="https://shambanyumba.com">ShambaNyumba</a>, the Real Estate Manager · 0742 076 192 · info@shambanyumba.com</div>
+    </footer>
+</body>
+</html>

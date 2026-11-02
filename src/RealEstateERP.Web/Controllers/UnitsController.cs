@@ -9,7 +9,7 @@ namespace RealEstateERP.Web.Controllers;
 
 /// <summary>Write operations only; units are viewed on the property page.</summary>
 [Authorize(Policy = Policies.CanEdit)]
-public class UnitsController(IUnitService units, IAssetService assets) : Controller
+public class UnitsController(IUnitService units, IAssetService assets, IStayService stays) : Controller
 {
     [HttpGet]
     public async Task<IActionResult> Create(int assetId, int? nodeId, CancellationToken ct)
@@ -31,6 +31,7 @@ public class UnitsController(IUnitService units, IAssetService assets) : Control
             return await FillAsync(model, ct) ? View("Form", model) : NotFound();
         }
 
+        await stays.EnsureStaysAsync(model.AssetId, ct);   // short-stay property: the unit becomes a stay with this nightly rate
         TempData["Success"] = $"Unit {model.UnitNumber} added.";
         return next == "another"
             ? RedirectToAction(nameof(Create), new { assetId = model.AssetId, nodeId = model.StructureNodeId })
@@ -57,6 +58,7 @@ public class UnitsController(IUnitService units, IAssetService assets) : Control
             return await FillAsync(model, ct) ? View(model) : NotFound();
         }
 
+        await stays.EnsureStaysAsync(model.AssetId, ct);
         TempData["Success"] = $"{result.Value} units added.";
         return RedirectToAction("Details", "Properties", new { id = model.AssetId });
     }
@@ -91,6 +93,7 @@ public class UnitsController(IUnitService units, IAssetService assets) : Control
             return await FillAsync(model, ct) ? View("Form", model) : NotFound();
         }
 
+        await stays.EnsureStaysAsync(model.AssetId, ct);
         TempData["Success"] = $"Unit {model.UnitNumber} saved.";
         return RedirectToAction("Details", "Properties", new { id = model.AssetId });
     }
@@ -125,6 +128,7 @@ public class UnitsController(IUnitService units, IAssetService assets) : Control
         if (details is null) return false;
         model.AssetName = details.Asset.Name;
         model.NodeOptions = details.Tree.Select(r => new NodeOption(r.Id, r.Path)).ToList();
+        ViewData["ShortStay"] = details.Asset.Purpose == PropertyPurpose.ShortStay;
         return true;
     }
 
@@ -135,6 +139,7 @@ public class UnitsController(IUnitService units, IAssetService assets) : Control
         model.AssetName = details.Asset.Name;
         model.NodeOptions = details.Tree.Select(r => new NodeOption(r.Id, r.Path)).ToList();
         model.Usage = await units.GetUsageAsync(ct);
+        ViewData["ShortStay"] = details.Asset.Purpose == PropertyPurpose.ShortStay;
         return true;
     }
 }
