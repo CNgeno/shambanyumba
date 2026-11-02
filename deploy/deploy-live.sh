@@ -55,8 +55,9 @@ if [ "$WHAT" != "booking" ]; then
     echo "== Backing up the database (before migrations)"
     mapfile -t ENVLINES < "$MAIN_ENV"   # not shell-sourceable (values contain spaces)
     CONN=$(printf '%s\n' "${ENVLINES[@]}" | grep '^ConnectionStrings__DefaultConnection=' | cut -d= -f2-)
-    field() { echo "$CONN" | tr ';' '\n' | grep -i "^\($1\)=" | head -1 | cut -d= -f2-; }
+    field() { echo "$CONN" | tr ';' '\n' | grep -iE "^($1)=" | head -1 | cut -d= -f2-; }
     DB=$(field 'Database|Initial Catalog'); DB_USER=$(field 'User ID|UID|User'); DB_PASS=$(field 'Password|PWD')
+    if [ -z "$DB" ] || [ -z "$DB_USER" ]; then echo "ERROR: couldn't read Database/User ID from $MAIN_ENV"; exit 1; fi
     BAK="/var/opt/mssql/data/${DB}-$(date +%Y%m%d-%H%M%S).bak"
     # SQL Server Express: no WITH COMPRESSION.
     SQLCMDPASSWORD="$DB_PASS" /opt/mssql-tools18/bin/sqlcmd -S localhost -U "$DB_USER" -C -b \
