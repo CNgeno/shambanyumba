@@ -1,13 +1,32 @@
 #!/bin/bash
 # Server-side deployment handler for ShambaNyumba
+# Usage: sudo bash deploy/smartestate-apply.sh <archive.tgz> [main|booking]   (default: main)
+# Rolls back the files if /health fails. Database migrations (run by the main site at startup) are NOT rolled back:
+# restore the backup taken by deploy-live.sh if one has to be undone.
 set -e
 
 ARCHIVE_PATH=$1
-TARGET_DIR="/home/builder/SmartEstate/publish"
-BACKUP_DIR="/home/builder/SmartEstate/backups"
+SITE=${2:-main}   # main = shambanyumba.com, booking = booking.shambanyumba.com
 TIMESTAMP=$(date +"%Y%m%d-%H%M%S")
-SERVICE_NAME="smartestate" # Make sure this matches your exact systemd service name
-HEALTH_URL="http://127.0.0.1:5010/health" # the port smartestate listens on ("Now listening on" in its log); 5000 is another app
+case "$SITE" in
+    main)
+        TARGET_DIR="/home/builder/SmartEstate/publish"
+        BACKUP_DIR="/home/builder/SmartEstate/backups"
+        SERVICE_NAME="smartestate"
+        HEALTH_URL="http://127.0.0.1:5010/health" # the port smartestate listens on ("Now listening on" in its log); 5000 is another app
+        ;;
+    booking)
+        TARGET_DIR="/home/builder/SmartEstate/booking/publish"
+        BACKUP_DIR="/home/builder/SmartEstate/booking/backups"
+        SERVICE_NAME="smartestate-booking"
+        HEALTH_URL="http://127.0.0.1:5011/health"
+        ;;
+    *)
+        echo "ERROR: unknown site '$SITE' (use main or booking)."
+        exit 1
+        ;;
+esac
+echo "Deploying $SITE ($SERVICE_NAME)..."
 
 if [ -z "$ARCHIVE_PATH" ] || [ ! -f "$ARCHIVE_PATH" ]; then
     echo "ERROR: Missing archive payload package."
@@ -15,7 +34,7 @@ if [ -z "$ARCHIVE_PATH" ] || [ ! -f "$ARCHIVE_PATH" ]; then
 fi
 
 echo "Creating safe roll-back point backup..."
-mkdir -p "$BACKUP_DIR/$TIMESTAMP"
+mkdir -p "$BACKUP_DIR/$TIMESTAMP" "$TARGET_DIR"
 cp -r "$TARGET_DIR/." "$BACKUP_DIR/$TIMESTAMP/"
 
 # 🌟 CRITICAL FIX: Stop the application process first to free the locked files

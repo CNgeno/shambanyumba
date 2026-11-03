@@ -11,7 +11,7 @@
     <div class="alert alert-success small" role="status">@Model.StatusMessage</div>
 }
 
-<form method="post" asp-route-returnUrl="@Model.ReturnUrl" novalidate>
+<form method="post" asp-route-returnUrl="@Model.ReturnUrl" id="login-form" novalidate>
     <div asp-validation-summary="ModelOnly" class="alert alert-danger small" role="alert"></div>
     @if (Model.ShowResendLink)
     {
@@ -54,4 +54,22 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Send the sign-in form once: a second tap while the first is still loading arrives after the person is
+        // signed in, with a token that is no longer valid (it showed as "400 Bad Request" on slow connections).
+        (function () {
+            var form = document.getElementById('login-form');
+            form.addEventListener('submit', function (e) {
+                if (e.defaultPrevented) return;   // client-side validation stopped it
+                if (form.dataset.sent) { e.preventDefault(); return; }
+                form.dataset.sent = '1';
+                form.querySelector('button[type=submit]').disabled = true;
+            });
+            // Back button (page restored from cache): allow signing in again.
+            window.addEventListener('pageshow', function () {
+                delete form.dataset.sent;
+                form.querySelector('button[type=submit]').disabled = false;
+            });
+        })();
+    </script>
 }
