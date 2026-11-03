@@ -21,7 +21,7 @@ public class BookingServiceTests
         await db.SaveChangesAsync();
         user.BusinessId = business.Id;
         var unit = new Unit { Asset = new Asset { Name = "Bethlehem Estate", Type = AssetType.Estate }, UnitNumber = "H3", Bedrooms = 1, MonthlyRent = 6_000 };
-        var stay = new StayUnit { Unit = unit, Title = "1-bedroom at Bethlehem", BaseNightly = 4_000, CleaningFee = 500, MaxGuests = 3, MinNights = 1, MaxAdvanceDays = 365 };
+        var stay = new StayUnit { Unit = unit, Title = "1-bedroom at Bethlehem", BaseNightly = 4_000, CleaningFee = 500, MaxGuests = 3, MinNights = 1, MaxAdvanceDays = 365, IsPublished = true };
         db.StayUnits.Add(stay);
         await db.SaveChangesAsync();
         return (db, new BookingService(db, Clock, user), stay.Id);
@@ -117,5 +117,17 @@ public class BookingServiceTests
         Assert.False(RealEstateERP.Core.Common.CostingRules.IsDevelopmentCost(CostCategory.StayWages));
         Assert.True(RealEstateERP.Core.Common.CostingRules.IsRunningCost(CostCategory.Repairs));
         Assert.Equal(CostGroup.Stays, RealEstateERP.Core.Common.CostingRules.Group(CostCategory.StayCommissions));
+    }
+
+    [Fact]
+    public async Task Draft_stays_cannot_be_booked()
+    {
+        var (db, svc, stay) = await SetupAsync();
+        (await db.StayUnits.SingleAsync()).IsPublished = false;
+        await db.SaveChangesAsync();
+        var r = await svc.CreateAsync(Input(stay, D(11, 10), D(11, 11)));
+        Assert.False(r.Succeeded);
+        Assert.Contains("draft", r.Error);
+        Assert.Empty((await svc.CalendarAsync(D(11, 2), 14)).Rows);   // and drafts aren't on the calendar
     }
 }

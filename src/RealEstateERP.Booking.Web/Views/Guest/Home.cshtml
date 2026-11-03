@@ -10,5 +10,9 @@
 <section class="bk-wrap">
     <h2 class="bk-section-title">Stays you can book</h2>
     <div class="bk-stays">@foreach (var s in Model) { <partial name="_StayCard" model="s" /> }</div>
-    @if (Model.Count == 0) { <p class="bk-muted">No stays are listed yet. Hosts: <a href="/host">list your stay</a>.</p> }
+    @if (Model.Count == 0) { <p class="bk-muted">No stays are listed yet.</p> }
+    <div class="bk-panel bk-host-cta">
+        <div><h2>Have a room, flat or guest house?</h2><p class="bk-muted">List it on ShambaNyumba Stays: guests book and pay you directly by M-PESA, and you manage every booking in one calendar.</p></div>
+        <a class="bk-btn bk-btn-accent" href="/host/start">Become a host</a>
+    </div>
 </section>

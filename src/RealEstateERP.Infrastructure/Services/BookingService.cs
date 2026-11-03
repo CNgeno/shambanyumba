@@ -23,7 +23,7 @@ public sealed class BookingService(ApplicationDbContext db, TimeProvider clock, 
     {
         days = Math.Clamp(days, 7, 62);
         var to = from.AddDays(days);
-        var stays = await db.StayUnits.AsNoTracking().Include(s => s.Unit).OrderBy(s => s.Title).ToListAsync(ct);
+        var stays = await db.StayUnits.AsNoTracking().Include(s => s.Unit).Where(s => s.IsPublished).OrderBy(s => s.Title).ToListAsync(ct);   // drafts can't be booked
         var unitIds = stays.Select(s => s.UnitId).ToList();
         var nights = await db.BookingNights.AsNoTracking()
             .Where(n => unitIds.Contains(n.UnitId) && n.Night >= from && n.Night < to)
@@ -80,6 +80,7 @@ public sealed class BookingService(ApplicationDbContext db, TimeProvider clock, 
     {
         var stay = await db.StayUnits.Include(s => s.Seasons).Include(s => s.Discounts).FirstOrDefaultAsync(s => s.Id == i.StayUnitId, ct);
         if (stay is null) return Result<int>.Fail("Short stay not found.");
+        if (!stay.IsPublished) return Result<int>.Fail("This stay is a draft. Publish it (Stays → Publish) before taking bookings.");
         if (string.IsNullOrWhiteSpace(i.GuestName)) return Result<int>.Fail("Enter the guest's name.");
         var phone = new string((i.GuestPhone ?? "").Where(c => char.IsDigit(c) || c == '+').ToArray());
         if (phone.Length < 9) return Result<int>.Fail("Enter the guest's phone number.");
@@ -325,6 +326,6 @@ public sealed class BookingService(ApplicationDbContext db, TimeProvider clock, 
     private static Task<List<BookingListItem>> Items(IQueryable<Booking> q, CancellationToken ct)
         => q.AsNoTracking().OrderBy(b => b.CheckIn)
             .Select(b => new BookingListItem(b.Id, b.BookingNumber, b.StayUnit.Title, b.Guest.FullName, b.Guest.Phone,
-                b.CheckIn, b.CheckOut, b.Nights, b.Status, b.Channel, b.Total, b.AmountPaid))
+                b.CheckIn, b.CheckOut, b.Nights, b.Status, b.Channel, b.Total, b.AmountPaid, b.StayUnitId))
             .Take(300).ToListAsync(ct);
 }

@@ -1,0 +1,23 @@
+@model IReadOnlyList<HostStayProperty>
+@{ ViewData["Title"] = "Your properties"; var canEdit = ViewData["CanEdit"] is true; }
+<section class="bk-wrap">
+    <div class="bk-head"><div><p class="bk-eyebrow">Host</p><h1 class="bk-title">Your properties</h1></div>
+        @if (canEdit) { <a class="bk-btn bk-btn-primary" href="/host/properties/new">Add property</a> }</div>
+    <div class="bk-panel bk-table-wrap">
+        <table class="bk-table">
+            <thead><tr><th>Property</th><th>Place</th><th class="bk-right">Units</th><th class="bk-right">Published</th><th class="bk-right">Photos</th><th></th></tr></thead>
+            <tbody>
+            @foreach (var p in Model)
+            {
+                <tr>
+                    <td><strong>@p.Name</strong></td>
+                    <td>@string.Join(", ", new[] { p.Location, p.County }.Where(x => !string.IsNullOrWhiteSpace(x)))</td>
+                    <td class="bk-right">@p.Units</td><td class="bk-right">@p.Published</td><td class="bk-right">@p.Photos</td>
+                    <td class="bk-right"><a class="bk-btn bk-btn-small bk-btn-primary" href="/host/properties/@p.AssetId">Open</a></td>
+                </tr>
+            }
+            @if (Model.Count == 0) { <tr><td colspan="6" class="bk-muted">No properties yet. <a href="/host/properties/new">Add your first property</a>.</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</section>

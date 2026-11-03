@@ -1,0 +1,22 @@
+@{ ViewData["Title"] = "Add property"; }
+<section class="bk-wrap">
+    <p class="bk-back"><a href="/host/properties">&larr; Your properties</a></p>
+    <form method="post" action="/host/properties/new" class="bk-panel bk-form bk-narrow">
+        @Html.AntiForgeryToken()
+        <h1 class="bk-title">Add property</h1>
+        <p class="bk-muted">The place where your stays are: a guest house, an apartment block or an estate. You'll add its rooms or flats next.</p>
+        <label>Name</label><input name="name" required placeholder="e.g. Bethlehem Stays" />
+        <label>Type</label>
+        <select name="type">
+            <option value="@AssetType.Building">Building (guest house, apartments)</option>
+            <option value="@AssetType.Estate">Estate (several houses)</option>
+            <option value="@AssetType.CommercialComplex">Commercial complex</option>
+        </select>
+        <div class="bk-row3">
+            <div style="grid-column: span 2"><label>Town or area</label><input name="location" required placeholder="e.g. Kitengela" /></div>
+            <div><label>County</label><input name="county" placeholder="e.g. Kajiado" /></div>
+        </div>
+        <label>About the property (optional)</label><textarea name="description" rows="3" placeholder="Quiet compound, 10 minutes from town, secure parking..."></textarea>
+        <button type="submit" class="bk-btn bk-btn-primary">Add property</button>
+    </form>
+</section>

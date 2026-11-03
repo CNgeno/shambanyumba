@@ -1,0 +1,100 @@
+@model StayPropertySummary
+@{
+    var p = (HostStayProperty)ViewData["Property"]!;
+    var photos = (IReadOnlyList<PhotoRow>)ViewData["Photos"]!;
+    var canEdit = ViewData["CanEdit"] is true;
+    ViewData["Title"] = p.Name;
+    string Kes(decimal v) => "KES " + v.ToString("N0");
+}
+<section class="bk-wrap">
+    <p class="bk-back"><a href="/host/properties">&larr; Your properties</a></p>
+    <h1 class="bk-title">@p.Name</h1>
+    <p class="bk-muted">@string.Join(", ", new[] { p.Location, p.County }.Where(x => !string.IsNullOrWhiteSpace(x))) · @Model.Units stay@(Model.Units == 1 ? "" : "s"), @Model.Published published · @Model.OccupancyPercent% booked this month</p>
+
+    <div class="bk-grid">
+        <div>
+            <section class="bk-panel bk-table-wrap">
+                <div class="bk-panel-head">
+                    <h2>Stays</h2>
+                    @if (canEdit) { <button type="button" class="bk-btn bk-btn-small bk-btn-primary" onclick="document.getElementById('add-units').showModal()">+ Add units</button> }
+                </div>
+                <table class="bk-table">
+                    <thead><tr><th>Unit</th><th>Stay</th><th>Tonight</th><th class="bk-right">Nightly</th><th></th></tr></thead>
+                    <tbody>
+                    @foreach (var u in Model.Rows)
+                    {
+                        <tr>
+                            <td><strong>@u.UnitNumber</strong></td>
+                            <td><span class="bk-badge @(u.IsPublished ? "bk-badge-on" : "")">@(u.IsPublished ? "Published" : "Draft")</span> @u.Title</td>
+                            <td>@(u.OccupiedTonight ? "Booked" : "Free")</td>
+                            <td class="bk-right bk-nowrap">@(u.Nightly > 0 ? Kes(u.Nightly) : "Not set")</td>
+                            <td class="bk-right bk-nowrap"><a href="/host/units/@u.UnitId/photos">Photos</a> · <a href="/host/stays/@u.StayUnitId/view">View</a></td>
+                        </tr>
+                    }
+                    @if (Model.Rows.Count == 0) { <tr><td colspan="5" class="bk-muted">No units yet. @if (canEdit) { <button type="button" class="bk-link" onclick="document.getElementById('add-units').showModal()">Add the first ones</button> }</td></tr> }
+                    </tbody>
+                </table>
+            </section>
+        </div>
+        <div>
+            <section class="bk-panel" id="photos">
+                <h2>Property photos</h2>
+                <p class="bk-muted bk-small">Outside, gate, compound and views. Choose several at once. Guests see them after each unit's own photos.</p>
+                <div class="bk-thumbs">
+                    @foreach (var ph in photos)
+                    {
+                        <figure>
+                            <img src="/host/photo/estate/@ph.Id" alt="@ph.FileName" loading="lazy" />
+                            @if (canEdit) { <form method="post" action="/host/properties/@p.AssetId/photos/@ph.Id/remove">@Html.AntiForgeryToken()<button type="submit" class="bk-link">Remove</button></form> }
+                        </figure>
+                    }
+                    @if (photos.Count == 0) { <p class="bk-muted bk-small">No photos yet.</p> }
+                </div>
+                @if (canEdit)
+                {
+                    <form method="post" action="/host/properties/@p.AssetId/photos" enctype="multipart/form-data" class="bk-form">
+                        @Html.AntiForgeryToken()
+                        <input type="file" name="files" accept="image/*" multiple required />
+                        <button type="submit" class="bk-btn bk-btn-small bk-btn-primary">Upload photos</button>
+                    </form>
+                }
+            </section>
+        </div>
+    </div>
+
+    @if (canEdit)
+    {
+        <dialog id="add-units" class="bk-dialog">
+            <form method="post" action="/host/properties/@p.AssetId/units" class="bk-form">
+                @Html.AntiForgeryToken()
+                <div class="bk-panel-head"><h2>Add units</h2><button type="button" class="bk-dialog-close" aria-label="Close" onclick="this.closest('dialog').close()">&times;</button></div>
+                <div class="bk-choice">
+                    <label><input type="radio" name="mode" value="one" checked onchange="document.getElementById('one').hidden=false;document.getElementById('many').hidden=true" /> One unit</label>
+                    <label><input type="radio" name="mode" value="many" onchange="document.getElementById('one').hidden=true;document.getElementById('many').hidden=false" /> Many at once</label>
+                </div>
+                <div id="one"><label>Unit name or number</label><input name="unitNumber" placeholder="e.g. Room 1, A1" /></div>
+                <div id="many" hidden>
+                    <div class="bk-row3">
+                        <div><label>Prefix</label><input name="prefix" placeholder="e.g. A" /></div>
+                        <div><label>Start at</label><input name="start" type="number" min="1" value="1" /></div>
+                        <div><label>How many</label><input name="count" type="number" min="1" max="200" value="4" /></div>
+                    </div>
+                    <p class="bk-muted bk-small">E.g. prefix A, start 1, 4 units: A1, A2, A3, A4.</p>
+                </div>
+                <div class="bk-row3">
+                    <div><label>Nightly rate (KES)</label><input name="nightly" inputmode="decimal" required /></div>
+                    <div><label>Bedrooms</label><input name="bedrooms" type="number" min="0" value="1" /></div>
+                    <div><label>Bathrooms</label><input name="bathrooms" type="number" min="0" value="1" /></div>
+                </div>
+                <label>Type</label>
+                <select name="type"><option value="@UnitType.Apartment">Apartment or flat</option><option value="@UnitType.Bedsitter">Studio or bedsitter</option><option value="@UnitType.Other">Room or other</option></select>
+                <p class="bk-muted bk-small">New units start as drafts: add photos, check rates, then publish.</p>
+                <div class="bk-actions bk-actions-tight">
+                    <button type="submit" class="bk-btn bk-btn-primary">Add</button>
+                    <button type="button" class="bk-btn bk-btn-light bk-btn-outline" onclick="this.closest('dialog').close()">Cancel</button>
+                </div>
+            </form>
+        </dialog>
+        <script>if (location.hash === '#add-units') document.getElementById('add-units').showModal();</script>
+    }
+</section>

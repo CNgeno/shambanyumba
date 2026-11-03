@@ -21,7 +21,8 @@ public sealed class StaySearchService(ApplicationDbContext db, TimeProvider cloc
     private IQueryable<StayUnit> Published => db.StayUnits.IgnoreQueryFilters()
         .Where(s => !s.IsDeleted && s.IsPublished && s.BaseNightly > 0
                     && !s.Unit.IsDeleted && s.Unit.Status != UnitStatus.Inactive
-                    && !s.Unit.Asset.IsDeleted && s.Unit.Asset.Purpose == PropertyPurpose.ShortStay);
+                    && !s.Unit.Asset.IsDeleted && s.Unit.Asset.Purpose == PropertyPurpose.ShortStay
+                    && !db.Businesses.Any(b => b.Id == s.BusinessId && b.IsDemo));   // the public demo never reaches real guests
 
     private IQueryable<BookingNight> LiveNights => db.BookingNights.IgnoreQueryFilters().Where(n => !n.IsDeleted);
 

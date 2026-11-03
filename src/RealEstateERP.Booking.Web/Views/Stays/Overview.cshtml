@@ -1,0 +1,74 @@
+@model StayUnit
+@{
+    var s = Model;
+    var canEdit = ViewData["CanEdit"] is true;
+    var photos = (IReadOnlyList<PhotoRow>)ViewData["Photos"]!;
+    var upcoming = (List<BookingListItem>)ViewData["Upcoming"]!;
+    ViewData["Title"] = s.Title;
+    string Kes(decimal v) => "KES " + v.ToString("N0");
+}
+<section class="bk-wrap">
+    <p class="bk-back"><a href="/host/stays">&larr; Short stays</a></p>
+    <div class="bk-head">
+        <div>
+            <h1 class="bk-title">@s.Title</h1>
+            <p class="bk-muted">@s.Unit.UnitNumber at @s.Unit.Asset.Name · <span class="bk-badge @(s.IsPublished ? "bk-badge-on" : "")">@(s.IsPublished ? "Published" : "Draft: not on the guest site")</span></p>
+        </div>
+        @if (canEdit)
+        {
+            <div class="bk-actions bk-actions-tight">
+                <a class="bk-btn bk-btn-primary" href="/host/stays/@s.Id">Edit</a>
+                <a class="bk-btn bk-btn-light bk-btn-outline" href="/host/units/@s.UnitId/photos">Photos</a>
+                <form method="post" action="/host/stays/@s.Id/publish" class="bk-inline">
+                    @Html.AntiForgeryToken()<input type="hidden" name="published" value="@(!s.IsPublished)" /><input type="hidden" name="back" value="view" />
+                    <button type="submit" class="bk-btn bk-btn-light bk-btn-outline">@(s.IsPublished ? "Unpublish" : "Publish")</button>
+                </form>
+            </div>
+        }
+    </div>
+
+    @if (photos.Count > 0)
+    {
+        <div class="bk-gallery">@foreach (var ph in photos.Take(6)) { <img src="/host/photo/unit/@ph.Id" alt="@ph.FileName" loading="lazy" /> }</div>
+    }
+    else { <p class="bk-alert bk-alert-err">No photos yet: stays with photos get far more bookings. <a href="/host/units/@s.UnitId/photos">Add photos</a></p> }
+
+    <div class="bk-grid">
+        <div>
+            <section class="bk-panel">
+                <h2>Details</h2>
+                <p>@s.Beds bed@(s.Beds == 1 ? "" : "s") · @s.Bathrooms bathroom@(s.Bathrooms == 1 ? "" : "s") · up to @s.MaxGuests guests</p>
+                @if (s.Description is string d) { <p>@d</p> }
+                @if (s.Amenities is string a) { <p><strong>Amenities:</strong> @a</p> }
+                @if (s.HouseRules is string r) { <p><strong>House rules:</strong> @r</p> }
+                <h2>Rules</h2>
+                <table class="bk-table">
+                    <tr><td>Check-in / check-out</td><td class="bk-right">from @s.CheckInFrom.ToString("HH:mm") / by @s.CheckOutBy.ToString("HH:mm")</td></tr>
+                    <tr><td>Stay length</td><td class="bk-right">@s.MinNights night min@(s.MaxNights is int mx ? $", {mx} max" : "")</td></tr>
+                    <tr><td>Deposit at booking</td><td class="bk-right">@s.DepositPercent%</td></tr>
+                    <tr><td>Cancellation</td><td class="bk-right">@EnumNames.Display(s.CancellationPolicy)</td></tr>
+                </table>
+            </section>
+        </div>
+        <div>
+            <section class="bk-panel">
+                <h2>Rates</h2>
+                <table class="bk-table">
+                    <tr><td>Nightly</td><td class="bk-right">@(s.BaseNightly > 0 ? Kes(s.BaseNightly) : "Not set")</td></tr>
+                    @if (s.WeekendNightly is decimal w) { <tr><td>Friday and Saturday nights</td><td class="bk-right">@Kes(w)</td></tr> }
+                    @if (s.CleaningFee > 0) { <tr><td>Cleaning fee</td><td class="bk-right">@Kes(s.CleaningFee)</td></tr> }
+                    @foreach (var se in s.Seasons) { <tr><td>@se.Name (@se.From.ToString("d MMM") to @se.To.ToString("d MMM"))</td><td class="bk-right">@Kes(se.Nightly)</td></tr> }
+                    @foreach (var di in s.Discounts) { <tr><td>@di.MinNights+ nights</td><td class="bk-right">@di.Percent% off</td></tr> }
+                </table>
+            </section>
+            <section class="bk-panel">
+                <h2>Upcoming bookings</h2>
+                @foreach (var b in upcoming)
+                {
+                    <a class="bk-item" href="/host/bookings/@b.Id"><strong>@b.GuestName</strong><span>@b.BookingNumber · @b.CheckIn.ToString("d MMM") to @b.CheckOut.ToString("d MMM") · @EnumNames.Display(b.Status)</span></a>
+                }
+                @if (upcoming.Count == 0) { <p class="bk-muted">None yet.</p> }
+            </section>
+        </div>
+    </div>
+</section>

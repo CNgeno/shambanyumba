@@ -28,4 +28,11 @@ public interface IStayService
     /// </summary>
     Task EnsureStaysAsync(int assetId, CancellationToken ct = default);
     Task<StayPropertySummary> GetPropertySummaryAsync(int assetId, CancellationToken ct = default);
+
+    Task<Result> SetPublishedAsync(int stayUnitId, bool published, CancellationToken ct = default);
+    /// <summary>Publishes every draft stay that has a nightly rate. Value: how many.</summary>
+    Task<Result<int>> PublishAllReadyAsync(CancellationToken ct = default);
+    /// <summary>The business's short-stay properties with their unit, published and photo counts.</summary>
+    Task<IReadOnlyList<HostStayProperty>> ListPropertiesAsync(CancellationToken ct = default);
+    Task<HostSetupProgress> GetSetupProgressAsync(CancellationToken ct = default);
 }

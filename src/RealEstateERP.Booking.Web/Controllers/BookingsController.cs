@@ -52,7 +52,7 @@ public class BookingsController(IBookingService bookings, IStayService stays, IC
     public async Task<IActionResult> New(int? stayUnitId, DateOnly? checkIn, DateOnly? checkOut, CancellationToken ct)
     {
         if (!CanEdit) return Forbid();
-        ViewData["Stays"] = (await stays.ListAsync(ct)).Where(s => s.StayUnitId is not null).ToList();
+        ViewData["Stays"] = (await stays.ListAsync(ct)).Where(s => s.StayUnitId is not null && s.IsPublished).ToList();
         var ci = checkIn ?? Today;
         return View(new NewBookingInput(stayUnitId ?? 0, ci, checkOut ?? ci.AddDays(1), 1, 0, "", "", null, BookingChannel.WalkIn, null, null));
     }
@@ -66,7 +66,7 @@ public class BookingsController(IBookingService bookings, IStayService stays, IC
         var r = await bookings.CreateAsync(input, ct);
         if (r.Succeeded) { TempData["Success"] = "Booking confirmed."; return Redirect($"/host/bookings/{r.Value}"); }
         TempData["Error"] = r.Error;
-        ViewData["Stays"] = (await stays.ListAsync(ct)).Where(s => s.StayUnitId is not null).ToList();
+        ViewData["Stays"] = (await stays.ListAsync(ct)).Where(s => s.StayUnitId is not null && s.IsPublished).ToList();
         return View("New", input);
     }
 

@@ -51,7 +51,8 @@ public static class DemoDataSeeder
             await LinkAgentLoginAsync(db, ids);   // James Kamau signs in as an agent
             await SeedSalesAsync(db);             // Sprint 9: Savanna Homes plot sales
             await SeedCostingAsync(db);           // Development costing for Savanna Heights and Acacia Court
-            await SeedListingsAsync(db);          // Sprint 10: public listings and verified leads
+            await SeedListingsAsync(db);
+            await DemoStaysSeeder.SeedAsync(db);   // short stays with three months of activity, for reports
             return;
         }
 
@@ -121,6 +122,7 @@ public static class DemoDataSeeder
         await SeedSalesAsync(db);
         await SeedCostingAsync(db);
         await SeedListingsAsync(db);
+            await DemoStaysSeeder.SeedAsync(db);   // short stays with three months of activity, for reports
     }
 
     // ------------------------------------------------------------------ public demo
@@ -162,6 +164,7 @@ public static class DemoDataSeeder
         await SeedSalesAsync(db);
         await SeedCostingAsync(db);
         await SeedListingsAsync(db);
+            await DemoStaysSeeder.SeedAsync(db);   // short stays with three months of activity, for reports
     }
 
     // ------------------------------------------------------------------ Sprint 10: marketplace

@@ -26,7 +26,17 @@ public sealed record CalendarRow(int StayUnitId, string Title, string UnitNumber
 public sealed record HostCalendar(DateOnly From, int Days, IReadOnlyList<CalendarRow> Rows);
 
 public sealed record BookingListItem(int Id, string BookingNumber, string StayTitle, string GuestName, string GuestPhone,
-    DateOnly CheckIn, DateOnly CheckOut, int Nights, BookingStatus Status, BookingChannel Channel, decimal Total, decimal AmountPaid);
+    DateOnly CheckIn, DateOnly CheckOut, int Nights, BookingStatus Status, BookingChannel Channel, decimal Total, decimal AmountPaid, int StayUnitId = 0);
+
+/// <summary>A short-stay property on the host's booking site.</summary>
+public sealed record HostStayProperty(int AssetId, string Name, string? Location, string? County, int Units, int Published, int Photos);
+
+/// <summary>The host's "getting started" progress, worked out from their data.</summary>
+public sealed record HostSetupProgress(bool HasProperty, bool HasUnits, bool HasPhotos, bool AllRated, bool AnyPublished, bool HasPaymentInstructions)
+{
+    public bool Complete => HasProperty && HasUnits && HasPhotos && AllRated && AnyPublished && HasPaymentInstructions;
+    public int Done => new[] { HasProperty, HasUnits, HasPhotos, AllRated, AnyPublished, HasPaymentInstructions }.Count(x => x);
+}
 
 public sealed record CleaningItem(int Id, string StayTitle, string UnitNumber, DateOnly Due, CleaningStatus Status, string? BookingNumber);
 

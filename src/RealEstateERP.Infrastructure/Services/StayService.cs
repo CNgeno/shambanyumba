@@ -8,7 +8,7 @@ using RealEstateERP.Infrastructure.Data;
 
 namespace RealEstateERP.Infrastructure.Services;
 
-public sealed class StayService(ApplicationDbContext db, TimeProvider clock) : IStayService
+public sealed class StayService(ApplicationDbContext db, TimeProvider clock, ICurrentUserService? currentUser = null) : IStayService
 {
     private DateOnly Today => DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime.AddHours(3));   // East Africa Time
 
@@ -115,6 +115,48 @@ public sealed class StayService(ApplicationDbContext db, TimeProvider clock) : I
         db.StayDiscounts.Remove(d);
         await db.SaveChangesAsync(ct);
         return Result.Ok();
+    }
+
+    public async Task<Result> SetPublishedAsync(int stayUnitId, bool published, CancellationToken ct = default)
+    {
+        var stay = await db.StayUnits.FirstOrDefaultAsync(s => s.Id == stayUnitId, ct);
+        if (stay is null) return Result.Fail("Short stay not found.");
+        if (published && stay.BaseNightly <= 0) return Result.Fail("Set the nightly rate before publishing.");
+        stay.IsPublished = published;
+        await db.SaveChangesAsync(ct);
+        return Result.Ok();
+    }
+
+    public async Task<Result<int>> PublishAllReadyAsync(CancellationToken ct = default)
+    {
+        var drafts = await db.StayUnits.Where(s => !s.IsPublished && s.BaseNightly > 0 && s.Unit.Status != UnitStatus.Inactive).ToListAsync(ct);
+        foreach (var s in drafts) s.IsPublished = true;
+        await db.SaveChangesAsync(ct);
+        return Result<int>.Ok(drafts.Count);
+    }
+
+    public async Task<IReadOnlyList<HostStayProperty>> ListPropertiesAsync(CancellationToken ct = default)
+        => await db.Assets.AsNoTracking().Where(a => a.Purpose == PropertyPurpose.ShortStay).OrderBy(a => a.Name)
+            .Select(a => new HostStayProperty(a.Id, a.Name, a.Location, a.County,
+                db.Units.Count(u => u.AssetId == a.Id && u.Status != UnitStatus.Inactive),
+                db.StayUnits.Count(s => s.Unit.AssetId == a.Id && s.IsPublished),
+                db.AssetPhotos.Count(p => p.AssetId == a.Id) + db.UnitPhotos.Count(p => p.Unit.AssetId == a.Id)))
+            .ToListAsync(ct);
+
+    public async Task<HostSetupProgress> GetSetupProgressAsync(CancellationToken ct = default)
+    {
+        var properties = await ListPropertiesAsync(ct);
+        var stays = db.StayUnits.Where(s => s.Unit.Status != UnitStatus.Inactive);
+        var businessId = currentUser?.BusinessId;
+        var instructions = businessId is null ? null
+            : await db.Businesses.AsNoTracking().Where(b => b.Id == businessId).Select(b => b.PaymentInstructions).FirstOrDefaultAsync(ct);
+        return new HostSetupProgress(
+            properties.Count > 0,
+            properties.Any(p => p.Units > 0),
+            properties.Any(p => p.Photos > 0),
+            await stays.AnyAsync(ct) && !await stays.AnyAsync(s => s.BaseNightly <= 0, ct),
+            await stays.AnyAsync(s => s.IsPublished, ct),
+            !string.IsNullOrWhiteSpace(instructions));
     }
 
     public Task<bool> IsShortStayPropertyAsync(int assetId, CancellationToken ct = default)

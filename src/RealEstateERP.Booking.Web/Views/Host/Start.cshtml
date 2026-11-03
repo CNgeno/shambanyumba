@@ -1,0 +1,52 @@
+@model HostSetupProgress
+@using RealEstateERP.Booking.Web.Services
+@{
+    ViewData["Title"] = "Get started";
+    var canEdit = ViewData["CanEdit"] is true;
+    var steps = SetupSteps.For(Model);
+    var current = SetupSteps.Current(steps);
+    var stepNo = current?.Number ?? 6;
+}
+<section class="bk-wrap">
+    <div class="bk-head">
+        <div><p class="bk-eyebrow">Host</p><h1 class="bk-title">@(Model.Complete ? "You're all set" : "Get started as a host")</h1></div>
+        <div class="bk-stepper-count">@(Model.Complete ? "All 6 steps done" : $"Step {stepNo} of 6")</div>
+    </div>
+    <div class="bk-progress" role="progressbar" aria-valuemin="0" aria-valuemax="6" aria-valuenow="@Model.Done"><span style="width:@(Model.Done * 100 / 6)%"></span></div>
+
+    <ol class="bk-steps">
+        @foreach (var s in steps)
+        {
+            var state = s.Done ? "is-done" : s == current ? "is-current" : "is-locked";
+            <li class="@state" id="@(s.Number == 6 ? "pay" : $"step-{s.Number}")">
+                <div class="bk-step-row">
+                    <span class="bk-step-mark">@(s.Done ? "✓" : s == current ? s.Number.ToString() : "🔒")</span>
+                    <div>
+                        <strong>@s.Number. @s.Title</strong>
+                        <p class="bk-muted bk-small">@(s.Done || s == current ? s.Text : $"Unlocks after step {s.Number - 1}.")</p>
+                    </div>
+                    @if (s.Done && s.ReviewHref is string review) { <a class="bk-link" href="@review">Review</a> }
+                    else if (s == current && s.Number != 6) { <a class="bk-btn bk-btn-small bk-btn-primary" href="@s.Href">@s.Action</a> }
+                </div>
+
+                @* Step 6 happens right here: when it's due, or to change it once done. *@
+                @if (s.Number == 6 && (s == current || s.Done))
+                {
+                    <div class="bk-step-body">
+                        <p class="bk-muted bk-small">Guests pay you directly; ShambaNyumba never holds the money. They use the booking number as the account number.</p>
+                        @if (canEdit)
+                        {
+                            <form method="post" action="/host/payment-instructions" class="bk-form">
+                                @Html.AntiForgeryToken()
+                                <textarea name="instructions" rows="3" placeholder="M-PESA Paybill 123456 (account: your booking number)&#10;or Equity Bank, account 0123456789">@ViewData["Instructions"]</textarea>
+                                <button type="submit" class="bk-btn bk-btn-small bk-btn-primary">@(s.Done ? "Save changes" : "Save and finish")</button>
+                            </form>
+                        }
+                        else { <p style="white-space: pre-line">@(ViewData["Instructions"] ?? "Not set yet: ask the business owner.")</p> }
+                    </div>
+                }
+            </li>
+        }
+    </ol>
+    @if (Model.Complete) { <p><a href="/host" class="bk-btn bk-btn-primary">Go to Today</a> <a href="/" class="bk-btn bk-btn-light bk-btn-outline">See the guest site</a></p> }
+</section>

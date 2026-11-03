@@ -11,10 +11,10 @@
             <a class="bk-btn bk-btn-light bk-btn-outline" href="/host/calendar">Calendar</a>
         </div>
     </div>
-    @if (ViewData["Stays"] is 0)
+    @if (ViewData["Setup"] is HostSetupProgress setup && !setup.Complete)
     {
-        <div class="bk-panel"><h2>Start here</h2><p>You have @ViewData["Units"] unit(s) on ShambaNyumba. Turn a vacant one into a short stay and set its rates.</p>
-            <a class="bk-btn bk-btn-primary" href="/host/stays">Your short stays</a></div>
+        var nextStep = RealEstateERP.Booking.Web.Services.SetupSteps.Current(RealEstateERP.Booking.Web.Services.SetupSteps.For(setup));
+        <a class="bk-panel bk-setup-banner" href="/host/start"><strong>Finish setting up: step @nextStep!.Number of 6</strong><span>Next: @nextStep.Title.</span><span class="bk-btn bk-btn-small bk-btn-primary">Continue</span></a>
     }
     @if (Model.AwaitingDeposit is { Count: > 0 } awaiting)
     {

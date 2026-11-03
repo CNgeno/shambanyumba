@@ -9,7 +9,7 @@ namespace RealEstateERP.Booking.Web.Controllers;
 
 /// <summary>Host: which units are short stays, their details, rules, rates and seasons, with a price preview.</summary>
 [Authorize, Route("host/stays")]
-public class StaysController(IStayService stays, ICurrentUserService currentUser) : Controller
+public class StaysController(IStayService stays, IBookingService bookings, IEstateService estate, ICurrentUserService currentUser) : Controller
 {
     private bool CanEdit => currentUser.Role is BusinessRole.Owner or BusinessRole.Admin or BusinessRole.User;
 
@@ -19,6 +19,36 @@ public class StaysController(IStayService stays, ICurrentUserService currentUser
         if (currentUser.BusinessId is null) return Redirect("/host");
         ViewData["CanEdit"] = CanEdit;
         return View(await stays.ListAsync(ct));
+    }
+
+    /// <summary>A stay at a glance: photos, details, rates, seasons, discounts and upcoming bookings, with Edit.</summary>
+    [HttpGet("{id:int}/view")]
+    public async Task<IActionResult> Overview(int id, CancellationToken ct)
+    {
+        var stay = await stays.GetAsync(id, ct);
+        if (stay is null) return NotFound();
+        ViewData["CanEdit"] = CanEdit;
+        ViewData["Photos"] = await estate.GetUnitPhotosAsync(stay.UnitId, ct);
+        ViewData["Upcoming"] = (await bookings.ListAsync("upcoming", ct)).Where(b => b.StayUnitId == id).ToList();
+        return View("Overview", stay);
+    }
+
+    [HttpPost("{id:int}/publish"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> Publish(int id, bool published, string? back, CancellationToken ct)
+    {
+        if (!CanEdit) return Forbid();
+        var r = await stays.SetPublishedAsync(id, published, ct);
+        TempData[r.Succeeded ? "Success" : "Error"] = r.Succeeded ? (published ? "Published: guests can now find and book it." : "Unpublished: hidden from guests.") : r.Error;
+        return Redirect(back is "view" ? $"/host/stays/{id}/view" : "/host/stays");
+    }
+
+    [HttpPost("publish-all"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> PublishAll(CancellationToken ct)
+    {
+        if (!CanEdit) return Forbid();
+        var r = await stays.PublishAllReadyAsync(ct);
+        TempData["Success"] = r.Value == 0 ? "Nothing to publish: every stay with a nightly rate is already published." : $"Published {r.Value} stay(s).";
+        return Redirect("/host/stays");
     }
 
     [HttpPost("enable/{unitId:int}"), ValidateAntiForgeryToken]

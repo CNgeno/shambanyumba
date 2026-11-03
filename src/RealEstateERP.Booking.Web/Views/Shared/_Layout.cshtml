@@ -1,3 +1,4 @@
+@inject RealEstateERP.Core.Interfaces.IStayService Stays
 @inject IConfiguration Configuration
 <!DOCTYPE html>
 <html lang="en">
@@ -24,12 +25,13 @@
                     <a href="/host/bookings">Bookings</a>
                     <a href="/host/cleaning">Cleaning</a>
                     <a href="/host/stays">Stays</a>
+                    <a href="/host/properties">Properties</a>
                 }
                 else
                 {
                     <a href="/">Find a stay</a>
                     <a href="/my-booking">My booking</a>
-                    <a href="/host">@(User.Identity?.IsAuthenticated == true ? "Host dashboard" : "Host sign in")</a>
+                    @if (User.Identity?.IsAuthenticated == true) { <a href="/host">Host dashboard</a> } else { <a href="/host/start" class="bk-nav-cta">Become a host</a> }
                 }
                 @if (User.Identity?.IsAuthenticated == true)
                 {
@@ -51,6 +53,19 @@
         </div>
     </header>
     <main class="bk-main">
+        @if (User.Identity?.IsAuthenticated == true && Context.Request.Cookies.ContainsKey(RealEstateERP.Booking.Web.Services.SetupSteps.Cookie)
+             && Context.Request.Path.StartsWithSegments("/host") && !Context.Request.Path.StartsWithSegments("/host/start"))
+        {
+            // Mid-setup: a way back to the next step from every host page.
+            var setupSteps = RealEstateERP.Booking.Web.Services.SetupSteps.For(await Stays.GetSetupProgressAsync());
+            if (RealEstateERP.Booking.Web.Services.SetupSteps.Current(setupSteps) is { } next)
+            {
+                <div class="bk-flowbar"><div class="bk-wrap bk-flowbar-row">
+                    <span><strong>Getting started</strong> · Step @next.Number of 6: @next.Title</span>
+                    <a href="/host/start">Continue &rarr;</a>
+                </div></div>
+            }
+        }
         @if (TempData["Success"] is string ok) { <div class="bk-wrap"><p class="bk-alert bk-alert-ok">@ok</p></div> }
         @if (TempData["Error"] is string err) { <div class="bk-wrap"><p class="bk-alert bk-alert-err">@err</p></div> }
         @RenderBody()

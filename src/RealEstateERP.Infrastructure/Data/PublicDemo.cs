@@ -19,7 +19,21 @@ public static class PublicDemo
         var owner = await EnsureUserAsync(users, DemoUsers.Owner, "Demo Visitor");
         var agent = await EnsureUserAsync(users, DemoUsers.Agent, "James Kamau (demo agent)");
         await DemoDataSeeder.SeedPublicDemoAsync(db, owner.Id, agent.Id);
+        await DemoStaysSeeder.SeedAsync(db);   // also adds the stays to a demo created before they existed
         return (owner, agent);
+    }
+
+    /// <summary>Null when the demo is ready to use; otherwise why not (for the log, and to keep visitors out of an empty demo).</summary>
+    public static async Task<string?> ProblemAsync(ApplicationDbContext db, string ownerUserId, CancellationToken ct = default)
+    {
+        if (await db.BusinessUsers.AnyAsync(m => m.UserId == ownerUserId && m.IsActive && m.Business.IsDemo, ct)) return null;
+        var clash = await db.Businesses.Where(b => !b.IsDemo
+                && (b.Name == "Acacia Gardens Ltd" || b.Name == "Savanna Homes Developers" || b.Name == "Mji Property Agents"))
+            .Select(b => b.Name).ToListAsync(ct);
+        return clash.Count > 0
+            ? $"The demo wasn't created because businesses with its names already exist and aren't demo businesses ({string.Join(", ", clash)}). "
+              + "These are usually old test data: remove them (Clean-Production-Keep-Mine.sql) and the demo is created on the next click."
+            : "The demo businesses are missing and couldn't be created; see earlier errors in the log.";
     }
 
     /// <summary>Deletes all rows of demo businesses, across every table with a BusinessId, in one transaction.</summary>
