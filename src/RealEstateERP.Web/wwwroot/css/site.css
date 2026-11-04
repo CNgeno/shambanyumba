@@ -621,3 +621,15 @@ a.map-pin-btn { color: inherit; text-decoration: none; display: inline-flex; ali
 .map-pin-preview-label { font-size: .8rem; font-weight: 600; color: #5c6670; margin-bottom: .25rem; }
 .map-pin-preview iframe { display: block; width: 100%; height: 240px; border: 1px solid #dee2e6; border-radius: .6rem; }
 .map-pin-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .6rem; }
+
+/* Property page: small "Map" link beside the location, opening a compact map under the title (Views/Properties/_PropertyMap). */
+.map-toggle { display: inline-flex; align-items: center; gap: .25rem; margin-left: .5rem; padding: .05rem .55rem; border: 1px solid var(--sb-line);
+    border-radius: 999px; background: transparent; color: var(--sb-brand); font-size: .8rem; font-weight: 500; line-height: 1.6; text-decoration: none; vertical-align: 1px; cursor: pointer; }
+.map-toggle:hover { background: var(--sb-brand-tint); }
+.map-toggle-chevron { font-size: .65rem; transition: transform .2s; }
+.map-toggle:not(.collapsed) .map-toggle-chevron { transform: rotate(180deg); }
+.property-map { max-width: 640px; margin: 0 0 1rem; border: 1px solid var(--sb-line); border-radius: .6rem; overflow: hidden; background: #fff; }
+.property-map-frame { display: block; width: 100%; height: 240px; border: 0; }
+.property-map-actions { display: flex; align-items: center; gap: 1rem; padding: .45rem .75rem; font-size: .85rem; border-top: 1px solid var(--sb-line); }
+.property-map-actions a { text-decoration: none; }
+.btn-close-sm { width: .6em; height: .6em; }

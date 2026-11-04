@@ -1,0 +1,24 @@
+@model RealEstateERP.Core.Entities.Asset
+@* Collapsed map under the page title, opened by the "Map" link beside the location. The map loads only when opened. *@
+@if (Model.Latitude is double lat && Model.Longitude is double lng)
+{
+    <div class="collapse" id="property-map">
+        <div class="property-map">
+            <iframe class="property-map-frame" data-src="@RealEstateERP.Core.Common.MapPin.EmbedUrl(lat, lng)" title="Map: @Model.Name" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+            <div class="property-map-actions">
+                <a target="_blank" rel="noopener" href="@RealEstateERP.Core.Common.MapPin.OpenUrl(lat, lng)"><i class="bi bi-box-arrow-up-right me-1"></i>Open in Google Maps</a>
+                <a asp-action="Edit" asp-route-id="@Model.Id">Move pin</a>
+                <button type="button" class="btn-close btn-close-sm ms-auto" data-bs-toggle="collapse" data-bs-target="#property-map" aria-label="Close map"></button>
+            </div>
+        </div>
+    </div>
+    <script>
+        (function () {
+            var box = document.getElementById('property-map');
+            box.addEventListener('show.bs.collapse', function () {
+                var f = box.querySelector('iframe');
+                if (!f.src) f.src = f.dataset.src;
+            });
+        })();
+    </script>
+}

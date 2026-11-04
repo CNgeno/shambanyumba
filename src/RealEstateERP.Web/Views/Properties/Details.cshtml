@@ -16,6 +16,14 @@
             @a.Type.Display()
             @if (!string.IsNullOrEmpty(a.Location)) { <span>, @a.Location</span> }
             @if (!string.IsNullOrEmpty(a.County)) { <span>, @a.County County</span> }
+            @if (a.Latitude is not null && a.Longitude is not null)
+            {
+                <button type="button" class="map-toggle collapsed" data-bs-toggle="collapse" data-bs-target="#property-map" aria-expanded="false" aria-controls="property-map"><i class="bi bi-geo-alt-fill"></i>Map<i class="bi bi-chevron-down map-toggle-chevron"></i></button>
+            }
+            else if (Model.CanEdit)
+            {
+                <a class="map-toggle" asp-action="Edit" asp-route-id="@a.Id"><i class="bi bi-pin-map"></i>Pin on map</a>
+            }
             @if (ViewData["ManagedFor"] is ValueTuple<int, string, int> m)
             {
                 <span class="status-chip status-info ms-1">Managed for <a asp-controller="Owners" asp-action="Details" asp-route-id="@m.Item1">@m.Item2</a></span>
@@ -69,6 +77,7 @@
         </div>
     }
 </div>
+<partial name="_PropertyMap" model="a" />
 
 @if (ViewData["Project"] is LandProjectModel project)
 {
@@ -194,22 +203,6 @@ else
             </dl>
         </section>
 
-        <section class="panel mt-3">
-            <h2 class="panel-title mb-2">On the map</h2>
-            @if (a.Latitude is double lat && a.Longitude is double lng)
-            {
-                <iframe class="map-pin-view" src="@RealEstateERP.Core.Common.MapPin.EmbedUrl(lat, lng)" title="Map: @a.Name" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
-                <div class="map-pin-actions">
-                    <a class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener" href="@RealEstateERP.Core.Common.MapPin.OpenUrl(lat, lng)"><i class="bi bi-geo-alt me-1"></i>Open in Google Maps</a>
-                    <a class="btn btn-sm btn-link" asp-action="Edit" asp-route-id="@a.Id">Move pin</a>
-                </div>
-            }
-            else
-            {
-                <p class="small text-body-secondary mb-2">No map pin yet. Pin the property so people who enquire can find it.</p>
-                <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@a.Id"><i class="bi bi-pin-map me-1"></i>Pin on the map</a>
-            }
-        </section>
     </aside>
 
     <section class="panel p-0" id="units">
