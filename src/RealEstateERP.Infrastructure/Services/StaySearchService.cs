@@ -87,7 +87,8 @@ public sealed class StaySearchService(ApplicationDbContext db, TimeProvider cloc
         var discounts = s.Discounts.Where(d => !d.IsDeleted).OrderBy(d => d.MinNights).Select(d => $"{d.Percent}% off stays of {d.MinNights}+ nights").ToList();
         return new PublicStayDetails(new PublicStayCard(s.Id, s.Title, Place(s.Unit.Asset), s.Beds, s.MaxGuests, s.BaseNightly, photoId, kind, quote),
             host, s.Description, amenities, s.HouseRules, s.CheckInFrom, s.CheckOutBy, s.MinNights, s.MaxNights, s.CancellationPolicy,
-            s.DepositPercent, s.CleaningFee, unitPhotos.Concat(estatePhotos).ToList(), taken, discounts);
+            s.DepositPercent, s.CleaningFee, unitPhotos.Concat(estatePhotos).ToList(), taken, discounts,
+            s.Unit.Asset.Latitude, s.Unit.Asset.Longitude);
     }
 
     public async Task<Result<string>> BookAsync(PublicBookingInput i, CancellationToken ct = default)
@@ -159,7 +160,8 @@ public sealed class StaySearchService(ApplicationDbContext db, TimeProvider cloc
         var host = await db.Businesses.IgnoreQueryFilters().AsNoTracking().Where(x => x.Id == b.BusinessId)
             .Select(x => new { x.Name, x.Phone, x.PaymentInstructions }).FirstAsync(ct);
         return new GuestBookingView(b.BookingNumber, b.Status, b.StayUnit.Title, Place(b.StayUnit.Unit.Asset), host.Name, host.Phone,
-            b.CheckIn, b.CheckOut, b.Nights, b.StayUnit.CheckInFrom, b.StayUnit.CheckOutBy, b.Total, b.AmountPaid, b.DepositDue, b.HoldExpiresUtc, host.PaymentInstructions);
+            b.CheckIn, b.CheckOut, b.Nights, b.StayUnit.CheckInFrom, b.StayUnit.CheckOutBy, b.Total, b.AmountPaid, b.DepositDue, b.HoldExpiresUtc, host.PaymentInstructions,
+            b.StayUnit.Unit.Asset.Latitude, b.StayUnit.Unit.Asset.Longitude);
     }
 
     public async Task<(Stream Content, string ContentType)?> OpenPhotoAsync(string kind, int photoId, CancellationToken ct = default)

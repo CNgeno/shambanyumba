@@ -601,3 +601,18 @@ h1, h2, h3, h4, h5, h6 { color: var(--sb-ink); }
 .estate-tab.is-active .estate-tab-mark { border-color: rgba(255,255,255,.7); color: #fff; }
 .estate-tab.is-active small { color: rgba(255,255,255,.8) !important; }
 .estate-pane[hidden] { display: none !important; }
+
+/* ---- Property map pins (js/map-pin.js) ---- */
+.map-pin-tools { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .5rem; }
+.map-pin-search { flex: 1 1 16rem; min-width: 0; padding: .45rem .7rem; border: 1px solid #ced4da; border-radius: .5rem; font: inherit; }
+.map-pin-btn { padding: .45rem .8rem; border: 1px solid #ced4da; border-radius: .5rem; background: #fff; font: inherit; font-size: .9rem; cursor: pointer; white-space: nowrap; }
+.map-pin-btn:hover { background: #f1f4f8; }
+.map-pin-canvas { height: 320px; border-radius: .6rem; border: 1px solid #dee2e6; z-index: 0; }
+.map-pin-view { height: 260px; border-radius: .6rem; border: 1px solid #dee2e6; z-index: 0; }
+.map-pin-status { font-size: .85rem; color: #5c6670; margin-top: .4rem; }
+.map-pin-link { border: 0; background: none; padding: 0; color: #b02a37; text-decoration: underline; cursor: pointer; font: inherit; }
+.map-pin-results { display: grid; gap: .25rem; margin-top: .4rem; }
+.map-pin-result { text-align: left; border: 1px solid #dee2e6; background: #fff; border-radius: .4rem; padding: .35rem .6rem; font-size: .85rem; cursor: pointer; }
+.map-pin-result:hover { background: #f1f4f8; }
+.map-pin-error { padding: 1rem; color: #5c6670; font-size: .9rem; }
+.map-pin-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .6rem; }

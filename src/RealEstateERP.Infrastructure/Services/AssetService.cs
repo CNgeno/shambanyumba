@@ -114,6 +114,18 @@ public sealed class AssetService(ApplicationDbContext db, ICapabilityService? ca
         return Result.Ok();
     }
 
+    public async Task<Result> SetMapPinAsync(int assetId, double? latitude, double? longitude, CancellationToken ct = default)
+    {
+        var asset = await db.Assets.FirstOrDefaultAsync(a => a.Id == assetId, ct);
+        if (asset is null) return Result.Fail("Property not found.");
+        if (MapPin.Validate(latitude, longitude) is string error) return Result.Fail(error);
+
+        asset.Latitude = latitude is double lat ? MapPin.Round(lat) : null;
+        asset.Longitude = longitude is double lng ? MapPin.Round(lng) : null;
+        await db.SaveChangesAsync(ct);
+        return Result.Ok();
+    }
+
     public async Task<Result> DeleteAsync(int assetId, CancellationToken ct = default)
     {
         var asset = await db.Assets.FirstOrDefaultAsync(a => a.Id == assetId, ct);
@@ -213,7 +225,7 @@ public sealed class AssetService(ApplicationDbContext db, ICapabilityService? ca
             return "Choose a county from the list.";
         if (input.LandSizeAcres < 0 || input.AcquisitionCost < 0)
             return "Land size and acquisition cost can't be negative.";
-        return null;
+        return MapPin.Validate(input.Latitude, input.Longitude);
     }
 
     private static string? ValidateNode(IReadOnlyList<StructureNodeDto> nodes, StructureNodeInput input, int? nodeId)
@@ -243,6 +255,8 @@ public sealed class AssetService(ApplicationDbContext db, ICapabilityService? ca
         asset.LifecycleState = input.LifecycleState;
         asset.Location = input.Location?.Trim();
         asset.County = KenyaCounties.All.FirstOrDefault(c => string.Equals(c, input.County, StringComparison.OrdinalIgnoreCase));
+        asset.Latitude = input.Latitude is double lat ? MapPin.Round(lat) : null;
+        asset.Longitude = input.Longitude is double lng ? MapPin.Round(lng) : null;
         asset.LandSizeAcres = input.LandSizeAcres;
         asset.AcquisitionCost = input.AcquisitionCost;
         asset.AcquisitionDate = input.AcquisitionDate;

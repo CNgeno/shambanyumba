@@ -28,7 +28,8 @@ public sealed record PublicSearchResult(IReadOnlyList<PublicListingCard> Items, 
 }
 
 public sealed record PublicListingDetails(
-    PublicListingCard Card, string Description, IReadOnlyList<int> PhotoIds, string AssetName, IReadOnlyList<PublicListingCard> MoreInProject);
+    PublicListingCard Card, string Description, IReadOnlyList<int> PhotoIds, string AssetName, IReadOnlyList<PublicListingCard> MoreInProject,
+    double? Latitude = null, double? Longitude = null);
 
 /// <param name="EmailConfirmedRecently">This browser confirmed this email within the confirmation window (protected cookie): deliver without a new email.</param>
 public sealed record EnquiryInput(int ListingId, string Name, string Phone, string Email, string? Message, bool Consent, bool EmailConfirmedRecently = false);

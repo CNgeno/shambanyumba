@@ -13,6 +13,8 @@ public interface IAssetService
 
     Task<Result<int>> CreateAsync(AssetInput input, CancellationToken ct = default);
     Task<Result> UpdateAsync(int assetId, AssetInput input, CancellationToken ct = default);
+    /// <summary>Set or clear (both null) the property's map pin.</summary>
+    Task<Result> SetMapPinAsync(int assetId, double? latitude, double? longitude, CancellationToken ct = default);
     Task<Result> DeleteAsync(int assetId, CancellationToken ct = default);
 
     Task<Result<int>> AddNodeAsync(int assetId, StructureNodeInput input, CancellationToken ct = default);

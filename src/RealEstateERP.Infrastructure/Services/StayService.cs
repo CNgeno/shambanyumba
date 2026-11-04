@@ -140,7 +140,8 @@ public sealed class StayService(ApplicationDbContext db, TimeProvider clock, ICu
             .Select(a => new HostStayProperty(a.Id, a.Name, a.Location, a.County,
                 db.Units.Count(u => u.AssetId == a.Id && u.Status != UnitStatus.Inactive),
                 db.StayUnits.Count(s => s.Unit.AssetId == a.Id && s.IsPublished),
-                db.AssetPhotos.Count(p => p.AssetId == a.Id) + db.UnitPhotos.Count(p => p.Unit.AssetId == a.Id)))
+                db.AssetPhotos.Count(p => p.AssetId == a.Id) + db.UnitPhotos.Count(p => p.Unit.AssetId == a.Id),
+                a.Latitude, a.Longitude))
             .ToListAsync(ct);
 
     public async Task<HostSetupProgress> GetSetupProgressAsync(CancellationToken ct = default)

@@ -107,7 +107,7 @@ public class PropertiesController(IAssetService assets, IUnitService units, IAge
         return View("Form", new AssetFormViewModel
         {
             Id = a.Id, Name = a.Name, Type = a.Type, Purpose = RealEstateERP.Core.Common.PropertyRules.Effective(a.Purpose, a.Type), LifecycleState = a.LifecycleState, Location = a.Location,
-            County = a.County, LandSizeAcres = a.LandSizeAcres, AcquisitionCost = a.AcquisitionCost,
+            County = a.County, Latitude = a.Latitude, Longitude = a.Longitude, LandSizeAcres = a.LandSizeAcres, AcquisitionCost = a.AcquisitionCost,
             AcquisitionDate = a.AcquisitionDate?.ToDateTime(TimeOnly.MinValue), TitleDeedNumber = a.TitleDeedNumber,
             Description = a.Description
         });

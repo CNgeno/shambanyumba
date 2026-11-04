@@ -12,6 +12,9 @@ public class Asset : TenantEntity
 
     public string? Location { get; set; }
     public string? County { get; set; }
+    /// <summary>Map pin (WGS84). Both set or both null. Shown to enquirers and guests as a map with "Open in Google Maps".</summary>
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
     public decimal? LandSizeAcres { get; set; }
     public decimal? AcquisitionCost { get; set; }
     public DateOnly? AcquisitionDate { get; set; }

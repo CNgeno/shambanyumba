@@ -193,6 +193,23 @@ else
                 }
             </dl>
         </section>
+
+        <section class="panel mt-3">
+            <h2 class="panel-title mb-2">On the map</h2>
+            @if (a.Latitude is double lat && a.Longitude is double lng)
+            {
+                <div class="map-pin-view" data-lat="@lat.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-lng="@lng.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-title="@a.Name"></div>
+                <div class="map-pin-actions">
+                    <a class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener" href="@RealEstateERP.Core.Common.MapPin.OpenUrl(lat, lng)"><i class="bi bi-geo-alt me-1"></i>Open in Google Maps</a>
+                    <a class="btn btn-sm btn-link" asp-action="Edit" asp-route-id="@a.Id">Move pin</a>
+                </div>
+            }
+            else
+            {
+                <p class="small text-body-secondary mb-2">No map pin yet. Pin the property so people who enquire can find it.</p>
+                <a class="btn btn-sm btn-outline-primary" asp-action="Edit" asp-route-id="@a.Id"><i class="bi bi-pin-map me-1"></i>Pin on the map</a>
+            }
+        </section>
     </aside>
 
     <section class="panel p-0" id="units">
@@ -515,6 +532,7 @@ else
 }
 
 @section Scripts {
+    <script src="~/js/map-pin.js" asp-append-version="true"></script>
     <script>
         (function () {
             var modal = document.getElementById('nodeModal');

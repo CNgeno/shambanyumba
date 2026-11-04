@@ -69,7 +69,7 @@ public sealed class MarketplaceService(ApplicationDbContext db, IEmailService em
         var card = (await Cards((await LiveAsync(ct)).Where(l => l.Id == listingId), ct)).FirstOrDefault();
         if (card is null) return null;
 
-        var extra = await (await LiveAsync(ct)).Where(l => l.Id == listingId).Select(l => new { l.Description, l.Unit.AssetId, AssetName = l.Unit.Asset.Name }).FirstAsync(ct);
+        var extra = await (await LiveAsync(ct)).Where(l => l.Id == listingId).Select(l => new { l.Description, l.Unit.AssetId, AssetName = l.Unit.Asset.Name, l.Unit.Asset.Latitude, l.Unit.Asset.Longitude }).FirstAsync(ct);
         var photos = await db.ListingPhotos.IgnoreQueryFilters([QueryFilters.Tenant]).Where(p => p.ListingId == listingId)
             .OrderBy(p => p.SortOrder).ThenBy(p => p.Id).Select(p => p.Id).ToListAsync(ct);
         var more = await Cards((await LiveAsync(ct)).Where(l => l.Unit.AssetId == extra.AssetId && l.Id != listingId).OrderBy(l => l.Price).Take(6), ct);
@@ -77,7 +77,7 @@ public sealed class MarketplaceService(ApplicationDbContext db, IEmailService em
         if (countView)   // direct UPDATE: an anonymous visitor may not save tenant rows through the change tracker
             await AllListings.Where(l => l.Id == listingId).ExecuteUpdateAsync(s => s.SetProperty(l => l.ViewCount, l => l.ViewCount + 1), ct);
 
-        return new PublicListingDetails(card, extra.Description, photos, extra.AssetName, more);
+        return new PublicListingDetails(card, extra.Description, photos, extra.AssetName, more, extra.Latitude, extra.Longitude);
     }
 
     public async Task<(string Key, string FileName)?> GetPublicPhotoAsync(int photoId, CancellationToken ct = default)

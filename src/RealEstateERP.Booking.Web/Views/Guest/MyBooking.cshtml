@@ -25,6 +25,13 @@
             <p class="bk-eyebrow">@b.BookingNumber</p>
             <h1 class="bk-title">@b.StayTitle</h1>
             <p class="bk-muted">@b.Place · host: @b.HostName@(b.HostPhone is null ? "" : $", {b.HostPhone}")</p>
+            @if (b.Latitude is double lat && b.Longitude is double lng)
+            {
+                <p class="map-pin-actions">
+                    <a class="bk-btn bk-btn-small bk-btn-primary" target="_blank" rel="noopener" href="@RealEstateERP.Core.Common.MapPin.DirectionsUrl(lat, lng)">Directions to the stay</a>
+                    <a class="bk-btn bk-btn-small bk-btn-light bk-btn-outline" target="_blank" rel="noopener" href="@RealEstateERP.Core.Common.MapPin.OpenUrl(lat, lng)">Open in Google Maps</a>
+                </p>
+            }
             <p><span class="bk-badge @(b.Status == BookingStatus.Confirmed || b.Status == BookingStatus.CheckedIn ? "bk-badge-on" : "")">@EnumNames.Display(b.Status)</span></p>
             <table class="bk-table">
                 <tr><td>Check-in</td><td class="bk-right">@b.CheckIn.ToString("dddd d MMM yyyy"), from @b.CheckInFrom.ToString("HH:mm")</td></tr>

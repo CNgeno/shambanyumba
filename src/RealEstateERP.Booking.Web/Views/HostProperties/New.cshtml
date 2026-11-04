@@ -13,10 +13,16 @@
             <option value="@AssetType.CommercialComplex">Commercial complex</option>
         </select>
         <div class="bk-row3">
-            <div style="grid-column: span 2"><label>Town or area</label><input name="location" required placeholder="e.g. Kitengela" /></div>
-            <div><label>County</label><input name="county" placeholder="e.g. Kajiado" /></div>
+            <div style="grid-column: span 2"><label>Town or area</label><input name="location" id="location" required placeholder="e.g. Kitengela" /></div>
+            <div><label>County</label><input name="county" id="county" placeholder="e.g. Kajiado" /></div>
         </div>
+        <label>Pin it on the map</label>
+        <p class="bk-muted bk-small">Click the map where the property is, or stand at the property and tap <em>My location</em>. Guests see this pin and can open it in Google Maps for directions.</p>
+        <input type="hidden" name="latitude" id="latitude" />
+        <input type="hidden" name="longitude" id="longitude" />
+        <div class="map-pin-picker" data-lat-input="latitude" data-lng-input="longitude" data-address-inputs="location,county"></div>
         <label>About the property (optional)</label><textarea name="description" rows="3" placeholder="Quiet compound, 10 minutes from town, secure parking..."></textarea>
         <button type="submit" class="bk-btn bk-btn-primary">Add property</button>
     </form>
 </section>
+<script src="~/js/map-pin.js" asp-append-version="true"></script>

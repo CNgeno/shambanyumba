@@ -36,6 +36,15 @@
                     <li>Deposit at booking: @Model.DepositPercent% of the total</li>
                     <li>Cancellation: @EnumNames.Display(Model.CancellationPolicy)</li>
                 </ul>
+                @if (Model.Latitude is double lat && Model.Longitude is double lng)
+                {
+                    <h3 id="map">Where it is</h3>
+                    <div class="map-pin-view" data-lat="@lat.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-lng="@lng.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-title="@c.Title"></div>
+                    <div class="map-pin-actions">
+                        <a class="bk-btn bk-btn-small bk-btn-primary" target="_blank" rel="noopener" href="@RealEstateERP.Core.Common.MapPin.OpenUrl(lat, lng)">Open in Google Maps</a>
+                        <a class="bk-btn bk-btn-small bk-btn-light bk-btn-outline" target="_blank" rel="noopener" href="@RealEstateERP.Core.Common.MapPin.DirectionsUrl(lat, lng)">Get directions</a>
+                    </div>
+                }
                 @if (Model.TakenNights.Count > 0)
                 {
                     <h3>Already booked</h3>
@@ -94,3 +103,4 @@
         </div>
     </div>
 </section>
+<script src="~/js/map-pin.js" asp-append-version="true"></script>

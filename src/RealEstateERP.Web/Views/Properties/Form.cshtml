@@ -63,6 +63,14 @@ else
                 </select>
             </div>
             <div class="col-12">
+                <label class="form-label">Pin on the map <span class="text-body-secondary fw-normal">(recommended)</span></label>
+                <div class="form-text mt-0 mb-2">Click the map where the property is, or stand at the property and tap <em>My location</em>. People who enquire will see this pin and can open it in Google Maps for directions.</div>
+                <input type="hidden" asp-for="Latitude" />
+                <input type="hidden" asp-for="Longitude" />
+                <div class="map-pin-picker" data-lat-input="Latitude" data-lng-input="Longitude" data-address-inputs="Location,County"></div>
+                <span asp-validation-for="Latitude" class="invalid-feedback d-block"></span>
+            </div>
+            <div class="col-12">
                 <label asp-for="Description" class="form-label"></label>
                 <textarea asp-for="Description" class="form-control" rows="2"></textarea>
             </div>
@@ -100,4 +108,5 @@ else
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/map-pin.js" asp-append-version="true"></script>
 }

@@ -28,14 +28,26 @@ public class HostPropertiesController(IAssetService assets, IUnitService units, 
     public IActionResult New() => CanEdit ? View() : Forbid();
 
     [HttpPost("properties/new"), ValidateAntiForgeryToken]
-    public async Task<IActionResult> Create(string name, AssetType type, string? location, string? county, string? description, CancellationToken ct)
+    public async Task<IActionResult> Create(string name, AssetType type, string? location, string? county, string? description,
+        double? latitude, double? longitude, CancellationToken ct)
     {
         if (!CanEdit) return Forbid();
         var r = await assets.CreateAsync(new AssetInput(name ?? "", type, AssetLifecycle.Operational, location, county,
-            null, null, null, null, description, PropertyPurpose.ShortStay), ct);
+            null, null, null, null, description, PropertyPurpose.ShortStay, latitude, longitude), ct);
         if (!r.Succeeded) { TempData["Error"] = r.Error; return View("New"); }
         TempData["Success"] = "Property added. Now add its units with their nightly rate.";
         return Redirect($"/host/properties/{r.Value}");
+    }
+
+    [HttpPost("properties/{assetId:int}/pin"), ValidateAntiForgeryToken]
+    public async Task<IActionResult> SetPin(int assetId, double? latitude, double? longitude, CancellationToken ct)
+    {
+        if (!CanEdit) return Forbid();
+        if (!await stays.IsShortStayPropertyAsync(assetId, ct)) return NotFound();
+        var r = await assets.SetMapPinAsync(assetId, latitude, longitude, ct);
+        if (r.Succeeded) TempData["Success"] = latitude is null ? "Map pin removed." : "Map pin saved. Guests can now open it in Google Maps.";
+        else TempData["Error"] = r.Error;
+        return Redirect($"/host/properties/{assetId}#map");
     }
 
     [HttpGet("properties/{assetId:int}")]

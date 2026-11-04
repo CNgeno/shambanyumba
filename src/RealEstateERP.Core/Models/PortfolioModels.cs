@@ -14,7 +14,9 @@ public sealed record AssetInput(
     DateOnly? AcquisitionDate,
     string? TitleDeedNumber,
     string? Description,
-    PropertyPurpose? Purpose = null);
+    PropertyPurpose? Purpose = null,
+    double? Latitude = null,
+    double? Longitude = null);
 
 public sealed record StructureNodeInput(string Name, StructureNodeType NodeType, int? ParentId, int SortOrder);
 

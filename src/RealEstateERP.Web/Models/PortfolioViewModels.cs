@@ -38,6 +38,10 @@ public sealed class AssetFormViewModel
 
     public string? County { get; set; }
 
+    /// <summary>Map pin, set by clicking the map on the form (js/map-pin.js).</summary>
+    [Range(-90, 90)] public double? Latitude { get; set; }
+    [Range(-180, 180)] public double? Longitude { get; set; }
+
     [Range(0, 1_000_000)]
     [Display(Name = "Land size (acres)")]
     public decimal? LandSizeAcres { get; set; }
@@ -60,7 +64,8 @@ public sealed class AssetFormViewModel
     public static IEnumerable<SelectListItem> CountyOptions => KenyaCounties.All.Select(c => new SelectListItem(c, c));
 
     public AssetInput ToInput() => new(Name, Type!.Value, LifecycleState, Location, County, LandSizeAcres,
-        AcquisitionCost, AcquisitionDate is DateTime d ? DateOnly.FromDateTime(d) : null, TitleDeedNumber, Description, Purpose);
+        AcquisitionCost, AcquisitionDate is DateTime d ? DateOnly.FromDateTime(d) : null, TitleDeedNumber, Description, Purpose,
+        Latitude, Longitude);
 }
 
 public sealed class PropertyDetailsViewModel

@@ -169,6 +169,31 @@ public class PortfolioServiceTests
     }
 
     [Fact]
+    public async Task Map_pin_is_saved_validated_and_cleared()
+    {
+        var (db, _, assetId) = await SetupAsync();
+        var assets = new AssetService(db);
+
+        Assert.True((await assets.SetMapPinAsync(assetId, -1.21234567, 36.8)).Succeeded);
+        var a = await db.Assets.SingleAsync(x => x.Id == assetId);
+        Assert.Equal(-1.212346, a.Latitude);
+        Assert.Equal(36.8, a.Longitude);
+
+        Assert.False((await assets.SetMapPinAsync(assetId, -1.2, null)).Succeeded);   // half a pin
+        Assert.False((await assets.SetMapPinAsync(assetId, 95, 36.8)).Succeeded);     // off the globe
+
+        Assert.True((await assets.SetMapPinAsync(assetId, null, null)).Succeeded);
+        Assert.Null((await db.Assets.SingleAsync(x => x.Id == assetId)).Latitude);
+    }
+
+    [Fact]
+    public void Map_links_use_invariant_coordinates()
+    {
+        Assert.Equal("https://www.google.com/maps/search/?api=1&query=-1.286389,36.817223", MapPin.OpenUrl(-1.286389, 36.817223));
+        Assert.Equal("https://www.google.com/maps/dir/?api=1&destination=-1.5,37", MapPin.DirectionsUrl(-1.5, 37));
+    }
+
+    [Fact]
     public async Task Property_with_units_cannot_be_deleted()
     {
         var (db, user, assetId) = await SetupAsync();

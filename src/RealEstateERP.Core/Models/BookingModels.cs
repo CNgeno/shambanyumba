@@ -29,7 +29,8 @@ public sealed record BookingListItem(int Id, string BookingNumber, string StayTi
     DateOnly CheckIn, DateOnly CheckOut, int Nights, BookingStatus Status, BookingChannel Channel, decimal Total, decimal AmountPaid, int StayUnitId = 0);
 
 /// <summary>A short-stay property on the host's booking site.</summary>
-public sealed record HostStayProperty(int AssetId, string Name, string? Location, string? County, int Units, int Published, int Photos);
+public sealed record HostStayProperty(int AssetId, string Name, string? Location, string? County, int Units, int Published, int Photos,
+    double? Latitude = null, double? Longitude = null);
 
 /// <summary>The host's "getting started" progress, worked out from their data.</summary>
 public sealed record HostSetupProgress(bool HasProperty, bool HasUnits, bool HasPhotos, bool AllRated, bool AnyPublished, bool HasPaymentInstructions)
@@ -65,7 +66,8 @@ public sealed record PublicPhoto(int Id, string Kind, string? Caption);
 
 public sealed record PublicStayDetails(PublicStayCard Card, string HostName, string? Description, IReadOnlyList<string> Amenities, string? HouseRules,
     TimeOnly CheckInFrom, TimeOnly CheckOutBy, int MinNights, int? MaxNights, CancellationPolicy CancellationPolicy, int DepositPercent,
-    decimal CleaningFee, IReadOnlyList<PublicPhoto> Photos, IReadOnlyList<DateOnly> TakenNights, IReadOnlyList<string> Discounts);
+    decimal CleaningFee, IReadOnlyList<PublicPhoto> Photos, IReadOnlyList<DateOnly> TakenNights, IReadOnlyList<string> Discounts,
+    double? Latitude = null, double? Longitude = null);
 
 public sealed record PublicBookingInput(int StayUnitId, DateOnly CheckIn, DateOnly CheckOut, int Adults, int Children,
     string Name, string Phone, string? Email, string? Message);
@@ -73,7 +75,7 @@ public sealed record PublicBookingInput(int StayUnitId, DateOnly CheckIn, DateOn
 /// <summary>What a guest sees under "My booking".</summary>
 public sealed record GuestBookingView(string BookingNumber, BookingStatus Status, string StayTitle, string Place, string HostName, string? HostPhone,
     DateOnly CheckIn, DateOnly CheckOut, int Nights, TimeOnly CheckInFrom, TimeOnly CheckOutBy, decimal Total, decimal AmountPaid, decimal DepositDue,
-    DateTime? HoldExpiresUtc, string? PaymentInstructions)
+    DateTime? HoldExpiresUtc, string? PaymentInstructions, double? Latitude = null, double? Longitude = null)
 {
     public decimal Balance => Total - AmountPaid;
     public decimal DepositOutstanding => Math.Max(0, DepositDue - AmountPaid);
