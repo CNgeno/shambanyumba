@@ -57,7 +57,7 @@
                 @if (d.Latitude is double lat && d.Longitude is double lng)
                 {
                     <h2 class="h5 mt-4 mb-2" id="map"><i class="bi bi-geo-alt me-1"></i>Where it is</h2>
-                    <div class="map-pin-view" data-lat="@lat.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-lng="@lng.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-title="@d.AssetName"></div>
+                    <iframe class="map-pin-view" src="@RealEstateERP.Core.Common.MapPin.EmbedUrl(lat, lng)" title="Map: @d.AssetName" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
                     <div class="map-pin-actions">
                         <a class="btn btn-sm btn-primary" target="_blank" rel="noopener" href="@RealEstateERP.Core.Common.MapPin.OpenUrl(lat, lng)"><i class="bi bi-map me-1"></i>Open in Google Maps</a>
                         <a class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener" href="@RealEstateERP.Core.Common.MapPin.DirectionsUrl(lat, lng)"><i class="bi bi-sign-turn-right me-1"></i>Get directions</a>
@@ -150,7 +150,6 @@
     </div>
 </section>
 @section Scripts {
-    <script src="~/js/map-pin.js" asp-append-version="true"></script>
     <script>
         document.querySelectorAll('.gallery-thumb').forEach(function (t) {
             t.addEventListener('click', function () { var main = document.getElementById('gallery-main'); if (main) main.src = t.dataset.src; });

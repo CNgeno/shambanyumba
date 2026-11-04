@@ -1,3 +1,4 @@
+@inject Microsoft.Extensions.Configuration.IConfiguration MapsConfig
 @{ ViewData["Title"] = "Add property"; }
 <section class="bk-wrap">
     <p class="bk-back"><a href="/host/properties">&larr; Your properties</a></p>
@@ -20,7 +21,7 @@
         <p class="bk-muted bk-small">Click the map where the property is, or stand at the property and tap <em>My location</em>. Guests see this pin and can open it in Google Maps for directions.</p>
         <input type="hidden" name="latitude" id="latitude" />
         <input type="hidden" name="longitude" id="longitude" />
-        <div class="map-pin-picker" data-lat-input="latitude" data-lng-input="longitude" data-address-inputs="location,county"></div>
+        <div class="map-pin-picker" data-google-key="@MapsConfig["GoogleMaps:ApiKey"]" data-resolve-url="/host/maps/resolve" data-lat-input="latitude" data-lng-input="longitude" data-address-inputs="location,county"></div>
         <label>About the property (optional)</label><textarea name="description" rows="3" placeholder="Quiet compound, 10 minutes from town, secure parking..."></textarea>
         <button type="submit" class="bk-btn bk-btn-primary">Add property</button>
     </form>

@@ -198,7 +198,7 @@ else
             <h2 class="panel-title mb-2">On the map</h2>
             @if (a.Latitude is double lat && a.Longitude is double lng)
             {
-                <div class="map-pin-view" data-lat="@lat.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-lng="@lng.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-title="@a.Name"></div>
+                <iframe class="map-pin-view" src="@RealEstateERP.Core.Common.MapPin.EmbedUrl(lat, lng)" title="Map: @a.Name" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
                 <div class="map-pin-actions">
                     <a class="btn btn-sm btn-outline-primary" target="_blank" rel="noopener" href="@RealEstateERP.Core.Common.MapPin.OpenUrl(lat, lng)"><i class="bi bi-geo-alt me-1"></i>Open in Google Maps</a>
                     <a class="btn btn-sm btn-link" asp-action="Edit" asp-route-id="@a.Id">Move pin</a>
@@ -532,7 +532,6 @@ else
 }
 
 @section Scripts {
-    <script src="~/js/map-pin.js" asp-append-version="true"></script>
     <script>
         (function () {
             var modal = document.getElementById('nodeModal');

@@ -1,3 +1,4 @@
+@inject Microsoft.Extensions.Configuration.IConfiguration MapsConfig
 @model AssetFormViewModel
 @{
     var isNew = Model.Id is null;
@@ -67,7 +68,7 @@ else
                 <div class="form-text mt-0 mb-2">Click the map where the property is, or stand at the property and tap <em>My location</em>. People who enquire will see this pin and can open it in Google Maps for directions.</div>
                 <input type="hidden" asp-for="Latitude" />
                 <input type="hidden" asp-for="Longitude" />
-                <div class="map-pin-picker" data-lat-input="Latitude" data-lng-input="Longitude" data-address-inputs="Location,County"></div>
+                <div class="map-pin-picker" data-google-key="@MapsConfig["GoogleMaps:ApiKey"]" data-resolve-url="/Properties/ResolveMapLink" data-lat-input="Latitude" data-lng-input="Longitude" data-address-inputs="Location,County"></div>
                 <span asp-validation-for="Latitude" class="invalid-feedback d-block"></span>
             </div>
             <div class="col-12">

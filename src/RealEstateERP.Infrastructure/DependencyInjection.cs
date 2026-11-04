@@ -38,6 +38,9 @@ public static class DependencyInjection
         services.AddSingleton<IDevMailbox>(sp => sp.GetRequiredService<DevMailbox>());
         services.AddScoped<IEmailService, EmailService>();
         services.AddSingleton<IPdfService, PdfService>();
+        // Follows Google Maps share links one hop at a time (MapLinkResolver checks every host), so no auto-redirects.
+        services.AddHttpClient<MapLinkResolver>(c => c.Timeout = TimeSpan.FromSeconds(8))
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false });
 
         // ---- Domain (may depend on low-level only, never on each other "upward") ----
         services.AddScoped<IPlanService, PlanService>();

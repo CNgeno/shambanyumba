@@ -97,6 +97,14 @@ public class PropertiesController(IAssetService assets, IUnitService units, IAge
         return RedirectToAction(nameof(Details), new { id = result.Value });
     }
 
+    /// <summary>The map picker sends pasted Google Maps links here (short share links can only be followed server-side).</summary>
+    [HttpGet, Authorize(Policy = Policies.CanEdit)]
+    public async Task<IActionResult> ResolveMapLink(string? url, [FromServices] RealEstateERP.Infrastructure.Services.MapLinkResolver resolver, CancellationToken ct)
+    {
+        var pin = await resolver.ResolveAsync(url, ct);
+        return pin is { } p ? Json(new { lat = p.Latitude, lng = p.Longitude }) : Json(new { error = "No location found in that link." });
+    }
+
     [HttpGet, Authorize(Policy = Policies.CanEdit)]
     public async Task<IActionResult> Edit(int id, CancellationToken ct)
     {

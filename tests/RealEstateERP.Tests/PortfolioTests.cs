@@ -186,6 +186,47 @@ public class PortfolioServiceTests
         Assert.Null((await db.Assets.SingleAsync(x => x.Id == assetId)).Latitude);
     }
 
+    [Theory]
+    [InlineData("-1.286389, 36.817223", -1.286389, 36.817223)]
+    [InlineData("-1.286389 36.817223", -1.286389, 36.817223)]
+    [InlineData("1°17'11.0\"S 36°49'02.0\"E", -1.286389, 36.817222)]
+    [InlineData("https://www.google.com/maps/place/1%C2%B017'11.0%22S+36%C2%B049'02.0%22E/@-1.2863,36.8150,17z/data=!3m1!4b1!4m4!3m3!8m2!3d-1.286389!4d36.817222", -1.286389, 36.817222)]
+    [InlineData("https://www.google.com/maps/search/-1.2864,+36.8172?entry=tts", -1.2864, 36.8172)]
+    [InlineData("https://maps.google.com/?q=-1.2864,36.8172", -1.2864, 36.8172)]
+    [InlineData("https://www.google.com/maps/@-0.0917,34.768,15z", -0.0917, 34.768)]
+    public void Map_pins_are_read_from_pasted_text_and_google_links(string text, double lat, double lng)
+    {
+        var pin = MapPin.Parse(text);
+        Assert.NotNull(pin);
+        Assert.Equal(lat, pin.Value.Latitude, 5);
+        Assert.Equal(lng, pin.Value.Longitude, 5);
+    }
+
+    [Theory]
+    [InlineData("Kitengela")]
+    [InlineData("https://maps.app.goo.gl/AbC123")]
+    [InlineData("95, 36.8")]
+    public void Text_without_a_usable_pin_gives_nothing(string text) => Assert.Null(MapPin.Parse(text));
+
+    [Fact]
+    public void Short_share_links_are_recognised() =>
+        Assert.True(MapPin.IsShortLink("https://maps.app.goo.gl/AbC123") && !MapPin.IsShortLink("https://evil.example/maps"));
+
+    [Fact]
+    public async Task Link_resolver_never_leaves_google()
+    {
+        var resolver = new MapLinkResolver(new HttpClient(new ThrowingHandler()));
+        Assert.Null(await resolver.ResolveAsync("https://evil.example/maps/place/home"));   // never fetched
+        Assert.Null(await resolver.ResolveAsync("http://maps.app.goo.gl/abc"));   // https only
+        Assert.Equal((-1.5, 37.0), await resolver.ResolveAsync("-1.5, 37"));     // no request needed
+    }
+
+    private sealed class ThrowingHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+            => throw new InvalidOperationException("No request expected: " + request.RequestUri);
+    }
+
     [Fact]
     public void Map_links_use_invariant_coordinates()
     {
