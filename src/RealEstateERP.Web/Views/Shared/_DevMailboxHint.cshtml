@@ -1,10 +1,11 @@
 @using Microsoft.AspNetCore.Hosting
 @using Microsoft.Extensions.Hosting
 @inject IWebHostEnvironment Env
-@if (Env.IsDevelopment())
+@inject Microsoft.Extensions.Configuration.IConfiguration HintConfig
+@if (Env.IsDevelopment() || RealEstateERP.Infrastructure.TestSite.IsTest(HintConfig))
 {
     <div class="demo-hint">
-        <i class="bi bi-wrench-adjustable me-1"></i>Development: emails aren't really sent.
+        <i class="bi bi-wrench-adjustable me-1"></i>@(Env.IsDevelopment() ? "Development" : "Test site"): emails aren't really sent.
         <a href="/dev/mailbox" target="_blank">Open the dev mailbox</a> to read them.
     </div>
 }

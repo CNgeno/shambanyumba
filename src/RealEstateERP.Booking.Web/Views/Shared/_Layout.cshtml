@@ -14,6 +14,10 @@
     <link rel="stylesheet" href="~/css/booking.css" asp-append-version="true" />
 </head>
 <body>
+    @if (RealEstateERP.Infrastructure.TestSite.IsTest(Configuration))
+    {
+        <div class="test-site-banner" role="status">TEST SITE: bookings here aren't real, and no emails are sent. <a href="https://booking.shambanyumba.com">Go to the live site</a></div>
+    }
     <header class="bk-header">
         <div class="bk-wrap bk-header-row">
             <a href="/" class="bk-brand"><img src="/img/shambanyumba-logo-dark.svg" alt="ShambaNyumba" width="190" height="31" /><span class="bk-product">Stays</span></a>

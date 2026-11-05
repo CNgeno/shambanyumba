@@ -1,0 +1,21 @@
+[Unit]
+Description=ShambaNyumba TEST main site (test.shambanyumba.com)
+After=network.target mssql-server.service
+Wants=mssql-server.service
+
+[Service]
+Type=simple
+User=builder
+Group=builder
+WorkingDirectory=/home/builder/SmartEstate/test/publish
+EnvironmentFile=/home/builder/SmartEstate/test/test.env
+ExecStart=/usr/bin/dotnet /home/builder/SmartEstate/test/publish/RealEstateERP.Web.dll
+Restart=always
+RestartSec=10
+KillSignal=SIGINT
+SyslogIdentifier=smartestate-test
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

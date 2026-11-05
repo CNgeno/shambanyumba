@@ -38,6 +38,14 @@ public sealed class EmailService(
             return;
         }
 
+        // Test sites run on a copy of real data: never email real people from there.
+        if (TestSite.IsTest(appConfig))
+        {
+            mailbox.Add(message);
+            logger.LogInformation("TEST SITE: email '{Subject}' to {To} kept in the mailbox, not sent.", message.Subject, message.To);
+            return;
+        }
+
         var server = await ResolveAsync(ct);
         if (server is null)
         {
@@ -71,6 +79,7 @@ public sealed class EmailService(
 
     public async Task<string> DescribeAsync(CancellationToken ct = default)
     {
+        if (TestSite.IsTest(appConfig)) return "Test site: emails are kept in the test mailbox (/dev/mailbox), never sent";
         var server = await ResolveAsync(ct);
         if (server is not null)
             return $"SMTP {server.Host}:{server.Port} as {server.FromAddress} (from {server.Source})";

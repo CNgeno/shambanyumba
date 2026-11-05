@@ -88,4 +88,18 @@ public class EmailSettingsTests
         await service.SendAsync(new EmailMessage("faith@x.test", "Hello", "<p>Hi</p>"));
         Assert.Equal("Hello", Assert.Single(mailbox.All()).Subject);
     }
+
+    [Fact]
+    public async Task A_test_site_never_sends_even_with_smtp_configured()
+    {
+        var (_, config) = await SetupAsync(host: "smtp.unreachable.invalid");   // a real send would throw
+        var mailbox = new DevMailbox();
+        var appConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["Site:IsTest"] = "true" }).Build();
+        var service = new EmailService(config, appConfig, new FakeEnv("Production"), mailbox, NullLogger<EmailService>.Instance);
+
+        await service.SendAsync(new EmailMessage("real.customer@x.test", "Rent invoice", "<p>Hi</p>"));
+
+        Assert.Equal("Rent invoice", Assert.Single(mailbox.All()).Subject);
+        Assert.Contains("never sent", await service.DescribeAsync());
+    }
 }

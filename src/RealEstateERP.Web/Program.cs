@@ -40,11 +40,15 @@ builder.Services
 
 // One sign-in for shambanyumba.com and booking.shambanyumba.com: the same key ring (in the database), the same
 // application name, and (in production) the sign-in cookie set for the parent domain, Auth:CookieDomain = .shambanyumba.com
+// A test copy (Site:IsTest) sets its own application name and cookie name: see TestSite.
 builder.Services.AddDataProtection()
-    .SetApplicationName("ShambaNyumba")
+    .SetApplicationName(TestSite.ApplicationName(builder.Configuration))
     .PersistKeysToDbContext<ApplicationDbContext>();
-if (builder.Configuration["Auth:CookieDomain"] is { Length: > 0 } cookieDomain)
-    builder.Services.ConfigureApplicationCookie(o => o.Cookie.Domain = cookieDomain);
+builder.Services.ConfigureApplicationCookie(o =>
+{
+    o.Cookie.Name = TestSite.CookieName(builder.Configuration);
+    if (builder.Configuration["Auth:CookieDomain"] is { Length: > 0 } cookieDomain) o.Cookie.Domain = cookieDomain;
+});
 
 // Real email for Identity's built-in pages + our account emails (confirmation, password reset).
 builder.Services.AddTransient<Microsoft.AspNetCore.Identity.UI.Services.IEmailSender, IdentityEmailSender>();
@@ -98,6 +102,9 @@ builder.Services.AddRazorPages();
 
 var app = builder.Build();
 app.UseForwardedHeaders();   // first: everything after sees the real scheme and client address
+// Test copies (Site:IsTest) are kept out of search engines.
+if (RealEstateERP.Infrastructure.TestSite.IsTest(app.Configuration))
+    app.Use(async (context, next) => { context.Response.Headers["X-Robots-Tag"] = "noindex, nofollow"; await next(); });
 
 // Migrations (Development, with safety checks) + seeding. See DatabaseInitializer.
 await DatabaseInitializer.InitializeAsync(app.Services, app.Environment, app.Configuration);

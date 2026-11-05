@@ -1,6 +1,6 @@
 #!/bin/bash
 # Server-side deployment handler for ShambaNyumba
-# Usage: sudo bash deploy/smartestate-apply.sh <archive.tgz> [main|booking]   (default: main)
+# Usage: sudo bash deploy/smartestate-apply.sh <archive.tgz> [main|booking|test-main|test-booking]   (default: main)
 # Rolls back the files if /health fails. Database migrations (run by the main site at startup) are NOT rolled back:
 # restore the backup taken by deploy-live.sh if one has to be undone.
 set -e
@@ -21,8 +21,20 @@ case "$SITE" in
         SERVICE_NAME="smartestate-booking"
         HEALTH_URL="http://127.0.0.1:5011/health"
         ;;
+    test-main)      # test.shambanyumba.com (database SmartEstate, see deploy/deploy-test.sh)
+        TARGET_DIR="/home/builder/SmartEstate/test/publish"
+        BACKUP_DIR="/home/builder/SmartEstate/test/backups"
+        SERVICE_NAME="smartestate-test"
+        HEALTH_URL="http://127.0.0.1:5012/health"
+        ;;
+    test-booking)   # testbooking.shambanyumba.com
+        TARGET_DIR="/home/builder/SmartEstate/test/booking/publish"
+        BACKUP_DIR="/home/builder/SmartEstate/test/booking/backups"
+        SERVICE_NAME="smartestate-test-booking"
+        HEALTH_URL="http://127.0.0.1:5013/health"
+        ;;
     *)
-        echo "ERROR: unknown site '$SITE' (use main or booking)."
+        echo "ERROR: unknown site '$SITE' (use main, booking, test-main or test-booking)."
         exit 1
         ;;
 esac

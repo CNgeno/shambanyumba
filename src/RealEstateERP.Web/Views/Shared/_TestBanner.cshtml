@@ -1,0 +1,5 @@
+@inject Microsoft.Extensions.Configuration.IConfiguration TestBannerConfig
+@if (RealEstateERP.Infrastructure.TestSite.IsTest(TestBannerConfig))
+{
+    <div class="test-site-banner" role="status">TEST SITE: changes here don't affect the live site, and no emails are sent. <a href="https://shambanyumba.com">Go to the live site</a></div>
+}

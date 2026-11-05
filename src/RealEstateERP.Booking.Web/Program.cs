@@ -26,13 +26,13 @@ builder.Services.AddIdentityCore<ApplicationUser>().AddRoles<IdentityRole>().Add
 // One sign-in with shambanyumba.com: same key ring, same application name, same cookie (scheme and name).
 // People sign in on the main site; this site reads the cookie. Settings: Auth:CookieDomain, Booking:MainSiteUrl.
 builder.Services.AddDataProtection()
-    .SetApplicationName("ShambaNyumba")
+    .SetApplicationName(RealEstateERP.Infrastructure.TestSite.ApplicationName(builder.Configuration))
     .PersistKeysToDbContext<ApplicationDbContext>();
 var mainSite = (builder.Configuration["Booking:MainSiteUrl"] ?? "https://shambanyumba.com").TrimEnd('/');
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
     .AddCookie(IdentityConstants.ApplicationScheme, o =>
     {
-        o.Cookie.Name = ".AspNetCore.Identity.Application";
+        o.Cookie.Name = RealEstateERP.Infrastructure.TestSite.CookieName(builder.Configuration);   // must match the main site
         if (builder.Configuration["Auth:CookieDomain"] is { Length: > 0 } domain) o.Cookie.Domain = domain;
         o.Events.OnRedirectToLogin = ctx =>
         {
@@ -48,6 +48,9 @@ builder.Services.AddHostedService<HoldExpiryService>();   // releases unpaid gue
 
 var app = builder.Build();
 app.UseForwardedHeaders();   // first: everything after sees the real scheme and client address
+// Test copies (Site:IsTest) are kept out of search engines.
+if (RealEstateERP.Infrastructure.TestSite.IsTest(app.Configuration))
+    app.Use(async (context, next) => { context.Response.Headers["X-Robots-Tag"] = "noindex, nofollow"; await next(); });
 
 if (!app.Environment.IsDevelopment())
 {

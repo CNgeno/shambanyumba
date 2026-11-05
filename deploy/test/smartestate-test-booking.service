@@ -1,0 +1,21 @@
+[Unit]
+Description=ShambaNyumba TEST booking site (testbooking.shambanyumba.com)
+After=network.target mssql-server.service smartestate-test.service
+Wants=mssql-server.service
+
+[Service]
+Type=simple
+User=builder
+Group=builder
+WorkingDirectory=/home/builder/SmartEstate/test/booking/publish
+EnvironmentFile=/home/builder/SmartEstate/test/booking/booking.env
+ExecStart=/usr/bin/dotnet /home/builder/SmartEstate/test/booking/publish/RealEstateERP.Booking.Web.dll
+Restart=always
+RestartSec=10
+KillSignal=SIGINT
+SyslogIdentifier=smartestate-test-booking
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

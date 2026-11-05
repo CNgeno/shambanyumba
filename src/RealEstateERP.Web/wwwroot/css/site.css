@@ -633,3 +633,7 @@ a.map-pin-btn { color: inherit; text-decoration: none; display: inline-flex; ali
 .property-map-actions { display: flex; align-items: center; gap: 1rem; padding: .45rem .75rem; font-size: .85rem; border-top: 1px solid var(--sb-line); }
 .property-map-actions a { text-decoration: none; }
 .btn-close-sm { width: .6em; height: .6em; }
+
+/* Test copies only (Site:IsTest) */
+.test-site-banner { position: sticky; top: 0; z-index: 2000; background: #b42318; color: #fff; text-align: center; font-size: .85rem; font-weight: 600; padding: .35rem .75rem; }
+.test-site-banner a { color: #fff; text-decoration: underline; margin-left: .5rem; }
