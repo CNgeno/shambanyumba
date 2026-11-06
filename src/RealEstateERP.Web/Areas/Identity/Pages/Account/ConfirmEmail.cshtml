@@ -1,0 +1,10 @@
+@page
+@model ConfirmEmailModel
+@{
+    ViewData["Title"] = "Link not valid";
+}
+<div class="auth-icon"><i class="bi bi-envelope-x"></i></div>
+<h1 class="auth-title">This link didn't work</h1>
+<p class="auth-sub">The confirmation link is damaged, expired or was already replaced by a newer one.</p>
+<a asp-page="./ResendEmailConfirmation" class="btn btn-primary w-100 mt-2">Send a new confirmation email</a>
+<a asp-page="./Login" class="btn btn-outline-primary w-100 mt-2">Go to sign in</a>

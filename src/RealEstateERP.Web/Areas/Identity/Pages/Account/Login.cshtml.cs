@@ -29,9 +29,10 @@ public class LoginModel(SignInManager<ApplicationUser> signIn, UserManager<Appli
         public bool RememberMe { get; set; }
     }
 
-    public async Task OnGetAsync(string? returnUrl = null)
+    public async Task OnGetAsync(string? returnUrl = null, string? email = null)
     {
         ReturnUrl = SafeReturnUrl(returnUrl);
+        if (!string.IsNullOrWhiteSpace(email)) Input.Email = email.Trim();   // arriving from the email confirmation link
         await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
     }
 

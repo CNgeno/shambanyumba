@@ -20,7 +20,7 @@
 
     <div class="mb-3">
         <label asp-for="Input.Email" class="form-label">Email</label>
-        <input asp-for="Input.Email" class="form-control" autocomplete="username" autofocus />
+        <input asp-for="Input.Email" class="form-control" autocomplete="username" autofocus="@string.IsNullOrEmpty(Model.Input.Email)" />
         <span asp-validation-for="Input.Email" class="invalid-feedback d-block"></span>
     </div>
     <div class="mb-2">
@@ -29,7 +29,7 @@
             <a asp-page="./ForgotPassword" class="small">Forgot password?</a>
         </div>
         <div class="input-group">
-            <input asp-for="Input.Password" class="form-control" autocomplete="current-password" id="password" />
+            <input asp-for="Input.Password" class="form-control" autocomplete="current-password" id="password" autofocus="@(!string.IsNullOrEmpty(Model.Input.Email))" />
             <button type="button" class="btn btn-outline-secondary" data-toggle-password="password" aria-label="Show password"><i class="bi bi-eye"></i></button>
         </div>
         <span asp-validation-for="Input.Password" class="invalid-feedback d-block"></span>
